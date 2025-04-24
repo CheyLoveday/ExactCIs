@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "exactcis"
+version = "0.1.0"
+description = "Exact Confidence Intervals for Odds Ratios"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "ExactCIs Contributors", email = "example@example.com"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Intended Audience :: Science/Research",
+]
+# Core dependencies - minimal requirements for basic functionality
+dependencies = [
+    "typing-extensions>=4.0.0; python_version < '3.10'"  # For older Python versions that need newer typing features
+]
+
+[project.optional-dependencies]
+# Optional dependencies for enhanced functionality
+numpy = ["numpy>=1.20.0"]  # For vectorized calculations
+tqdm = ["tqdm>=4.62.0"]  # For progress bars in long-running calculations
+viz = ["matplotlib>=3.4.0"]  # For visualization functions
+
+# Full set of optional dependencies for enhanced functionality
+full = [
+    "numpy>=1.20.0",
+    "tqdm>=4.62.0",
+    "matplotlib>=3.4.0"
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-timeout>=2.1.0",
+    "pytest-xdist>=3.3.1",
+    "pytest-cov>=4.1.0",
+    "tqdm>=4.65.0",
+    "black>=23.0.0",
+    "ruff>=0.0.270",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/exactcis"
+"Bug Tracker" = "https://github.com/yourusername/exactcis/issues"
+"Documentation" = "https://github.com/yourusername/exactcis/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/exactcis"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+markers = [
+    "fast: mark a test as fast running",
+    "slow: mark a test as slow running",
+    "unconditional: tests for the unconditional method",
+    "integration: integration tests",
+    "edge: tests edge cases",
+    "mock: tests that use mocking"
+]
+timeout = 300  # 5 minutes global timeout
+
+[tool.coverage.run]
+source = ["src/exactcis"]
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError"
+]

@@ -1,0 +1,4 @@
+Test                                                         Median (s) Mean (s)   Min (s)    Max (s)    StdDev (s)
+--------------------------------------------------------------------------------------------------------------
+tests/test_core.py::test_pmf_weights                         0.148      0.148      0.147      0.149      0.001     
+tests/test_core.py::test_find_root                           0.152      0.179      0.151      0.235      0.048     
