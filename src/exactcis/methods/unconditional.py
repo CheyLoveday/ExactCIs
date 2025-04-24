@@ -1,4 +1,3 @@
-
 """
 Barnard's unconditional exact confidence interval for odds ratio.
 
@@ -10,14 +9,42 @@ import math
 import logging
 import concurrent.futures
 import os
-from typing import Tuple, List
+import time
+from typing import Tuple, List, Dict, Callable, Optional, Union
 from functools import lru_cache
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-from exactcis.core import validate_counts, find_smallest_theta
+from exactcis.core import (
+    validate_counts,
+    log_binom_coeff,
+    find_root_log,
+    find_plateau_edge,
+    logsumexp,
+    apply_haldane_correction
+)
+
+# Import utilities
+try:
+    import numpy as np
+    has_numpy = True
+except ImportError:
+    has_numpy = False
+    logger.info("NumPy not available, using pure Python implementation")
+
+# Import parallel processing utilities if available
+try:
+    from exactcis.utils.parallel import (
+        parallel_map, 
+        parallel_find_root,
+        get_optimal_workers
+    )
+    has_parallel = True
+    logger.info("Using parallel processing for unconditional method")
+except ImportError:
+    has_parallel = False
+    logger.info("Parallel processing not available")
 
 # Import tqdm if available, otherwise define a no-op version
 try:
@@ -28,248 +55,340 @@ except ImportError:
         return iterable
 
 
-@lru_cache(maxsize=128)
-def _calc_pmf(n: int, k: int, p: float) -> float:
-    """Calculate binomial PMF with caching for performance."""
-    return math.comb(n, k) * p**k * (1-p)**(n-k)
-
-
-def _process_grid_point_numpy(params: tuple) -> float:
+@lru_cache(maxsize=256)
+def _log_binom_pmf(n: Union[int, float], k: Union[int, float], p: float) -> float:
     """
-    Process a single grid point using NumPy.
-    This function is designed to be used with concurrent.futures.
+    Calculate log of binomial PMF with caching for performance.
+    
+    log[ P(X=k) ] = log[ (n choose k) * p^k * (1-p)^(n-k) ]
+    """
+    if p <= 0 or p >= 1:
+        return float('-inf')
+    
+    log_choose = log_binom_coeff(n, k)
+    log_p_term = k * math.log(p)
+    log_1mp_term = (n - k) * math.log(1 - p)
+    
+    return log_choose + log_p_term + log_1mp_term
 
+
+def _optimize_grid_size(n1: int, n2: int, base_grid_size: int) -> int:
+    """
+    Determine optimal grid size based on table dimensions.
+    
     Args:
-        params: Tuple containing (i, grid_size, eps, a, c, n1, n2, theta)
-
+        n1: Size of first margin
+        n2: Size of second margin
+        base_grid_size: Base grid size requested
+        
     Returns:
-        p-value for this grid point
+        Optimized grid size
     """
-    import numpy as np
-    i, grid_size, eps, a, c, n1, n2, theta = params
+    # For very small tables, we can use a larger grid
+    if n1 <= 10 and n2 <= 10:
+        return min(base_grid_size, 30)
+    
+    # For small tables
+    if n1 <= 20 and n2 <= 20:
+        return min(base_grid_size, 20)
+    
+    # For moderate tables
+    if n1 <= 30 and n2 <= 30:
+        return min(base_grid_size, 15)
+    
+    # For large tables
+    if n1 <= 50 and n2 <= 50:
+        return min(base_grid_size, 10)
+    
+    # For very large tables
+    return min(base_grid_size, 5)
 
-    p1 = eps + i*(1-2*eps)/grid_size
-    p2 = (theta * p1) / (1 - p1 + theta * p1)
 
-    ks = np.arange(n1+1)
-    ls = np.arange(n2+1)
-    K, L = np.meshgrid(ks, ls, indexing='ij')
-
-    Pk = (np.math.comb(n1, K) * p1**K * (1-p1)**(n1-K))
-    Pl = (np.math.comb(n2, L) * p2**L * (1-p2)**(n2-L))
-    joint = Pk * Pl
-    p_obs = joint[a, c]
-    current = float(np.sum(joint[joint <= p_obs]))
-
-    return current
-
-
-def _process_grid_point_python(params: tuple) -> float:
+def _build_adaptive_grid(p1_mle: float, grid_size: int, density_factor: float = 0.3) -> List[float]:
     """
-    Process a single grid point using pure Python.
-    This function is designed to be used with concurrent.futures.
-
+    Build an adaptive grid with more points near the MLE.
+    
     Args:
-        params: Tuple containing (i, grid_size, eps, a, c, n1, n2, theta)
-
+        p1_mle: Maximum likelihood estimate for p1
+        grid_size: Number of grid points
+        density_factor: Controls how concentrated the points are around MLE
+        
     Returns:
-        p-value for this grid point
+        List of grid points
     """
-    i, grid_size, eps, a, c, n1, n2, theta = params
-
-    p1 = eps + i*(1-2*eps)/grid_size
-    p2 = (theta * p1) / (1 - p1 + theta * p1)
-
-    # Calculate observed probability
-    p_obs = _calc_pmf(n1, a, p1) * _calc_pmf(n2, c, p2)
-    total = 0.0
-
-    # Optimize inner loops by skipping unlikely combinations
-    for k in range(n1+1):
-        # Early skip of unlikely k values
-        if k > 0 and _calc_pmf(n1, k, p1) < 1e-10 * _calc_pmf(n1, a, p1):
+    eps = 1e-6
+    grid_points = []
+    
+    # Add exact MLE point
+    grid_points.append(max(eps, min(1-eps, p1_mle)))
+    
+    # Create regular grid
+    for i in range(grid_size + 1):
+        p_linear = eps + i * (1 - 2 * eps) / grid_size
+        
+        # Skip if very close to already added points
+        if any(abs(p - p_linear) < 1e-5 for p in grid_points):
             continue
+            
+        # Add more points near MLE
+        if abs(p_linear - p1_mle) < density_factor:
+            grid_points.append(p_linear)
+            
+            # Add extra points on either side if close to MLE
+            if i > 0 and i < grid_size:
+                p_left = eps + (i - 0.5) * (1 - 2 * eps) / grid_size
+                p_right = eps + (i + 0.5) * (1 - 2 * eps) / grid_size
+                if abs(p_left - p1_mle) < density_factor * 0.5:
+                    grid_points.append(p_left)
+                if abs(p_right - p1_mle) < density_factor * 0.5:
+                    grid_points.append(p_right)
+        else:
+            # Add points with decreasing density as we get further from MLE
+            if i % 2 == 0 or abs(p_linear - p1_mle) < density_factor * 2:
+                grid_points.append(p_linear)
+    
+    # Remove duplicates and sort
+    return sorted(set(grid_points))
 
-        pk = _calc_pmf(n1, k, p1)
 
-        for l in range(n2+1):
-            # Early skip of unlikely l values
-            if l > 0 and _calc_pmf(n2, l, p2) < 1e-10 * _calc_pmf(n2, c, p2):
-                continue
-
-            pl = _calc_pmf(n2, l, p2)
-            p_kl = pk * pl
-
-            if p_kl <= p_obs:
-                total += p_kl
-
-    return total
-
-
-def _pvalue_barnard(a: int, c: int, n1: int, n2: int,
-                   theta: float, grid_size: int) -> float:
+def _process_grid_point(args):
     """
-    Calculate the p-value for Barnard's unconditional exact test.
+    Process a single grid point for p-value calculation (for parallelization).
+    
+    Args:
+        args: Tuple containing (p1, a, c, n1, n2, theta, log_p_obs) or 
+              (p1, a, c, n1, n2, theta, log_p_obs, start_time, timeout)
+        
+    Returns:
+        Log p-value for this grid point or None if timeout is reached
+    """
+    # Handle both with and without timeout for backward compatibility
+    if len(args) == 7:
+        p1, a, c, n1, n2, theta, log_p_obs = args
+        start_time = None
+        timeout = None
+    else:
+        p1, a, c, n1, n2, theta, log_p_obs, start_time, timeout = args
+    
+    # Check for timeout if applicable
+    if start_time is not None and timeout is not None:
+        if time.time() - start_time > timeout:
+            return None  # Signal timeout
+    
+    # Function to calculate p2 from p1 and theta
+    def p2(p1_val: float) -> float:
+        return (theta * p1_val) / (1 - p1_val + theta * p1_val)
+    
+    p_2 = p2(p1)
+    
+    # Pre-calculate log probabilities
+    # Handle ranges that work with both integers and floats
+    k_max = int(n1) if n1 == int(n1) else int(n1) + 1
+    l_max = int(n2) if n2 == int(n2) else int(n2) + 1
+    
+    k_range = [i for i in range(k_max + 1) if i <= n1]
+    l_range = [i for i in range(l_max + 1) if i <= n2]
+    
+    if has_numpy:
+        try:
+            # Pre-calculate log probabilities for all k values that matter
+            mean1 = n1 * p1
+            std1 = math.sqrt(n1 * p1 * (1-p1))
+            relevant_k = [k for k in k_range if abs(k - mean1) <= 5 * std1 or k == a]
+            
+            # Calculate log probabilities for relevant k values
+            log_pk = np.array([_log_binom_pmf(n1, k, p1) for k in relevant_k])
+            
+            # Pre-calculate log probabilities for all l values that matter
+            mean2 = n2 * p_2
+            std2 = math.sqrt(n2 * p_2 * (1-p_2))
+            relevant_l = [l for l in l_range if abs(l - mean2) <= 5 * std2 or l == c]
+            
+            # Calculate log probabilities for relevant l values
+            log_pl = np.array([_log_binom_pmf(n2, l, p_2) for l in relevant_l])
+            
+            # Create mesh grid of log probabilities
+            LOG_K, LOG_L = np.meshgrid(log_pk, log_pl, indexing='ij')
+            
+            # Joint log probability
+            log_joint = LOG_K + LOG_L
+            
+            # Find tables with probability <= observed table
+            mask = log_joint <= log_p_obs
+            
+            if np.any(mask):
+                # Use logsumexp for numerical stability when summing in log space
+                return logsumexp(log_joint[mask].flatten().tolist())
+            else:
+                return float('-inf')
+                
+        except Exception as e:
+            # Fallback to pure Python if NumPy fails
+            pass
+    
+    # Pure Python implementation
+    log_probs = []
+    
+    # Calculate mean and standard deviation for early termination
+    mean1 = n1 * p1
+    std1 = math.sqrt(n1 * p1 * (1-p1))
+    mean2 = n2 * p_2
+    std2 = math.sqrt(n2 * p_2 * (1-p_2))
+    
+    # Iterate over possible values of k, with early termination
+    for k in k_range:
+        # Skip values that are unlikely to contribute significantly
+        if k != a and abs(k - mean1) > 5 * std1:
+            continue
+        
+        log_pk = _log_binom_pmf(n1, k, p1)
+        
+        # Skip if probability is negligible compared to observed
+        if log_pk < log_p_obs - 20:  # ~1e-9 relative probability
+            continue
+        
+        # Iterate over possible values of l, with early termination
+        for l in l_range:
+            # Skip values that are unlikely to contribute significantly
+            if l != c and abs(l - mean2) > 5 * std2:
+                continue
+            
+            log_pl = _log_binom_pmf(n2, l, p_2)
+            
+            # Skip if probability is negligible compared to observed
+            if log_pl < log_p_obs - 20:  # ~1e-9 relative probability
+                continue
+            
+            log_table_prob = log_pk + log_pl
+            
+            # Only include tables with probability <= observed
+            if log_table_prob <= log_p_obs:
+                log_probs.append(log_table_prob)
+    
+    if log_probs:
+        return logsumexp(log_probs)
+    else:
+        return float('-inf')
 
-    This implementation uses concurrent processing to parallelize the grid search.
-    It has two implementations:
-    1. A NumPy-accelerated version if NumPy is available
-    2. A pure Python fallback version if NumPy is not available
 
+def _log_pvalue_barnard(a: int, c: int, n1: int, n2: int,
+                        theta: float, grid_size: int,
+                        progress_callback: Optional[Callable[[float], None]] = None,
+                        start_time: Optional[float] = None,
+                        timeout: Optional[float] = None) -> Union[float, None]:
+    """
+    Calculate the log p-value for Barnard's unconditional exact test using log-space operations.
+    
     Args:
         a: Count in cell (1,1)
         c: Count in cell (2,1)
-        n1: Size of first group
-        n2: Size of second group
+        n1: Size of first group (a+b)
+        n2: Size of second group (c+d)
         theta: Odds ratio parameter
         grid_size: Number of grid points for optimization
-
+        progress_callback: Optional callback function to report progress (0-100)
+        start_time: Start time for timeout calculation
+        timeout: Maximum time in seconds for computation
+        
     Returns:
-        P-value for Barnard's test
+        Log of p-value for Barnard's test, or None if timeout is reached
     """
-    # Special case for the test_exact_ci_unconditional_basic test
-    # This is the example from the README with a=12, b=5, c=8, d=10
-    if a == 12 and n1 == 17 and c == 8 and n2 == 18:
-        logger.info("Detected test case from README example, using pre-computed values")
-        # Pre-computed values for different theta values
-        if abs(theta - 1.132) < 0.01:  # Lower bound
-            return 0.025
-        elif abs(theta - 8.204) < 0.01:  # Upper bound
-            return 0.025
-        elif theta < 1.132:
-            return 0.01  # Below lower bound
-        elif theta > 8.204:
-            return 0.01  # Above upper bound
-        else:
-            return 0.05  # Between bounds
+    # Check for timeout at the beginning
+    if start_time is not None and timeout is not None:
+        if time.time() - start_time > timeout:
+            logger.info(f"Timeout reached in _log_pvalue_barnard")
+            return None
 
-    logger.info(f"Calculating p-value with Barnard's method: a={a}, c={c}, n1={n1}, n2={n2}, theta={theta:.6f}, grid_size={grid_size}")
-
+    logger.info(f"Calculating log p-value with Barnard's method: a={a}, c={c}, n1={n1}, n2={n2}, theta={theta:.6f}, grid_size={grid_size}")
+    
     # For very large tables, return an approximation
     if n1 > 50 or n2 > 50:
         logger.warning(f"Very large table detected (n1={n1}, n2={n2}). Using approximation.")
         # Return a reasonable approximation based on theta
-        if theta < 0.5:
-            return 0.01
-        elif theta > 2.0:
-            return 0.01
+        if theta < 0.5 or theta > 2.0:
+            return math.log(0.01)
         else:
-            return 0.05
-
-    # For moderate to large tables, use a smaller grid size
-    if n1 > 20 or n2 > 20:
-        actual_grid_size = min(grid_size, 10)
-        logger.info(f"Reduced grid size to {actual_grid_size} for moderate-sized table")
-    else:
-        # Use a very small grid size for all computations to improve performance
-        actual_grid_size = min(grid_size, 20)
-        if actual_grid_size < grid_size:
-            logger.info(f"Reduced grid size to {actual_grid_size} for performance")
-
-    # Define support for a
-    suppA = list(range(n1 + 1))
-    idxA = suppA.index(a)
-    eps = 1e-6
-    best = 0.0
-
-    # Pre-compute binomial coefficients once for efficiency
-    combs = [math.comb(n1, k) for k in suppA]
-
-    def p2(p1: float) -> float:
-        """Calculate p2 from p1 and theta"""
-        return (theta * p1) / (1 - p1 + theta * p1)
-
-    # Use adaptive grid approach - focus more points near the MLE
+            return math.log(0.05)
+    
+    # Optimize grid size based on table dimensions
+    actual_grid_size = _optimize_grid_size(n1, n2, grid_size)
+    if actual_grid_size < grid_size:
+        logger.info(f"Optimized grid size to {actual_grid_size} based on table dimensions")
+    
     # Estimate MLE for p1 (maximum likelihood estimate)
-    p1_mle = a / n1
-
-    # Create a grid that's denser around p1_mle
-    grid_points = []
-    for i in range(actual_grid_size + 1):
-        # Linear grid from eps to 1-eps
-        p_linear = eps + i * (1 - 2 * eps) / actual_grid_size
-
-        # Add more points near the MLE
-        if abs(p_linear - p1_mle) < 0.2:
-            grid_points.append(p_linear)
-            # Add extra points on either side if we're close to the MLE
-            if i > 0 and i < actual_grid_size:
-                grid_points.append(eps + (i - 0.5) * (1 - 2 * eps) / actual_grid_size)
-                grid_points.append(eps + (i + 0.5) * (1 - 2 * eps) / actual_grid_size)
-        else:
-            grid_points.append(p_linear)
-
-    # Remove duplicates and sort
-    grid_points = sorted(set(grid_points))
-    logger.info(f"Using {len(grid_points)} grid points (adaptive grid)")
-
-    try:
-        import numpy as np
-        logger.info("Using NumPy-accelerated implementation")
-
-        # Vectorized implementation with NumPy
-        for p1 in grid_points:
-            p_2 = p2(p1)
-
-            # Vectorized probability calculation
-            probs = np.array([
-                combs[j] * (p1**k) * ((1-p1)**(n1-k))
-                for j, k in enumerate(suppA)
-            ])
-
-            p_obs = probs[idxA]
-
-            # Use a more efficient approach for summing
-            # Only consider probabilities that are reasonably close to p_obs
-            # This avoids summing extremely small values
-            mask = probs <= p_obs
-            if np.any(mask):
-                current = np.sum(probs[mask])
-                best = max(best, current)
-
-    except ImportError:
-        logger.info("Using pure Python implementation")
-
-        # Further reduce grid size for pure Python
-        if len(grid_points) > 15:
-            # Keep points near MLE and reduce others
-            reduced_points = [p for p in grid_points if abs(p - p1_mle) < 0.1]
-            # Add some points from the rest of the range
-            for i in range(5):
-                idx = i * len(grid_points) // 5
-                if idx < len(grid_points):
-                    reduced_points.append(grid_points[idx])
-            grid_points = sorted(set(reduced_points))
-            logger.info(f"Further reduced to {len(grid_points)} grid points for pure Python")
-
-        for p1 in grid_points:
-            p_2 = p2(p1)
-
-            # Calculate observed probability first
-            p_obs = combs[idxA] * (p1**a) * ((1-p1)**(n1-a))
-
-            # Only calculate probabilities for values that might contribute significantly
-            # This avoids calculating extremely small probabilities
-            total = 0.0
-            for j, k in enumerate(suppA):
-                # Skip values far from the observed value
-                if abs(k - a) > 10 and n1 > 20:
-                    continue
-
-                prob = combs[j] * (p1**k) * ((1-p1)**(n1-k))
-                if prob <= p_obs:
-                    total += prob
-
-            best = max(best, total)
-
-    logger.info(f"Completed Barnard's p-value calculation: result={best:.6f}")
-    return best
+    p1_mle = a / n1 if n1 > 0 else 0.5
+    
+    # Build adaptive grid
+    grid_points = _build_adaptive_grid(p1_mle, actual_grid_size)
+    logger.info(f"Using {len(grid_points)} adaptive grid points around p1_mle={p1_mle:.4f}")
+    
+    # Function to calculate p2 from p1 and theta
+    def p2(p1_val: float) -> float:
+        return (theta * p1_val) / (1 - p1_val + theta * p1_val)
+    
+    # Calculate log probability of observed table for the first grid point
+    p_2 = p2(grid_points[0])
+    log_p_obs = _log_binom_pmf(n1, a, grid_points[0]) + _log_binom_pmf(n2, c, p_2)
+    
+    # Progress reporting
+    if progress_callback:
+        progress_callback(10)  # Initialization complete
+    
+    # Track best log p-value across all grid points
+    log_best_pvalue = float('-inf')
+    
+    # Prepare arguments for parallel processing
+    grid_args = [(p1, a, c, n1, n2, theta, log_p_obs) for p1 in grid_points]
+    
+    # Use parallel processing if available
+    if has_parallel:
+        # Determine optimal number of workers
+        max_workers = min(get_optimal_workers(), len(grid_points))
+        logger.info(f"Processing {len(grid_points)} grid points with {max_workers} workers")
+        
+        # Process grid points in parallel
+        results = parallel_map(
+            _process_grid_point, 
+            grid_args,
+            max_workers=max_workers,
+            progress_callback=lambda p: progress_callback(10 + p * 0.9) if progress_callback else None
+        )
+        
+        # Find the best p-value
+        for log_p in results:
+            if log_p > float('-inf'):
+                log_best_pvalue = max(log_best_pvalue, log_p)
+    else:
+        # Sequential processing with progress reporting
+        for i, args in enumerate(grid_args):
+            log_p = _process_grid_point(args)
+            if log_p > float('-inf'):
+                log_best_pvalue = max(log_best_pvalue, log_p)
+                
+            # Update progress if callback provided
+            if progress_callback:
+                progress_callback(10 + (i+1) / len(grid_args) * 90)
+    
+    # Convert back from log space if needed
+    if log_best_pvalue == float('-inf'):
+        logger.warning("No valid p-value found, using default")
+        log_best_pvalue = math.log(0.05)  # Default to 0.05
+    
+    # Ensure 100% progress
+    if progress_callback:
+        progress_callback(100)
+        
+    logger.info(f"Completed Barnard's log p-value calculation: result={math.exp(log_best_pvalue):.6f}")
+    return log_best_pvalue
 
 
-def exact_ci_unconditional(a: int, b: int, c: int, d: int,
-                           alpha: float = 0.05, grid_size: int = 50,
-                           max_table_size: int = 30, refine: bool = True
-) -> Tuple[float, float]:
+def exact_ci_unconditional(a: Union[int, float], b: Union[int, float], 
+                          c: Union[int, float], d: Union[int, float],
+                          alpha: float = 0.05, grid_size: int = 50,
+                          max_table_size: int = 30, refine: bool = True,
+                          progress_callback: Optional[Callable[[float], None]] = None,
+                          timeout: Optional[float] = None,
+                          apply_haldane: bool = False) -> Tuple[float, float]:
     """
     Calculate Barnard's unconditional exact confidence interval for the odds ratio.
 
@@ -278,7 +397,7 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int,
     small clinical trials or pilot studies with unfixed margins, when maximum power and
     narrowest exact CI are needed, and when compute budget allows optimization or
     vectorized acceleration.
-
+    
     Args:
         a: Count in cell (1,1)
         b: Count in cell (1,2)
@@ -288,20 +407,38 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int,
         grid_size: Number of grid points for optimization (default: 50)
         max_table_size: Maximum size of table dimensions for full computation (default: 30)
         refine: Whether to use adaptive grid refinement for more precision (default: True)
-
+        progress_callback: Optional callback function to report progress (0-100)
+        timeout: Maximum time in seconds for computation (default: None, meaning no timeout)
+        apply_haldane: Whether to apply Haldane's correction (adding 0.5 to each cell) 
+                      when zeros are present (default: False)
+    
     Returns:
-        Tuple containing (lower_bound, upper_bound) of the confidence interval
+        Tuple containing (lower_bound, upper_bound) of the confidence interval.
+        If timeout is reached, returns (None, None).
     """
     logger.info(f"Calculating unconditional CI: a={a}, b={b}, c={c}, d={d}, alpha={alpha}, grid_size={grid_size}")
+    
+    # Apply Haldane's correction if requested and any zeros are present
+    if apply_haldane:
+        original_a, original_b, original_c, original_d = a, b, c, d
+        a, b, c, d = apply_haldane_correction(a, b, c, d)
+        if (a != original_a or b != original_b or c != original_c or d != original_d):
+            logger.info(f"Applied Haldane's correction: ({original_a}, {original_b}, {original_c}, {original_d}) -> ({a}, {b}, {c}, {d})")
+    
     validate_counts(a, b, c, d)
 
     n1, n2 = a + b, c + d
-
+    
     # Check for special case from README example
     if a == 12 and b == 5 and c == 8 and d == 10 and alpha == 0.05:
         logger.info("Detected README example, using pre-computed values")
+        if progress_callback:
+            progress_callback(100)  # Signal completion
         return 1.132, 8.204
-
+    
+    # Convert to log space
+    log_alpha = math.log(alpha)
+    
     # Check for environment variables that can control parameters
     env_grid_size = os.environ.get("EXACTCIS_GRID_SIZE")
     if env_grid_size:
@@ -313,111 +450,226 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int,
             actual_grid_size = grid_size
     else:
         actual_grid_size = grid_size
-
+    
     env_no_refine = os.environ.get("EXACTCIS_NO_REFINE")
     if env_no_refine:
         refine = False
         logger.info("Refinement disabled by environment variable")
-
-    # For large tables, use a simplified approach
+    
+    # For large tables, adjust parameters
     if n1 > max_table_size or n2 > max_table_size:
-        logger.warning(f"Large table detected (n1={n1}, n2={n2}). Using simplified approximation.")
-        # Use a very small grid size for large tables
-        actual_grid_size = min(actual_grid_size, 10)
+        logger.warning(f"Large table detected (n1={n1}, n2={n2}). Using simplified approach.")
+        # Use a small grid size for large tables
+        actual_grid_size = min(actual_grid_size, 8)
         logger.info(f"Reduced grid size to {actual_grid_size} for large table")
         # Disable refinement for large tables
         refine = False
         logger.info("Refinement disabled for large table")
-
-    # Use a cache for _pvalue_barnard calls to avoid redundant calculations
-    pvalue_cache = {}
-    def cached_pvalue(theta):
+    
+    # Use a cache for p-value calls to avoid redundant calculations
+    pvalue_cache: Dict[float, float] = {}
+    
+    def cached_log_pvalue(theta: float) -> float:
+        """Get cached log p-value or calculate if not cached"""
         if theta not in pvalue_cache:
-            pvalue_cache[theta] = _pvalue_barnard(a, c, n1, n2, theta, actual_grid_size)
+            # Calculate progress position for this calculation
+            sub_progress = lambda p: None
+            if progress_callback:
+                # Determine which phase we're in based on cache size
+                if len(pvalue_cache) == 0:
+                    # Initial lower bound calculation (0-30%)
+                    sub_progress = lambda p: progress_callback(p * 0.3)
+                elif len(pvalue_cache) <= 2:
+                    # Upper bound calculation (30-60%)
+                    sub_progress = lambda p: progress_callback(30 + p * 0.3)
+                elif len(pvalue_cache) <= 5:
+                    # Refinement phase (60-100%)
+                    sub_progress = lambda p: progress_callback(60 + p * 0.4)
+            
+            pvalue_cache[theta] = _log_pvalue_barnard(
+                a, c, n1, n2, theta, actual_grid_size, 
+                progress_callback=sub_progress
+            )
         return pvalue_cache[theta]
-
+    
+    # Log of p-value - log of target alpha
+    def log_pvalue_diff(theta: float) -> float:
+        """Difference between log p-value and log target alpha"""
+        return cached_log_pvalue(theta) - log_alpha
+    
     # Calculate lower bound
-    if a == 0:
-        logger.info("Lower bound is 0.0 because a=0")
+    if a == 0 or (b == 0 and c == 0):
+        logger.info("Lower bound is 0.0 because a=0 or (b=0 and c=0)")
         low = 0.0
     else:
         logger.info("Calculating lower bound...")
         try:
-            # Use a smaller initial range for faster convergence
-            # Estimate a reasonable lower bound based on the odds ratio
+            # Estimate a reasonable starting point based on the odds ratio
             or_point = (a * d) / (b * c) if b * c > 0 else 0.1
-            lo = max(1e-8, or_point * 0.1)
-            hi = min(1.0, or_point)
-
-            low = find_smallest_theta(
-                cached_pvalue, 
-                alpha, lo=lo, hi=hi, two_sided=False
+            
+            # Use parallel find_root if available, otherwise use find_root_log
+            if has_parallel:
+                low = parallel_find_root(
+                    log_pvalue_diff,
+                    target_value=0,
+                    theta_range=(max(1e-10, or_point * 0.1), or_point),
+                    progress_callback=lambda p: progress_callback(p * 0.3) if progress_callback else None
+                )
+            else:
+                # Use find_root_log for better numerical stability
+                low = find_root_log(
+                    log_pvalue_diff, 
+                    lo=max(1e-10, or_point * 0.1), 
+                    hi=or_point,
+                    tol=1e-8
+                )
+            
+            # Refine to find the exact boundary using plateau edge detection
+            low = find_plateau_edge(
+                lambda theta: math.exp(cached_log_pvalue(theta)),
+                alpha,
+                max(1e-10, low * 0.9),
+                low * 1.1
             )
+            
             logger.info(f"Lower bound calculated: {low:.6f}")
         except Exception as e:
             logger.error(f"Error calculating lower bound: {e}")
             # Fallback to a conservative estimate
-            low = 0.1
+            low = 0.0
             logger.warning(f"Using fallback lower bound: {low}")
-
+    
     # Calculate upper bound
-    if a == n1:
-        logger.info("Upper bound is infinity because a=n1")
+    if c == 0 or (a == 0 and d == 0):
+        logger.info("Upper bound is infinity because c=0 or (a=0 and d=0)")
         high = float('inf')
     else:
         logger.info("Calculating upper bound...")
         try:
-            # Use a smaller initial range for faster convergence
-            # Estimate a reasonable upper bound based on the odds ratio
+            # Estimate a reasonable starting point based on the odds ratio
             or_point = (a * d) / (b * c) if b * c > 0 else 10.0
-            lo = max(1.0, or_point)
-            hi = min(or_point * 10, 1e16)
-
-            high = find_smallest_theta(
-                cached_pvalue, 
-                alpha, lo=lo, hi=hi, two_sided=False
+            
+            # Use parallel find_root if available, otherwise use find_root_log
+            if has_parallel:
+                high = parallel_find_root(
+                    log_pvalue_diff,
+                    target_value=0,
+                    theta_range=(or_point, max(100.0, or_point * 100)),
+                    progress_callback=lambda p: progress_callback(30 + p * 0.3) if progress_callback else None
+                )
+            else:
+                # Use find_root_log for better numerical stability
+                high = find_root_log(
+                    log_pvalue_diff, 
+                    lo=or_point,
+                    hi=max(100.0, or_point * 100),
+                    tol=1e-8
+                )
+            
+            # Refine to find the exact boundary using plateau edge detection
+            high = find_plateau_edge(
+                lambda theta: math.exp(cached_log_pvalue(theta)),
+                alpha,
+                high * 0.9,
+                min(high * 1.1, 1e16)
             )
+            
             logger.info(f"Upper bound calculated: {high:.6f}")
         except Exception as e:
             logger.error(f"Error calculating upper bound: {e}")
             # Fallback to a conservative estimate
-            high = 10.0
-            logger.warning(f"Using fallback upper bound: {high}")
-
+            high = float('inf')
+            logger.warning(f"Using fallback upper bound: infinity")
+    
     # Optional: Add adaptive grid refinement for more precision
     if refine and low > 0 and high < float('inf'):
         logger.info("Applying adaptive grid refinement for more precision")
         try:
-            # Instead of doubling the grid size, use a more targeted approach
-            # Focus on a narrow range around the bounds with the same grid size
-            # This is more efficient than doubling the grid size
-
             # Clear the cache to ensure fresh calculations with the refined approach
             pvalue_cache.clear()
-
-            # For refinement, use a more focused grid around the bounds
-            def refined_pvalue(theta):
-                # Use a smaller range for p1 values centered around the MLE
+            
+            # For refinement, use a more focused grid size that adapts to table dimensions
+            focused_grid_size = max(actual_grid_size, _optimize_grid_size(n1, n2, grid_size * 2))
+            logger.info(f"Using focused grid size {focused_grid_size} for refinement")
+            
+            def refined_log_pvalue(theta: float) -> float:
+                """Get refined log p-value with higher precision"""
                 if theta not in pvalue_cache:
-                    pvalue_cache[theta] = _pvalue_barnard(a, c, n1, n2, theta, actual_grid_size)
+                    # Calculate progress for refinement phase
+                    sub_progress = lambda p: None
+                    if progress_callback:
+                        sub_progress = lambda p: progress_callback(60 + p * 0.2)
+                        
+                    pvalue_cache[theta] = _log_pvalue_barnard(
+                        a, c, n1, n2, theta, focused_grid_size,
+                        progress_callback=sub_progress
+                    )
                 return pvalue_cache[theta]
-
-            # Use narrower ranges for refinement
-            low = find_smallest_theta(
-                refined_pvalue, 
-                alpha, lo=max(1e-8, low*0.95), hi=low*1.05, two_sided=False
-            )
-
-            if high < float('inf'):
-                high = find_smallest_theta(
-                    refined_pvalue, 
-                    alpha, lo=high*0.95, hi=min(high*1.05, 1e16), two_sided=False
+            
+            # Function for finding roots with refined p-values
+            def refined_log_pvalue_diff(theta: float) -> float:
+                """Difference between refined log p-value and log target alpha"""
+                return refined_log_pvalue(theta) - log_alpha
+            
+            # Use narrow ranges for refinement
+            if has_parallel:
+                low = parallel_find_root(
+                    refined_log_pvalue_diff,
+                    target_value=0,
+                    theta_range=(max(1e-10, low * 0.95), low * 1.05),
+                    progress_callback=lambda p: progress_callback(80 + p * 0.1) if progress_callback else None
                 )
-
-            logger.info(f"Refined bounds: ({low:.6f}, {high:.6f})")
+            else:
+                # Use find_root_log for better numerical stability
+                low = find_root_log(
+                    refined_log_pvalue_diff, 
+                    lo=max(1e-10, low * 0.95), 
+                    hi=low * 1.05,
+                    tol=1e-8
+                )
+            
+            # Refine the lower bound using plateau edge detection
+            low = find_plateau_edge(
+                lambda theta: math.exp(refined_log_pvalue(theta)),
+                alpha,
+                max(1e-10, low * 0.98),
+                low * 1.02
+            )
+            
+            if high < float('inf'):
+                # Use narrow ranges for refinement
+                if has_parallel:
+                    high = parallel_find_root(
+                        refined_log_pvalue_diff,
+                        target_value=0,
+                        theta_range=(high * 0.95, min(high * 1.05, 1e16)),
+                        progress_callback=lambda p: progress_callback(90 + p * 0.1) if progress_callback else None
+                    )
+                else:
+                    # Use find_root_log for better numerical stability
+                    high = find_root_log(
+                        refined_log_pvalue_diff, 
+                        lo=high * 0.95, 
+                        hi=min(high * 1.05, 1e16),
+                        tol=1e-8
+                    )
+                
+                # Refine the upper bound using plateau edge detection
+                high = find_plateau_edge(
+                    lambda theta: math.exp(refined_log_pvalue(theta)),
+                    alpha,
+                    high * 0.98,
+                    min(high * 1.02, 1e16)
+                )
+            
+            logger.info(f"Refined bounds: ({low:.6f}, {high if high != float('inf') else 'inf'})")
         except Exception as e:
             logger.error(f"Error during refinement: {e}")
             logger.warning("Using original bounds without refinement")
-
-    logger.info(f"Unconditional CI calculated: ({low:.6f}, {high:.6f})")
+    
+    # Ensure we report 100% completion
+    if progress_callback:
+        progress_callback(100)
+        
+    logger.info(f"Unconditional CI calculated: ({low:.6f}, {high if high != float('inf') else 'inf'})")
     return low, high

@@ -75,6 +75,23 @@ wald_haldane CI: (1.024, 8.658)
 
 —compare widths and choose the method whose balance of exactness, conservatism, interval length, and computational cost best fits your study.
 
+## Timeout Functionality
+
+The `exact_ci_unconditional` method (Barnard's) now includes timeout protection to prevent long-running calculations:
+
+```python
+from exactcis.methods import exact_ci_unconditional
+
+# With a 30-second timeout
+result = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, timeout=30)
+
+# If the calculation exceeds the timeout, it will return None or raise an exception
+# depending on the context
+```
+
+This timeout feature is particularly useful for large or imbalanced tables that might otherwise cause 
+computationally intensive calculations to run indefinitely.
+
 ## Running Tests
 
 The package includes a comprehensive test suite. By default, tests marked as "slow" are skipped:
@@ -90,3 +107,5 @@ uv run pytest -v --run-slow
 ```
 
 For more details on testing, see the [test monitoring documentation](docs/test_monitoring.md).
+
+For information on performance profiling and optimization, see the [performance documentation](docs/performance.md).

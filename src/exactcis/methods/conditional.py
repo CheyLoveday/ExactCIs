@@ -7,7 +7,6 @@ for the odds ratio of a 2x2 contingency table.
 
 from typing import Tuple
 
-from exactcis.core import validate_counts, support, pmf, find_smallest_theta
 
 
 def exact_ci_conditional(a: int, b: int, c: int, d: int,
@@ -36,37 +35,16 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
         raise ValueError("alpha must be in (0, 1)")
     validate_counts(a, b, c, d)
 
-    n1, n2, m = a + b, c + d, a + c
-    supp = support(n1, n2, m)
     kmin, kmax = supp[0], supp[-1]
-
-    def cdf_tail(theta: float, upper: bool) -> float:
-        return sum(pmf(k, n1, n2, m, theta)
-                   for k in supp if (k >= a if upper else k <= a))
-
-    # For edge cases, use predefined values
+    
+    
     if a == kmin:
         low = 0.0
-    else:
-        try:
-            low = find_smallest_theta(
-                lambda theta: cdf_tail(theta, True), alpha, lo=1e-8, hi=1.0, two_sided=True
-            )
-        except RuntimeError:
-            low = 0.0
-
-    if a == kmax:
-        high = float('inf')
-    else:
-        try:
-            high = find_smallest_theta(
-                lambda theta: cdf_tail(theta, False), alpha, lo=1.0, two_sided=True
-            )
-        except RuntimeError:
-            # For the edge case where a is at the minimum possible value,
-            # we should return a finite upper bound
-            if a == kmin:
-                high = float('inf')  # Consistent with other edge cases
-            else:
+        else:
+            try:
+                )
+                low = 0.0
+        
                 high = float('inf')
+            high = float('inf')
     return low, high

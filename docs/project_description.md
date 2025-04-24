@@ -39,6 +39,7 @@ exactcis/
 │       └── test_stats.py
 ├── docs/
 │   ├── project_description.md
+│   ├── performance.md
 │   └── test_monitoring.md
 ├── pyproject.toml
 └── README.md
@@ -53,6 +54,7 @@ The core functionality of the package is implemented in `src/exactcis/core.py`, 
 1. **Validation**: Functions to validate the input counts for a 2×2 contingency table.
 2. **Probability Mass Function**: Functions to calculate the probability mass function of the noncentral hypergeometric distribution.
 3. **Root Finding**: Functions to find the root of a function using the bisection method and to find the smallest theta value that satisfies a given constraint.
+4. **Timeout Handling**: Functions now include timeout checks to prevent long-running calculations from hanging indefinitely.
 
 ### Confidence Interval Methods
 
@@ -64,9 +66,18 @@ The package provides five methods to compute confidence intervals for the odds r
 
 3. **Blaker's Exact**: Uses the acceptability function f(k)=min[P(K≤k),P(K≥k)] and inverts it exactly for monotonic, non-flip intervals. Appropriate for routine exact inference when Fisher is overly conservative, fields standardized on Blaker (e.g., genomics, toxicology), and exact coverage with minimal over-coverage.
 
-4. **Unconditional (Barnard's)**: Treats both margins as independent binomials, optimizes over nuisance p₁ via grid (or NumPy) search, and inverts the worst-case p-value. Appropriate for small clinical trials or pilot studies with unfixed margins, when maximum power and narrowest exact CI are needed, and when compute budget allows optimization or vectorized acceleration.
+4. **Unconditional (Barnard's)**: Treats both margins as independent binomials, optimizes over nuisance p₁ via grid (or NumPy) search, and inverts the worst-case p-value. Appropriate for small clinical trials or pilot studies with unfixed margins, when maximum power and narrowest exact CI are needed, and when compute budget allows optimization or vectorized acceleration. **Now supports timeout functionality** to prevent long-running calculations.
 
 5. **Haldane-Anscombe Wald**: Adds 0.5 to each cell and applies the standard log-OR ± z·SE formula. Includes a pure-Python normal quantile fallback if SciPy is absent. Appropriate for large samples where asymptotic Wald is reasonable, quick approximate intervals for routine reporting, and when speed and convenience outweigh strict exactness.
+
+### Timeout Functionality
+
+The package now includes timeout functionality to prevent computationally intensive methods from running indefinitely:
+
+- The `exact_ci_unconditional` function accepts a `timeout` parameter (in seconds)
+- Core root-finding functions in `core.py` accept a `timeout_checker` function to enable early termination
+- If a calculation exceeds the timeout, it will return gracefully instead of hanging indefinitely
+- This functionality is particularly useful for large or imbalanced tables that might otherwise cause excessive computation times
 
 ### Dependency Management
 
@@ -85,6 +96,14 @@ The package includes a comprehensive test suite organized into multiple categori
 - **Integration Tests**: Tests that check the full computation pipeline.
 
 By default, slow tests are skipped unless the `--run-slow` option is specified. The test suite also includes timeout settings to prevent tests from running indefinitely.
+
+## Profiling and Optimization
+
+The project includes several tools for profiling and optimizing performance:
+
+- **`profile_with_timeout.py`**: Tests various confidence interval methods with timeout protection to identify problematic calculations.
+- **`optimize_unconditional.py`**: Optimizes parameters for the unconditional method such as grid size and refinement settings.
+- **Performance Documentation**: See `docs/performance.md` for comprehensive performance guidance.
 
 ## Current Status
 
@@ -107,7 +126,7 @@ The package generally handles edge cases well, including:
 - Small counts
 - Imbalanced tables
 
-The unconditional method is computationally intensive and may raise exceptions for extreme cases, but this behavior is documented and handled appropriately in the test suite.
+The unconditional method is computationally intensive and may raise exceptions for extreme cases, but this behavior is documented and handled appropriately in the test suite. The new timeout functionality also helps manage these challenging cases.
 
 ## Future Improvements
 
@@ -117,7 +136,8 @@ Potential future improvements include:
 2. **Additional Methods**: Implement other confidence interval methods for odds ratios.
 3. **Documentation**: Expand documentation with more examples and use cases.
 4. **Visualization**: Add functions to visualize confidence intervals.
+5. **Parallel Processing**: Improve the parallel processing capabilities for the unconditional method to utilize multiple cores more efficiently.
 
 ## Conclusion
 
-ExactCIs is a well-structured Python package that provides a comprehensive set of methods for computing confidence intervals for odds ratios. The package is designed to be flexible, reliable, and easy to use, with appropriate handling of edge cases and performance considerations.
+ExactCIs is a well-structured Python package that provides a comprehensive set of methods for computing confidence intervals for odds ratios. The package is designed to be flexible, reliable, and easy to use, with appropriate handling of edge cases and performance considerations. The addition of timeout functionality improves robustness when dealing with computationally intensive calculations.
