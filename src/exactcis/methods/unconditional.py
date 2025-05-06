@@ -388,7 +388,9 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
                           max_table_size: int = 30, refine: bool = True,
                           progress_callback: Optional[Callable[[float], None]] = None,
                           timeout: Optional[float] = None,
-                          apply_haldane: bool = False) -> Tuple[float, float]:
+                          apply_haldane: bool = False,
+                          theta_min: Optional[float] = None,
+                          theta_max: Optional[float] = None) -> Tuple[float, float]:
     """
     Calculate Barnard's unconditional exact confidence interval for the odds ratio.
 
@@ -411,12 +413,16 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
         timeout: Maximum time in seconds for computation (default: None, meaning no timeout)
         apply_haldane: Whether to apply Haldane's correction (adding 0.5 to each cell) 
                       when zeros are present (default: False)
+        theta_min: Optional lower bound for theta search (default: None)
+        theta_max: Optional upper bound for theta search (default: None)
     
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval.
         If timeout is reached, returns (None, None).
     """
     logger.info(f"Calculating unconditional CI: a={a}, b={b}, c={c}, d={d}, alpha={alpha}, grid_size={grid_size}")
+    if theta_min is not None and theta_max is not None:
+        logger.info(f"Using guided search with theta_min={theta_min:.6f}, theta_max={theta_max:.6f}")
     
     # Apply Haldane's correction if requested and any zeros are present
     if apply_haldane:
@@ -507,32 +513,46 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
             # Estimate a reasonable starting point based on the odds ratio
             or_point = (a * d) / (b * c) if b * c > 0 else 0.1
             
+            # Use provided theta_min if available
+            if theta_min is not None:
+                lower_start = max(1e-10, theta_min * 0.9)
+                lower_end = min(or_point, theta_min * 1.1)
+                logger.info(f"Using guided lower bounds: {lower_start:.6f} to {lower_end:.6f}")
+            else:
+                lower_start = max(1e-10, or_point * 0.1)
+                lower_end = or_point
+            
             # Use parallel find_root if available, otherwise use find_root_log
             if has_parallel:
                 low = parallel_find_root(
                     log_pvalue_diff,
                     target_value=0,
-                    theta_range=(max(1e-10, or_point * 0.1), or_point),
+                    theta_range=(lower_start, lower_end),
                     progress_callback=lambda p: progress_callback(p * 0.3) if progress_callback else None
                 )
             else:
                 # Use find_root_log for better numerical stability
                 low = find_root_log(
                     log_pvalue_diff, 
-                    lo=max(1e-10, or_point * 0.1), 
-                    hi=or_point,
+                    lo=lower_start, 
+                    hi=lower_end,
                     tol=1e-8
                 )
             
             # Refine to find the exact boundary using plateau edge detection
-            low = find_plateau_edge(
+            plateau_result = find_plateau_edge(
                 lambda theta: math.exp(cached_log_pvalue(theta)),
-                alpha,
-                max(1e-10, low * 0.9),
-                low * 1.1
+                lo=max(1e-10, low * 0.9),
+                hi=low * 1.1,
+                target=alpha
             )
             
-            logger.info(f"Lower bound calculated: {low:.6f}")
+            # Handle the tuple return value correctly
+            if plateau_result is not None:
+                low = plateau_result[0]  # First element is the result value
+                logger.info(f"Lower bound calculated: {low:.6f}")
+            else:
+                logger.warning("Plateau edge detection failed for lower bound")
         except Exception as e:
             logger.error(f"Error calculating lower bound: {e}")
             # Fallback to a conservative estimate
@@ -549,32 +569,46 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
             # Estimate a reasonable starting point based on the odds ratio
             or_point = (a * d) / (b * c) if b * c > 0 else 10.0
             
+            # Use provided theta_max if available
+            if theta_max is not None:
+                upper_start = max(or_point, theta_max * 0.9)
+                upper_end = min(1e16, theta_max * 1.1)
+                logger.info(f"Using guided upper bounds: {upper_start:.6f} to {upper_end:.6f}")
+            else:
+                upper_start = or_point
+                upper_end = max(100.0, or_point * 100)
+            
             # Use parallel find_root if available, otherwise use find_root_log
             if has_parallel:
                 high = parallel_find_root(
                     log_pvalue_diff,
                     target_value=0,
-                    theta_range=(or_point, max(100.0, or_point * 100)),
+                    theta_range=(upper_start, upper_end),
                     progress_callback=lambda p: progress_callback(30 + p * 0.3) if progress_callback else None
                 )
             else:
                 # Use find_root_log for better numerical stability
                 high = find_root_log(
                     log_pvalue_diff, 
-                    lo=or_point,
-                    hi=max(100.0, or_point * 100),
+                    lo=upper_start,
+                    hi=upper_end,
                     tol=1e-8
                 )
             
             # Refine to find the exact boundary using plateau edge detection
-            high = find_plateau_edge(
+            plateau_result = find_plateau_edge(
                 lambda theta: math.exp(cached_log_pvalue(theta)),
-                alpha,
-                high * 0.9,
-                min(high * 1.1, 1e16)
+                lo=high * 0.9,
+                hi=min(high * 1.1, 1e16),
+                target=alpha
             )
             
-            logger.info(f"Upper bound calculated: {high:.6f}")
+            # Handle the tuple return value correctly
+            if plateau_result is not None:
+                high = plateau_result[0]  # First element is the result value
+                logger.info(f"Upper bound calculated: {high:.6f}")
+            else:
+                logger.warning("Plateau edge detection failed for upper bound")
         except Exception as e:
             logger.error(f"Error calculating upper bound: {e}")
             # Fallback to a conservative estimate
@@ -629,12 +663,18 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
                 )
             
             # Refine the lower bound using plateau edge detection
-            low = find_plateau_edge(
+            plateau_result = find_plateau_edge(
                 lambda theta: math.exp(refined_log_pvalue(theta)),
-                alpha,
-                max(1e-10, low * 0.98),
-                low * 1.02
+                lo=max(1e-10, low * 0.98),
+                hi=low * 1.02,
+                target=alpha
             )
+            
+            # Handle the tuple return value correctly
+            if plateau_result is not None:
+                low = plateau_result[0]  # First element is the result value
+            else:
+                logger.warning("Plateau edge detection failed for lower bound")
             
             if high < float('inf'):
                 # Use narrow ranges for refinement
@@ -655,12 +695,18 @@ def exact_ci_unconditional(a: Union[int, float], b: Union[int, float],
                     )
                 
                 # Refine the upper bound using plateau edge detection
-                high = find_plateau_edge(
+                plateau_result = find_plateau_edge(
                     lambda theta: math.exp(refined_log_pvalue(theta)),
-                    alpha,
-                    high * 0.98,
-                    min(high * 1.02, 1e16)
+                    lo=high * 0.98,
+                    hi=min(high * 1.02, 1e16),
+                    target=alpha
                 )
+                
+                # Handle the tuple return value correctly
+                if plateau_result is not None:
+                    high = plateau_result[0]  # First element is the result value
+                else:
+                    logger.warning("Plateau edge detection failed for upper bound")
             
             logger.info(f"Refined bounds: ({low:.6f}, {high if high != float('inf') else 'inf'})")
         except Exception as e:
