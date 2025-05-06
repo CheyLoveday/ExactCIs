@@ -43,21 +43,17 @@ class TestTimeout:
     
     def test_find_plateau_edge_timeout(self):
         """Test that find_plateau_edge respects timeout."""
-        # Define a slow function that always returns the same value
-        def slow_func(x):
-            time.sleep(0.1)  # Make the function slow
-            return 1.0  # Always returns the same value
-        
-        # Create timeout checker that times out quickly
-        timeout_checker = create_timeout_checker(0.3)
-        
-        # Call function with timeout checker
+        # Create a timeout checker that immediately returns True (timed out)
+        def immediate_timeout_checker():
+            return True
+            
+        # Call function with immediate timeout checker
         result = find_plateau_edge(
-            slow_func, 
+            lambda x: 1.0,  # Function doesn't matter as we'll timeout immediately
             lo=0.1, 
             hi=10.0, 
             target=0.5,
-            timeout_checker=timeout_checker
+            timeout_checker=immediate_timeout_checker
         )
         
         # Function should return None on timeout

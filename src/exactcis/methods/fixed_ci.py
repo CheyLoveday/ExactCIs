@@ -8,15 +8,17 @@ method that addresses numerical stability issues in the original implementation.
 import math
 import logging
 import time
-from typing import Tuple, Union, Callable, Optional, Dict, Any
+from typing import Dict, List, Tuple, Callable, Optional, Any, Union
 
+# Third-party imports
 import numpy as np
-import pandas as pd
 from scipy import stats
-import statsmodels.api as sm
 
+# Local imports
+from ..core import calculate_odds_ratio
+from .unconditional import exact_ci_unconditional, _log_pvalue_barnard as unconditional_log_pvalue
 from exactcis.core import validate_counts, apply_haldane_correction
-from exactcis.methods.unconditional import exact_ci_unconditional
+from ..utils.optimization import get_global_cache, derive_search_params
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,221 +29,150 @@ def improved_ci_unconditional(
     c: Union[int, float], 
     d: Union[int, float],
     alpha: float = 0.05, 
-    grid_size: int = 50,
-    max_table_size: int = 30, 
-    refine: bool = True,
-    progress_callback: Optional[Callable[[float], None]] = None,
-    timeout: Optional[float] = None,
-    apply_haldane: bool = False,
-    use_fallback: bool = True,
-    return_details: bool = False
-) -> Union[Tuple[float, float], Tuple[float, float, Dict[str, Any]]]:
+    fallback_method: str = "statsmodels",
+    max_time: float = 120,
+    optimization_params: Optional[Dict[str, Any]] = None
+) -> Tuple[Tuple[float, float], Dict[str, Any]]:
     """
-    Improved version of Barnard's unconditional exact confidence interval calculation.
+    Calculate improved Barnard's unconditional exact confidence interval.
     
-    This function uses a two-step approach:
-    1. Get quick initial boundaries using statsmodels/Fisher's exact test
-    2. Use those boundaries to guide the more detailed unconditional method
+    This function implements a two-step approach:
+    1. Get quick initial estimates to bound the search
+    2. Run the unconditional method with these bounds for a guided, efficient search
     
     Args:
-        a: Count in cell (1,1)
-        b: Count in cell (1,2)
-        c: Count in cell (2,1)
-        d: Count in cell (2,2)
-        alpha: Significance level (default: 0.05)
-        grid_size: Number of grid points (default: 50)
-        max_table_size: Maximum table size for full computation (default: 30)
-        refine: Whether to use refinement for precision (default: True)
-        progress_callback: Optional progress reporting callback
-        timeout: Maximum computation time in seconds
-        apply_haldane: Whether to apply Haldane's correction
-        use_fallback: Whether to use statsmodels fallback when needed
-        return_details: Whether to return details about which method was used
+        a, b, c, d: Cell counts for 2x2 table
+        alpha: Significance level (default 0.05)
+        fallback_method: Method to use as fallback ('statsmodels' or 'fisher')
+        max_time: Maximum time in seconds to attempt calculation
+        optimization_params: Additional optimization parameters
         
     Returns:
-        If return_details=False:
-            Tuple containing (lower_bound, upper_bound) of the confidence interval.
-        If return_details=True:
-            Tuple containing (lower_bound, upper_bound, details_dict)
-            where details_dict contains information about which method was used.
+        Tuple of ((lower, upper), metadata) where metadata contains information about the calculation
     """
-    # Start timer for timeout checking
     start_time = time.time()
-    result_details = {
-        "method_used": "unknown",
+    logger.info(f"Starting improved CI calculation for ({a},{b},{c},{d}) at alpha={alpha}")
+    
+    # Initialize result metadata
+    metadata = {
+        "original_method_used": False,
+        "method_used": "unconditional_guided",
+        "warnings": [],
+        "calculation_time": 0,
         "fallback_used": False,
-        "convergence_achieved": True,
-        "time_taken": 0.0,
-        "warnings": []
+        "initial_bounds_method": None
     }
     
-    # Apply Haldane's correction if requested
-    if apply_haldane:
-        original_a, original_b, original_c, original_d = a, b, c, d
-        a, b, c, d = apply_haldane_correction(a, b, c, d)
-        if (a != original_a or b != original_b or c != original_c or d != original_d):
-            logger.info(f"Applied Haldane's correction: ({original_a}, {original_b}, {original_c}, {original_d}) -> ({a}, {b}, {c}, {d})")
-            result_details["warnings"].append("Applied Haldane's correction")
+    # Check cache first
+    cache = get_global_cache()
+    cached_result = cache.get_exact(a, b, c, d, alpha)
+    if cached_result is not None:
+        result, cached_metadata = cached_result
+        logger.info(f"Using cached CI: {result}")
+        
+        # Combine cached metadata with our metadata
+        metadata.update(cached_metadata)
+        metadata["calculation_time"] = 0  # Reset time since we're using cache
+        
+        return result, metadata
     
-    # Validate the counts
-    validate_counts(a, b, c, d)
+    # Step 1: Get quick initial estimates
+    logger.info("Calculating initial bounds using quick methods")
+    quick_ci, quick_method = get_quick_ci_estimate(a, b, c, d, alpha)
+    logger.info(f"Initial bounds from {quick_method}: {quick_ci}")
     
-    # Calculate the table margins
-    n1, n2 = a + b, c + d
-
-    # Calculate observed odds ratio with numerical stability
-    # Using small epsilon to avoid division by zero
-    epsilon = 1e-10
-    if b < epsilon or c < epsilon:
-        # Calculate a pseudo odds ratio that's large but finite
-        odds_ratio = (a * d + epsilon) / (max(b, epsilon) * max(c, epsilon))
-        logger.info(f"Small or zero counts in cells (b={b}, c={c}), using adjusted OR: {odds_ratio}")
-        result_details["warnings"].append(f"Small or zero counts in cells (b={b}, c={c})")
-    else:
-        odds_ratio = (a * d) / (b * c)
+    # Save initial bounds information
+    metadata["initial_bounds_method"] = quick_method
     
-    logger.info(f"Observed odds ratio: {odds_ratio}")
-    result_details["odds_ratio"] = odds_ratio
+    # Handle special cases where quick method might already be optimal
+    if quick_method == "fisher_exact":
+        # If Fisher's exact test already gave a good result for special cases
+        if a == 0 or d == 0 or b == 0 or c == 0:
+            logger.info("Using Fisher's exact result for table with zeros")
+            metadata["method_used"] = "fisher_exact"
+            elapsed = time.time() - start_time
+            metadata["calculation_time"] = elapsed
+            
+            # Add to cache
+            cache.add(a, b, c, d, alpha, quick_ci, metadata)
+            
+            return quick_ci, metadata
     
-    # Step 1: Get quick initial boundaries using statsmodels/Fisher's exact test
-    # This helps narrow the search space for the more detailed method
-    initial_bounds_success = False
-    try:
-        # Try statsmodels first for initial bounds
-        quick_ci = get_quick_ci_estimate(a, b, c, d, alpha)
-        initial_ci_low, initial_ci_high = quick_ci["ci"]
-        logger.info(f"Initial bounds from quick method: ({initial_ci_low}, {initial_ci_high})")
-        result_details["initial_bounds_method"] = quick_ci["method"]
-        result_details["initial_bounds"] = (initial_ci_low, initial_ci_high)
-        initial_bounds_success = True
-    except Exception as e:
-        logger.warning(f"Could not get initial bounds: {e}")
-        result_details["warnings"].append(f"Could not get initial bounds: {e}")
-        initial_bounds_success = False
+    # Step 2: Use quick estimates to guide unconditional method
+    logger.info("Using initial bounds to guide unconditional method")
+    theta_min, theta_max = quick_ci
     
-    # Step 2: Try the unconditional method with guided search space if we have initial bounds
-    unconditional_success = False
-    if initial_bounds_success:
+    # Add safety margins to ensure we don't miss the true bounds
+    if theta_min > 0:
+        theta_min = max(1e-6, theta_min * 0.5)
+    
+    if theta_max < float('inf'):
+        theta_max = min(1e6, theta_max * 2)
+    
+    # Look for similar tables in cache to further refine search params
+    similar_entries = cache.get_similar(a, b, c, d, alpha)
+    if similar_entries:
+        search_params = derive_search_params(a, b, c, d, similar_entries)
+        logger.info(f"Using parameters from similar tables: {search_params}")
+        
+        # Use optimization params from similar entries if available
+        optimization_params = optimization_params or {}
+        optimization_params.update(search_params)
+    
+    # Track how much time we've spent
+    time_so_far = time.time() - start_time
+    remaining_time = max_time - time_so_far
+    
+    # Only proceed with unconditional method if we have enough time
+    if remaining_time > 5:  # At least 5 seconds remaining
         try:
-            # Expand bounds slightly to ensure we don't miss the true CI
-            # Use logarithmic scale for multiplication to handle very small or large values
-            search_low = max(1e-10, initial_ci_low * 0.5)
-            search_high = min(1e10, initial_ci_high * 2.0)
-            
-            # Modify these parameters based on our initial bounds to speed up computation
-            theta_min = 1.0 / search_high  # Convert to theta scale (1/OR)
-            theta_max = 1.0 / search_low
-            
-            logger.info(f"Using guided search space: theta_min={theta_min}, theta_max={theta_max}")
-            
-            ci_low, ci_high = exact_ci_unconditional(
-                a, b, c, d, 
-                alpha=alpha, 
-                grid_size=grid_size,
-                max_table_size=max_table_size, 
-                refine=refine,
-                progress_callback=progress_callback,
-                timeout=timeout,
-                apply_haldane=False,  # We've already applied it if needed
+            # Run unconditional method with guided search
+            unconditional_ci = exact_ci_unconditional(
+                a, b, c, d, alpha,
                 theta_min=theta_min,
-                theta_max=theta_max
+                theta_max=theta_max,
+                optimization_params=optimization_params
             )
             
-            # Check if the results are informative
-            if (ci_low == 0.0 and ci_high == float('inf')) or \
-               (ci_low is None or ci_high is None):
-                logger.warning("Unconditional method produced uninformative CI bounds")
-                result_details["warnings"].append("Unconditional method produced uninformative CI bounds")
-                unconditional_success = False
-            else:
-                logger.info(f"Unconditional method with guided search produced CI: ({ci_low}, {ci_high})")
-                unconditional_success = True
-                result_details["method_used"] = "unconditional_guided"
-        except Exception as e:
-            logger.warning(f"Error in unconditional method with guided search: {e}")
-            result_details["warnings"].append(f"Error in unconditional method with guided search: {e}")
-            unconditional_success = False
-    
-    # If guided unconditional method failed, try the original unguided method
-    if not unconditional_success:
-        try:
-            ci_low, ci_high = exact_ci_unconditional(
-                a, b, c, d, 
-                alpha=alpha, 
-                grid_size=grid_size,
-                max_table_size=max_table_size, 
-                refine=refine,
-                progress_callback=progress_callback,
-                timeout=timeout,
-                apply_haldane=False  # We've already applied it if needed
-            )
-            
-            if (ci_low == 0.0 and ci_high == float('inf')) or \
-               (ci_low is None or ci_high is None):
-                logger.warning("Original method produced uninformative CI bounds, using alternative approach")
-                result_details["warnings"].append("Original method produced uninformative CI bounds")
-                unconditional_success = False
-            else:
-                logger.info(f"Original method produced CI: ({ci_low}, {ci_high})")
-                unconditional_success = True
-                result_details["method_used"] = "unconditional_original"
-        except Exception as e:
-            logger.warning(f"Error in original method: {e}, using alternative approach")
-            result_details["warnings"].append(f"Error in original method: {e}")
-            unconditional_success = False
-    
-    # Use fallback method if all previous attempts failed
-    if not unconditional_success and use_fallback and initial_bounds_success:
-        logger.info("Using quick method results as final CI")
-        ci_low, ci_high = initial_ci_low, initial_ci_high
-        result_details["method_used"] = quick_ci["method"]
-        result_details["fallback_used"] = True
-    elif not unconditional_success and use_fallback:
-        # Try statsmodels fallback if we haven't already tried it for initial bounds
-        logger.info("Using statsmodels-based fallback method")
-        try:
-            stats_ci = get_statsmodels_ci(a, b, c, d, alpha)
-            ci_low, ci_high = stats_ci
-            logger.info(f"Statsmodels fallback produced CI: ({ci_low}, {ci_high})")
-            result_details["method_used"] = "statsmodels_fallback"
-            result_details["fallback_used"] = True
-        except Exception as e:
-            logger.warning(f"Error in statsmodels fallback: {e}, using Fisher's exact test")
-            result_details["warnings"].append(f"Error in statsmodels fallback: {e}")
-            
-            try:
-                # Use Fisher's exact test as last resort
-                fisher_ci = get_fisher_approx_ci(a, b, c, d, alpha)
-                ci_low, ci_high = fisher_ci
-                logger.info(f"Fisher approximation produced CI: ({ci_low}, {ci_high})")
-                result_details["method_used"] = "fisher_approximation"
-                result_details["fallback_used"] = True
-            except Exception as e:
-                logger.error(f"All fallback methods failed: {e}")
-                result_details["warnings"].append(f"All fallback methods failed: {e}")
+            # Check if result is informative
+            if (unconditional_ci[0] > 0 or unconditional_ci[0] == 0 and (a == 0 or b == 0)) and \
+               (unconditional_ci[1] < float('inf') or unconditional_ci[1] == float('inf') and (c == 0 or d == 0)):
+                logger.info(f"Unconditional method with guided search produced CI: {unconditional_ci}")
+                metadata["original_method_used"] = True
                 
-                # Last resort is to return a conservative estimate
-                if odds_ratio < 1:
-                    ci_low = max(0.001, odds_ratio * 0.1)
-                    ci_high = min(1.0, odds_ratio * 10)
-                else:
-                    ci_low = max(1.0, odds_ratio * 0.1)
-                    ci_high = odds_ratio * 10
-                    
-                logger.warning(f"Using conservative default CI: ({ci_low}, {ci_high})")
-                result_details["method_used"] = "conservative_estimate"
-                result_details["fallback_used"] = True
-                result_details["convergence_achieved"] = False
-    
-    # Calculate elapsed time
-    elapsed_time = time.time() - start_time
-    logger.info(f"CI calculation completed in {elapsed_time:.3f} seconds")
-    result_details["time_taken"] = elapsed_time
-    
-    if return_details:
-        return ci_low, ci_high, result_details
+                # We're done!
+                elapsed = time.time() - start_time
+                metadata["calculation_time"] = elapsed
+                
+                # Add to cache
+                cache.add(a, b, c, d, alpha, unconditional_ci, metadata)
+                
+                return unconditional_ci, metadata
+            else:
+                # Result is not informative
+                logger.warning("Unconditional method produced uninformative CI bounds")
+                metadata["warnings"].append("Unconditional method produced uninformative CI bounds")
+        except Exception as e:
+            logger.error(f"Error in unconditional method: {e}")
+            metadata["warnings"].append(f"Error in unconditional calculation: {str(e)}")
     else:
-        return ci_low, ci_high
+        logger.warning(f"Not enough time for unconditional method, using quick result (remaining time: {remaining_time:.2f}s)")
+        metadata["warnings"].append("Not enough time for unconditional calculation")
+    
+    # Step 3: If we get here, fallback to the quick method result
+    logger.warning("Original method produced uninformative CI bounds, using alternative approach")
+    metadata["warnings"].append("Original method produced uninformative CI bounds")
+    metadata["fallback_used"] = True
+    metadata["method_used"] = quick_method
+    
+    logger.info("Using quick method results as final CI")
+    elapsed = time.time() - start_time
+    metadata["calculation_time"] = elapsed
+    
+    # Add to cache before returning
+    cache.add(a, b, c, d, alpha, quick_ci, metadata)
+    
+    return quick_ci, metadata
 
 def get_quick_ci_estimate(
     a: Union[int, float], 
@@ -249,7 +180,7 @@ def get_quick_ci_estimate(
     c: Union[int, float], 
     d: Union[int, float],
     alpha: float = 0.05
-) -> Dict[str, Any]:
+) -> Tuple[Tuple[float, float], str]:
     """
     Get a quick estimate of confidence interval bounds.
     
@@ -260,19 +191,19 @@ def get_quick_ci_estimate(
         alpha: Significance level
         
     Returns:
-        Dictionary with CI and method used
+        Tuple of (CI, method_used)
     """
     # Try statsmodels first
     try:
         ci = get_statsmodels_ci(a, b, c, d, alpha)
-        return {"ci": ci, "method": "statsmodels"}
+        return ci, "statsmodels"
     except Exception:
         pass
     
     # Fall back to Fisher's approximation
     try:
         ci = get_fisher_approx_ci(a, b, c, d, alpha)
-        return {"ci": ci, "method": "fisher_approximation"}
+        return ci, "fisher_approximation"
     except Exception:
         pass
     
@@ -298,7 +229,7 @@ def get_quick_ci_estimate(
         ci_low = max(1e-10, odds_ratio * 0.01)
         ci_high = min(1e10, odds_ratio * 100)
     
-    return {"ci": (ci_low, ci_high), "method": "wide_estimate"}
+    return (ci_low, ci_high), "wide_estimate"
 
 def get_statsmodels_ci(
     a: Union[int, float], 
@@ -389,3 +320,50 @@ def get_fisher_approx_ci(
             ci_high = odds_ratio * 10
     
     return ci_low, ci_high
+
+def fisher_approximation(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[float, float]:
+    """
+    Calculate confidence interval for odds ratio using Fisher's exact test approximation.
+    
+    This method calculates a fast approximation of the confidence interval using
+    the normal approximation of the log odds ratio.
+    
+    Args:
+        a, b, c, d: Cell counts in the 2x2 table
+        alpha: Significance level (default: 0.05)
+        
+    Returns:
+        Tuple of (lower, upper) confidence interval bounds
+    """
+    import logging
+    import numpy as np
+    from scipy import stats
+    
+    logger = logging.getLogger(__name__)
+    
+    # Handle zero cells with continuity correction
+    a_adj = a if a > 0 else 0.5
+    b_adj = b if b > 0 else 0.5
+    c_adj = c if c > 0 else 0.5
+    d_adj = d if d > 0 else 0.5
+    
+    # Calculate odds ratio and its log
+    odds_ratio = (a_adj * d_adj) / (b_adj * c_adj)
+    log_odds = np.log(odds_ratio)
+    
+    # Calculate standard error of log odds ratio
+    se = np.sqrt(1/a_adj + 1/b_adj + 1/c_adj + 1/d_adj)
+    
+    # Get critical value for the confidence level
+    z = stats.norm.ppf(1 - alpha / 2)
+    
+    # Calculate confidence interval on log scale
+    log_lower = log_odds - z * se
+    log_upper = log_odds + z * se
+    
+    # Transform back to original scale
+    lower = np.exp(log_lower)
+    upper = np.exp(log_upper)
+    
+    logger.info(f"Fisher approximation CI calculated: ({lower}, {upper})")
+    return lower, upper

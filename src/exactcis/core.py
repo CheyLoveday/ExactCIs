@@ -41,7 +41,8 @@ def apply_haldane_correction(a: Union[int, float], b: Union[int, float],
     """
     Apply Haldane's correction to a 2x2 contingency table.
     
-    This adds 0.5 to each cell count if any of the cells contains a zero.
+    This adds 0.5 to each cell count, which helps with zero counts and generally
+    improves the accuracy of interval estimates.
     
     Args:
         a: Count in cell (1,1)
@@ -50,14 +51,10 @@ def apply_haldane_correction(a: Union[int, float], b: Union[int, float],
         d: Count in cell (2,2)
         
     Returns:
-        Tuple (a, b, c, d) with Haldane's correction applied if needed
+        Tuple (a, b, c, d) with Haldane's correction applied
     """
-    # Check if any cell has a zero count
-    if a == 0 or b == 0 or c == 0 or d == 0:
-        logger.info("Applying Haldane's correction (adding 0.5 to each cell) due to zero counts")
-        return a + 0.5, b + 0.5, c + 0.5, d + 0.5
-    else:
-        return a, b, c, d
+    logger.info("Applying Haldane's correction (adding 0.5 to each cell)")
+    return a + 0.5, b + 0.5, c + 0.5, d + 0.5
 
 
 def logsumexp(log_terms: List[float]) -> float:
@@ -229,7 +226,7 @@ def log_nchg_sf(k: int, n1: int, n2: int, m1: int, theta: float) -> float:
 
 
 @lru_cache(maxsize=None)
-def support(n1: int, n2: int, m: int) -> Tuple[int, ...]:
+def support(n1: Union[int, float], n2: Union[int, float], m: Union[int, float]) -> Tuple[int, ...]:
     """
     Calculate the support of the noncentral hypergeometric distribution.
 
@@ -241,8 +238,8 @@ def support(n1: int, n2: int, m: int) -> Tuple[int, ...]:
     Returns:
         Tuple of possible values for the random variable
     """
-    low = max(0, m - n2)
-    high = min(m, n1)
+    low = max(0, int(m - n2))
+    high = min(int(m), int(n1))
     return tuple(range(low, high + 1))
 
 
@@ -377,7 +374,8 @@ def find_root(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0,
 def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0,
                 tol: float = 1e-8, maxiter: int = 60,
                 progress_callback: Optional[Callable[[float], None]] = None,
-                timeout_checker: Optional[Callable[[], bool]] = None) -> Optional[float]:
+                timeout_checker: Optional[Callable[[], bool]] = None,
+                **kwargs) -> Optional[float]:
     """
     Find the root of a function using bisection method in log space.
     
@@ -392,6 +390,7 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
         maxiter: Maximum iterations
         progress_callback: Optional callback function to report progress (0-100)
         timeout_checker: Optional function that returns True if a timeout has occurred
+        **kwargs: Additional keyword arguments for compatibility (e.g., xtol is mapped to tol)
         
     Returns:
         Approximate root of the function, or None if timeout occurred
@@ -399,6 +398,10 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     Raises:
         RuntimeError: If the root cannot be bracketed
     """
+    # For backward compatibility: if xtol is provided, use it instead of tol
+    if 'xtol' in kwargs:
+        tol = kwargs['xtol']
+    
     # Convert to log space
     log_lo = math.log(lo)
     log_hi = math.log(hi)
@@ -431,6 +434,7 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
             
             # Check for timeout
             if timeout_checker and timeout_checker():
+                logger.warning("Timeout occurred during root finding")
                 return None
                 
             # Handle timeout from function
@@ -449,6 +453,7 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
                 
                 # Check for timeout
                 if timeout_checker and timeout_checker():
+                    logger.warning("Timeout occurred during root finding")
                     return None
                     
                 # Handle timeout from function
@@ -471,6 +476,7 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     while iter_num < maxiter and (log_hi - log_lo) > tol:
         # Check for timeout
         if timeout_checker and timeout_checker():
+            logger.warning("Timeout occurred during root finding")
             return None
             
         log_mid = 0.5 * (log_lo + log_hi)
@@ -480,7 +486,7 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
         # Handle timeout from function
         if f_mid is None:
             return None
-            
+        
         # Report progress if callback provided
         if progress_callback:
             progress = 100 * iter_num / maxiter
@@ -532,6 +538,7 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
     
     # Check for timeout after first evaluation
     if timeout_checker and timeout_checker():
+        logger.info(f"Timeout reached in find_plateau_edge")
         return None
         
     # Handle timeout from function
@@ -542,6 +549,7 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
     
     # Check for timeout after second evaluation
     if timeout_checker and timeout_checker():
+        logger.info(f"Timeout reached in find_plateau_edge")
         return None
         
     # Handle timeout from function
@@ -552,18 +560,34 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
     if increasing:
         # If lo already meets the condition, return it
         if f_lo >= target:
+            # Check for timeout before returning
+            if timeout_checker and timeout_checker():
+                logger.info(f"Timeout reached in find_plateau_edge")
+                return None
             return (lo, 0)
         # If hi doesn't meet the condition, can't find a valid theta
         if f_hi < target:
+            # Check for timeout before returning
+            if timeout_checker and timeout_checker():
+                logger.info(f"Timeout reached in find_plateau_edge")
+                return None
             # Return hi as the best we can do
             return (hi, 0)
     # If finding the largest theta where f(theta) ≥ target
     else:
         # If hi already meets the condition, return it
         if f_hi >= target:
+            # Check for timeout before returning
+            if timeout_checker and timeout_checker():
+                logger.info(f"Timeout reached in find_plateau_edge")
+                return None
             return (hi, 0)
         # If lo doesn't meet the condition, can't find a valid theta
         if f_lo < target:
+            # Check for timeout before returning
+            if timeout_checker and timeout_checker():
+                logger.info(f"Timeout reached in find_plateau_edge")
+                return None
             # Return lo as the best we can do
             return (lo, 0)
     
@@ -577,6 +601,7 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
     while iter_count < max_iter and upper - lower > xtol:
         # Check for timeout
         if timeout_checker and timeout_checker():
+            logger.info(f"Timeout reached in find_plateau_edge")
             return None
             
         mid = (lower + upper) / 2
@@ -613,6 +638,11 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
         
         iter_count += 1
     
+    # Check for timeout one last time before returning final result
+    if timeout_checker and timeout_checker():
+        logger.info(f"Timeout reached in find_plateau_edge before returning final result")
+        return None
+        
     # Return the appropriate edge of the plateau
     if increasing:
         return (upper, iter_count)
@@ -726,3 +756,180 @@ def find_smallest_theta(f: Callable[[float], float], alpha: float,
     logger.info(f"Final result: theta={theta:.6f}")
     
     return theta
+
+
+def find_sign_change(f: Callable[[float], float], lo: float, hi: float, 
+                    tol: float = 1e-6, max_iter: int = 100,
+                    progress_callback: Optional[Callable[[float], None]] = None,
+                    timeout_checker: Optional[Callable[[], bool]] = None) -> Optional[float]:
+    """
+    Find a point where the function changes sign using bisection.
+    
+    This is particularly useful for finding where a p-value function crosses
+    the significance threshold.
+    
+    Args:
+        f: Function to evaluate
+        lo: Lower bound for the search
+        hi: Upper bound for the search
+        tol: Tolerance for convergence
+        max_iter: Maximum number of iterations
+        progress_callback: Optional callback function to report progress (0-100)
+        timeout_checker: Optional function that returns True if a timeout has occurred
+        
+    Returns:
+        A point where the function changes sign, or None if no sign change or timeout
+    """
+    f_lo = f(lo)
+    f_hi = f(hi)
+    
+    # If no sign change, return None
+    if f_lo * f_hi > 0:
+        return None
+    
+    # If either endpoint is a root, return it
+    if abs(f_lo) < tol:
+        return lo
+    if abs(f_hi) < tol:
+        return hi
+    
+    # Bisection search
+    for i in range(max_iter):
+        # Check timeout if function provided
+        if timeout_checker and timeout_checker():
+            logger.warning("Timeout occurred during sign change search")
+            return None
+            
+        # Report progress if callback provided
+        if progress_callback:
+            progress = (i / max_iter) * 100
+            progress_callback(progress)
+            
+        mid = (lo + hi) / 2
+        f_mid = f(mid)
+        
+        # Check if we found a root
+        if abs(f_mid) < tol:
+            return mid
+            
+        # Update interval based on sign
+        if f_lo * f_mid < 0:
+            hi = mid
+            f_hi = f_mid
+        else:
+            lo = mid
+            f_lo = f_mid
+            
+        # Check if interval is small enough
+        if hi - lo < tol:
+            return (lo + hi) / 2
+            
+    # If we reach max iterations, return best guess
+    return (lo + hi) / 2
+
+
+def calculate_odds_ratio(a: Union[int, float], b: Union[int, float], 
+                         c: Union[int, float], d: Union[int, float]) -> float:
+    """
+    Calculate the odds ratio for a 2x2 contingency table.
+    
+    Args:
+        a: Count in cell (1,1)
+        b: Count in cell (1,2)
+        c: Count in cell (2,1)
+        d: Count in cell (2,2)
+        
+    Returns:
+        Odds ratio (a*d)/(b*c)
+    """
+    # Handle division by zero
+    if b == 0 or c == 0:
+        if a == 0 or d == 0:
+            return 1.0  # Indeterminate form 0/0
+        else:
+            return float('inf')  # Division by zero
+    
+    return (a * d) / (b * c)
+
+
+def calculate_relative_risk(a: Union[int, float], b: Union[int, float], 
+                           c: Union[int, float], d: Union[int, float]) -> float:
+    """
+    Calculate the relative risk (risk ratio) for a 2x2 contingency table.
+    
+    Args:
+        a: Count in cell (1,1)
+        b: Count in cell (1,2)
+        c: Count in cell (2,1)
+        d: Count in cell (2,2)
+        
+    Returns:
+        Relative risk (a/(a+b))/(c/(c+d))
+    """
+    # Risk in exposed group
+    if a + b == 0:
+        risk1 = 0
+    else:
+        risk1 = a / (a + b)
+    
+    # Risk in unexposed group
+    if c + d == 0:
+        risk2 = 0
+    else:
+        risk2 = c / (c + d)
+    
+    # Relative risk
+    if risk2 == 0:
+        if risk1 == 0:
+            return 1.0  # Indeterminate form 0/0
+        else:
+            return float('inf')  # Division by zero
+    
+    return risk1 / risk2
+
+
+def create_2x2_table(a: Union[int, float], b: Union[int, float], 
+                    c: Union[int, float], d: Union[int, float]) -> Dict[str, Dict[str, float]]:
+    """
+    Create a structured 2x2 contingency table from cell counts.
+    
+    Args:
+        a: Count in cell (1,1)
+        b: Count in cell (1,2)
+        c: Count in cell (2,1)
+        d: Count in cell (2,2)
+        
+    Returns:
+        Dictionary representation of the 2x2 table with row and column totals
+    """
+    table = {
+        "row1": {"col1": float(a), "col2": float(b), "total": float(a + b)},
+        "row2": {"col1": float(c), "col2": float(d), "total": float(c + d)},
+        "total": {"col1": float(a + c), "col2": float(b + d), "total": float(a + b + c + d)}
+    }
+    
+    # Calculate proportions
+    n = table["total"]["total"]
+    if n > 0:
+        table["props"] = {
+            "row1": {"col1": a / n, "col2": b / n, "total": (a + b) / n},
+            "row2": {"col1": c / n, "col2": d / n, "total": (c + d) / n},
+            "total": {"col1": (a + c) / n, "col2": (b + d) / n, "total": 1.0}
+        }
+    else:
+        table["props"] = {
+            "row1": {"col1": 0.0, "col2": 0.0, "total": 0.0},
+            "row2": {"col1": 0.0, "col2": 0.0, "total": 0.0},
+            "total": {"col1": 0.0, "col2": 0.0, "total": 0.0}
+        }
+    
+    # Add statistical measures
+    odds_ratio = calculate_odds_ratio(a, b, c, d)
+    relative_risk = calculate_relative_risk(a, b, c, d)
+    
+    table["stats"] = {
+        "odds_ratio": odds_ratio,
+        "relative_risk": relative_risk
+    }
+    
+    return table

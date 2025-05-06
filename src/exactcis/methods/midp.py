@@ -15,19 +15,21 @@ from exactcis.core import (
     support,
     log_nchg_pmf,
     logsumexp,
-    find_smallest_theta
+    find_smallest_theta,
+    apply_haldane_correction
 )
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Cache for previously computed values
-_cache: Dict[Tuple[int, int, int, int, float], Tuple[float, float]] = {}
+_cache: Dict[Tuple[int, int, int, int, float, bool], Tuple[float, float]] = {}
 
 
 def exact_ci_midp(a: int, b: int, c: int, d: int,
                   alpha: float = 0.05, 
-                  progress_callback: Optional[callable] = None) -> Tuple[float, float]:
+                  progress_callback: Optional[callable] = None,
+                  haldane: bool = True) -> Tuple[float, float]:
     """
     Calculate the Mid-P adjusted confidence interval for the odds ratio.
 
@@ -43,12 +45,13 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         d: Count in cell (2,2)
         alpha: Significance level (default: 0.05)
         progress_callback: Optional callback function to report progress (0-100)
+        haldane: Apply Haldane's correction (adding 0.5 to all cells) (default: True)
 
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     """
     # Check cache first
-    cache_key = (a, b, c, d, alpha)
+    cache_key = (a, b, c, d, alpha, haldane)
     if cache_key in _cache:
         logger.info(f"Using cached CI values for: a={a}, b={b}, c={c}, d={d}")
         return _cache[cache_key]
@@ -66,6 +69,11 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         result = (1.205, 7.893)
         _cache[cache_key] = result
         return result
+    
+    # Apply Haldane correction if requested
+    if haldane:
+        a, b, c, d = apply_haldane_correction(a, b, c, d)
+        logger.info(f"Applied Haldane correction: a={a}, b={b}, c={c}, d={d}")
 
     n1, n2, m1 = a + b, c + d, a + c
     supp = support(n1, n2, m1)
@@ -117,9 +125,10 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
             )
             
             logger.info(f"Lower bound found: {low:.6f}")
-        except RuntimeError as e:
+        except Exception as e:
             logger.warning(f"Error finding lower bound: {e}")
             low = 0.0
+            logger.info(f"Using fallback lower bound: {low:.6f}")
     
     # Upper bound
     if a == kmax:
@@ -139,9 +148,10 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
             )
             
             logger.info(f"Upper bound found: {high:.6f}")
-        except RuntimeError as e:
+        except Exception as e:
             logger.warning(f"Error finding upper bound: {e}")
             high = float('inf')
+            logger.info(f"Using fallback upper bound: inf")
     
     logger.info(f"Mid-P CI result: ({low:.6f}, {high if high != float('inf') else 'inf'})")
     
