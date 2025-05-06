@@ -27,26 +27,28 @@ class CICache:
         Args:
             max_size: Maximum number of entries to store in the similar cache
         """
-        self.exact_cache: Dict[Tuple[int, int, int, int, float], Tuple[Tuple[float, float], Dict[str, Any]]] = {}
+        self.exact_cache: Dict[Tuple[int, int, int, int, float, int, bool], Tuple[Tuple[float, float], Dict[str, Any]]] = {}
         self.similar_cache: List[Tuple[Tuple[int, int, int, int], Tuple[float, float], Dict[str, Any]]] = []
         self.max_size = max_size
         self.cache_hits = 0
         self.similar_hits = 0
         self.total_lookups = 0
     
-    def get_exact(self, a: int, b: int, c: int, d: int, alpha: float) -> Optional[Tuple[Tuple[float, float], Dict[str, Any]]]:
+    def get_exact(self, a: int, b: int, c: int, d: int, alpha: float, grid_size: int, haldane: bool) -> Optional[Tuple[Tuple[float, float], Dict[str, Any]]]:
         """
         Get exact cache hit.
         
         Args:
             a, b, c, d: Cell counts for 2x2 table
             alpha: Significance level
+            grid_size: Grid size used for the calculation
+            haldane: Whether Haldane correction was applied
         
         Returns:
             Tuple of (confidence interval, parameters) if found, None otherwise
         """
         self.total_lookups += 1
-        key = (a, b, c, d, alpha)
+        key = (a, b, c, d, alpha, grid_size, haldane)
         result = self.exact_cache.get(key)
         
         if result is not None:
@@ -110,7 +112,7 @@ class CICache:
         
         return result
     
-    def add(self, a: int, b: int, c: int, d: int, alpha: float, ci: Tuple[float, float], params: Dict[str, Any]) -> None:
+    def add(self, a: int, b: int, c: int, d: int, alpha: float, ci: Tuple[float, float], params: Dict[str, Any], grid_size: int, haldane: bool) -> None:
         """
         Add a result to both caches.
         
@@ -119,30 +121,37 @@ class CICache:
             alpha: Significance level
             ci: Confidence interval (lower, upper)
             params: Parameters used for the calculation
+            grid_size: Grid size used for the calculation
+            haldane: Whether Haldane correction was applied
         """
+        # Ensure grid_size and haldane are in params for completeness
+        params_updated = params.copy()
+        params_updated.setdefault('grid_size', grid_size)
+        params_updated.setdefault('haldane', haldane)
+
         # Add to exact cache
-        key = (a, b, c, d, alpha)
-        self.exact_cache[key] = (ci, params)
+        key = (a, b, c, d, alpha, grid_size, haldane)
+        self.exact_cache[key] = (ci, params_updated)
         
-        # Add to similar cache
-        self.similar_cache.append(((a, b, c, d), ci, params))
+        # Add to similar cache (similar cache keying does not need to change for now)
+        self.similar_cache.append(((a, b, c, d), ci, params_updated))
         
         # Prune if needed
         if len(self.similar_cache) > self.max_size:
             self.similar_cache = self.similar_cache[-self.max_size:]
             
     # Alias methods for compatibility with different naming conventions
-    def store(self, a: int, b: int, c: int, d: int, alpha: float, ci: Tuple[float, float], params: Dict[str, Any]) -> None:
+    def store(self, a: int, b: int, c: int, d: int, alpha: float, ci: Tuple[float, float], params: Dict[str, Any], grid_size: int, haldane: bool) -> None:
         """Alias for add() method."""
-        return self.add(a, b, c, d, alpha, ci, params)
+        return self.add(a, b, c, d, alpha, ci, params, grid_size, haldane)
     
-    def lookup(self, a: int, b: int, c: int, d: int, alpha: float) -> Optional[Tuple[float, float]]:
+    def lookup(self, a: int, b: int, c: int, d: int, alpha: float, grid_size: int, haldane: bool) -> Optional[Tuple[float, float]]:
         """
         Alias for get_exact() method with simpler return type.
         
         Returns just the confidence interval without parameters.
         """
-        result = self.get_exact(a, b, c, d, alpha)
+        result = self.get_exact(a, b, c, d, alpha, grid_size, haldane)
         if result is not None:
             return result[0]  # Just return the CI tuple
         return None
@@ -441,14 +450,14 @@ def batch_optimize_ci(tables: List[Tuple[int, int, int, int]],
         results[group_representative] = rep_ci
         
         # Add to cache
-        cache.add(rep_a, rep_b, rep_c, rep_d, alpha, rep_ci, rep_details)
+        cache.add(rep_a, rep_b, rep_c, rep_d, alpha, rep_ci, rep_details, search_params.get('grid_size', 50), search_params.get('haldane', False))
         
         # Process remaining tables in the group
         for table in group[1:]:
             a, b, c, d = table
             
             # Check exact cache first
-            cached_result = cache.get_exact(a, b, c, d, alpha)
+            cached_result = cache.get_exact(a, b, c, d, alpha, search_params.get('grid_size', 50), search_params.get('haldane', False))
             if cached_result:
                 results[table] = cached_result[0]
                 continue
@@ -462,7 +471,7 @@ def batch_optimize_ci(tables: List[Tuple[int, int, int, int]],
             results[table] = ci
             
             # Add to cache
-            cache.add(a, b, c, d, alpha, ci, details)
+            cache.add(a, b, c, d, alpha, ci, details, search_params.get('grid_size', 50), search_params.get('haldane', False))
     
     elapsed = time.time() - start_time
     logger.info(f"Processed {len(tables)} tables in {elapsed:.2f} seconds")

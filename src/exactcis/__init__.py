@@ -8,7 +8,12 @@ mid-P adjusted, Blaker's exact, Barnard's unconditional exact, and Haldane-Ansco
 
 from typing import Dict, Tuple
 
-from exactcis.core import validate_counts
+from exactcis.core import validate_counts, calculate_odds_ratio, calculate_relative_risk
+from exactcis.utils.stats import (
+    add_haldane_correction, 
+    calculate_odds_ratio_with_correction,
+    calculate_standard_error
+)
 from exactcis.methods.conditional import exact_ci_conditional
 from exactcis.methods.midp import exact_ci_midp
 from exactcis.methods.blaker import exact_ci_blaker
@@ -24,6 +29,11 @@ __all__ = [
     "exact_ci_blaker",
     "exact_ci_unconditional",
     "ci_wald_haldane",
+    "calculate_odds_ratio",
+    "calculate_relative_risk",
+    "add_haldane_correction",
+    "calculate_odds_ratio_with_correction",
+    "calculate_standard_error",
 ]
 
 

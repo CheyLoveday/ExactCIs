@@ -19,12 +19,20 @@ Provides five methods to compute confidence intervals for the odds ratio of a 2Ã
 pip install exactcis
 ```
 
-### Optional NumPy acceleration
-
-For faster computation of Barnard's unconditional CI:
+### Optional dependencies
 
 ```bash
-pip install "exactcis[numpy]"
+# For data manipulation with pandas
+pip install "exactcis[pandas]"
+
+# For symbolic mathematics
+pip install "exactcis[sympy]"
+
+# For visualization
+pip install "exactcis[viz]"
+
+# For all optional dependencies
+pip install "exactcis[full]"
 ```
 
 ### Development installation
@@ -42,6 +50,24 @@ uv run pytest
 
 # Run all tests including slow ones
 uv run pytest --run-slow
+```
+
+## Command Line Interface
+
+ExactCIs provides a command-line interface for quick calculations:
+
+```bash
+# Basic usage
+exactcis-cli 12 5 8 10 --method blaker
+
+# With additional options
+exactcis-cli 12 5 8 10 --method unconditional --alpha 0.01 --grid-size 30 --apply-haldane --verbose
+```
+
+For help and all available options:
+
+```bash
+exactcis-cli --help
 ```
 
 ---

@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "exactcis"
 version = "0.1.0"
-description = "Exact Confidence Intervals for Odds Ratios"
-readme = "README.md"
-requires-python = ">=3.8"
+description = "Exact confidence intervals for odds ratios"
+readme = "readme.md"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "ExactCIs Contributors", email = "example@example.com"},
@@ -19,21 +19,28 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 # Core dependencies - minimal requirements for basic functionality
 dependencies = [
-    "typing-extensions>=4.0.0; python_version < '3.10'"  # For older Python versions that need newer typing features
+    "numpy>=1.21,<2.0",  # Constraining to pre-2.0 for broader compatibility
+    "scipy>=1.12.0",
+    "typing-extensions; python_version < '3.10'",  # For older Python versions that need newer typing features
+    "statsmodels>=0.14.0"  # Added for comparison script
 ]
 
 [project.optional-dependencies]
 # Optional dependencies for enhanced functionality
-numpy = ["numpy>=1.20.0"]  # For vectorized calculations
+pandas = ["pandas>=1.3.0"]  # For data manipulation
+sympy = ["sympy>=1.9.0"]    # For symbolic mathematics
 tqdm = ["tqdm>=4.62.0"]  # For progress bars in long-running calculations
 viz = ["matplotlib>=3.4.0"]  # For visualization functions
 
 # Full set of optional dependencies for enhanced functionality
 full = [
-    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+    "sympy>=1.9.0",
     "tqdm>=4.62.0",
     "matplotlib>=3.4.0"
 ]
@@ -56,12 +63,20 @@ dev = [
 "Bug Tracker" = "https://github.com/yourusername/exactcis/issues"
 "Documentation" = "https://github.com/yourusername/exactcis/docs"
 
+[project.scripts]
+exactcis-cli = "exactcis.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/exactcis"]
 
 [tool.black]
 line-length = 88
-target-version = ["py38"]
+target-version = ["py39"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
 
 [tool.ruff]
 line-length = 88
@@ -69,7 +84,7 @@ target-version = "py38"
 select = ["E", "F", "I"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -81,11 +96,11 @@ python_files = "test_*.py"
 python_functions = "test_*"
 markers = [
     "fast: mark a test as fast running",
-    "slow: mark a test as slow running",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "unconditional: tests for the unconditional method",
     "integration: integration tests",
     "edge: tests edge cases",
-    "mock: tests that use mocking"
+    "mock: tests that use mocking",
 ]
 timeout = 300  # 5 minutes global timeout
 

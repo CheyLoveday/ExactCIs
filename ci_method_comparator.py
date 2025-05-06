@@ -99,7 +99,7 @@ def profile_method(method_func, a, b, c, d, alpha, output_file):
     return result
 
 
-def compare_methods(test_cases):
+def compare_methods(test_cases, grid_size=20):
     """Compare all methods against the test cases."""
     results = []
     
@@ -114,7 +114,7 @@ def compare_methods(test_cases):
         blaker_result, blaker_time = run_blaker(a, b, c, d, alpha)
         conditional_result, conditional_time = run_conditional(a, b, c, d, alpha)
         midp_result, midp_time = run_midp(a, b, c, d, alpha)
-        unconditional_result, unconditional_time = run_unconditional(a, b, c, d, alpha)
+        unconditional_result, unconditional_time = run_unconditional(a, b, c, d, alpha, grid_size=grid_size)
         wald_result, wald_time = run_wald(a, b, c, d, alpha)
         
         # Store results
@@ -268,6 +268,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compare CI methods in ExactCIs")
     parser.add_argument("--profile", action="store_true", help="Profile slow methods")
     parser.add_argument("--cases", type=int, default=5, help="Number of test cases to run")
+    parser.add_argument("--grid-size", type=int, default=20, help="Grid size for unconditional method")
     args = parser.parse_args()
     
     # Define test cases (a, b, c, d, alpha)
@@ -285,7 +286,7 @@ def main():
     
     # Run comparison
     print("=== ExactCIs Method Comparison ===")
-    results = compare_methods(test_cases)
+    results = compare_methods(test_cases, grid_size=args.grid_size)
     
     # Generate summary
     summary = generate_summary(results)

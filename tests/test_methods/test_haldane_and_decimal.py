@@ -45,7 +45,6 @@ def test_unconditional_with_haldane():
     """Test that Haldane's correction works with the unconditional method."""
     # Use a small grid size and disable refinement for fast testing
     grid_size = 5
-    refine = False
     timeout = 5  # Set a reasonable timeout
     
     # Case with a zero - should fail without Haldane but work with it
@@ -57,7 +56,7 @@ def test_unconditional_with_haldane():
         start_time = time.time()
         lower1, upper1 = exact_ci_unconditional(
             a, b, c, d, alpha=0.05, 
-            grid_size=grid_size, refine=refine, 
+            grid_size=grid_size, 
             timeout=timeout
         )
         time1 = time.time() - start_time
@@ -71,8 +70,8 @@ def test_unconditional_with_haldane():
         start_time = time.time()
         lower2, upper2 = exact_ci_unconditional(
             a, b, c, d, alpha=0.05, 
-            grid_size=grid_size, refine=refine, 
-            timeout=timeout, apply_haldane=True
+            grid_size=grid_size, 
+            timeout=timeout, haldane=True
         )
         time2 = time.time() - start_time
         logger.info(f"With Haldane: CI=({lower2:.4f}, {upper2:.4f}), time={time2:.2f}s")
@@ -91,7 +90,6 @@ def test_decimal_values():
     """Test that decimal values work correctly in the unconditional method."""
     # Use a small grid size and disable refinement for fast testing
     grid_size = 5
-    refine = False
     timeout = 5  # Set a reasonable timeout
     
     # Use a stronger effect size for testing
@@ -101,7 +99,7 @@ def test_decimal_values():
         start_time = time.time()
         lower, upper = exact_ci_unconditional(
             a, b, c, d, alpha=0.05,
-            grid_size=grid_size, refine=refine,
+            grid_size=grid_size,
             timeout=timeout
         )
         time_elapsed = time.time() - start_time
@@ -126,7 +124,6 @@ def test_combined_haldane_and_decimal():
     """Test that both Haldane correction and decimal values work together."""
     # Use a small grid size and disable refinement for fast testing
     grid_size = 5
-    refine = False
     timeout = 5  # Set a reasonable timeout
     
     # Test with decimal values and a zero
@@ -136,8 +133,8 @@ def test_combined_haldane_and_decimal():
         start_time = time.time()
         lower, upper = exact_ci_unconditional(
             a, b, c, d, alpha=0.05,
-            grid_size=grid_size, refine=refine,
-            timeout=timeout, apply_haldane=True
+            grid_size=grid_size,
+            timeout=timeout, haldane=True
         )
         time_elapsed = time.time() - start_time
         
@@ -156,7 +153,6 @@ def test_performance_comparison():
     """Compare performance between regular and Haldane methods."""
     # Use a small grid size and disable refinement for fast testing
     grid_size = 5
-    refine = False
     timeout = 5  # Set a reasonable timeout
     
     # Case with a small value - not zero, to avoid errors in the regular method
@@ -166,7 +162,7 @@ def test_performance_comparison():
     start_time = time.time()
     exact_ci_unconditional(
         a, b, c, d, alpha=0.05,
-        grid_size=grid_size, refine=refine,
+        grid_size=grid_size,
         timeout=timeout
     )
     regular_time = time.time() - start_time
@@ -175,8 +171,8 @@ def test_performance_comparison():
     start_time = time.time()
     exact_ci_unconditional(
         a, b, c, d, alpha=0.05,
-        grid_size=grid_size, refine=refine,
-        timeout=timeout, apply_haldane=True
+        grid_size=grid_size,
+        timeout=timeout, haldane=True
     )
     haldane_time = time.time() - start_time
     

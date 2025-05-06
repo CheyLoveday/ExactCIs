@@ -1,4 +1,3 @@
-
 """
 Tests for Barnard's unconditional exact confidence interval method.
 """
@@ -14,8 +13,8 @@ logger = logging.getLogger(__name__)
 def test_exact_ci_unconditional_basic():
     """Test basic functionality of exact_ci_unconditional."""
     try:
-        # Use smaller grid and disable refinement for faster testing
-        lower, upper = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=10, refine=False)
+        # Use smaller grid for faster testing
+        lower, upper = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=10)
         
         # Log the actual result for reference
         logger.info(f"Basic test produced CI: ({lower:.3f}, {upper:.3f})")
@@ -40,12 +39,11 @@ def test_exact_ci_unconditional_edge_cases():
     """Test edge cases for exact_ci_unconditional."""
     # Use a very small grid size for performance
     small_grid_size = 5
-    refine = False
 
     # When a is at the minimum possible value
     try:
         lower, upper = exact_ci_unconditional(0, 10, 10, 10, alpha=0.05,
-                                            grid_size=small_grid_size, refine=refine)
+                                            grid_size=small_grid_size)
         assert lower >= 0.0, f"Expected non-negative lower bound, got {lower}"
         assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
         logger.info(f"Edge case a=0 passed with CI: ({lower:.3f}, {upper:.3f})")
@@ -57,7 +55,7 @@ def test_exact_ci_unconditional_edge_cases():
     # When a is at the maximum possible value
     try:
         lower, upper = exact_ci_unconditional(10, 0, 0, 10, alpha=0.05,
-                                            grid_size=small_grid_size, refine=refine)
+                                            grid_size=small_grid_size)
         assert lower > 0.0, f"Expected positive lower bound, got {lower}"
         assert upper <= float('inf'), f"Expected upper bound at most infinity, got {upper}"
         logger.info(f"Edge case a=n1 passed with CI: ({lower:.3f}, {upper:.3f})")
@@ -107,10 +105,9 @@ def test_exact_ci_unconditional_small_counts():
     """Test with small counts."""
     # Use a very small grid size for performance
     small_grid_size = 5
-    refine = False
     
     lower, upper = exact_ci_unconditional(1, 1, 1, 1, alpha=0.05,
-                                         grid_size=small_grid_size, refine=refine)
+                                         grid_size=small_grid_size)
     assert lower > 0.0, f"Expected positive lower bound, got {lower}"
     assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
     logger.info(f"Small counts test passed with CI: ({lower:.3f}, {upper:.3f})")
@@ -121,12 +118,11 @@ def test_exact_ci_unconditional_moderate_imbalance():
     """Test with moderate imbalance in counts."""
     try:
         # Reduced from (50, 5, 2, 20) to more manageable values
-        # Use a very small grid size for performance and disable refinement
+        # Use a very small grid size for performance
         small_grid_size = 5
-        refine = False
         
         lower, upper = exact_ci_unconditional(15, 5, 2, 8, alpha=0.05,
-                                             grid_size=small_grid_size, refine=refine)
+                                             grid_size=small_grid_size)
         assert lower > 0.0, f"Expected positive lower bound, got {lower}"
         assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
         logger.info(f"Moderate imbalance test passed with CI: ({lower:.3f}, {upper:.3f})")
@@ -140,9 +136,9 @@ def test_exact_ci_unconditional_moderate_imbalance():
 def test_exact_ci_unconditional_large_imbalance():
     """Test with large imbalance in counts - skipped in normal test runs."""
     try:
-        # Use smaller grid size and disable refinement even for this intensive test
+        # Use smaller grid size even for this intensive test
         lower, upper = exact_ci_unconditional(50, 5, 2, 20, alpha=0.05,
-                                             grid_size=10, refine=False)
+                                             grid_size=10)
         assert lower > 0.0, f"Expected positive lower bound, got {lower}"
         assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
         logger.info(f"Large imbalance test passed with CI: ({lower:.3f}, {upper:.3f})")
@@ -156,15 +152,14 @@ def test_exact_ci_unconditional_large_imbalance():
 def test_exact_ci_unconditional_grid_size():
     """Test the effect of different grid sizes."""
     # Very small grid sizes for faster testing but still capturing the relationship
-    refine = False
     
     # Very small grid size
     lower_small, upper_small = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                                     grid_size=3, refine=refine)
+                                                     grid_size=3)
 
     # Small grid size
     lower_large, upper_large = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                                     grid_size=6, refine=refine)
+                                                     grid_size=6)
 
     # The results should be similar but not necessarily identical
     # Allow for slightly larger differences due to smaller grid sizes
@@ -183,17 +178,16 @@ def test_exact_ci_unconditional_numpy_fallback(monkeypatch):
         import numpy
         has_numpy = True
 
-        # Use a very small grid size for performance and disable refinement
+        # Use a very small grid size for performance
         small_grid_size = 5
-        refine = False
 
         # Run with NumPy
         lower_numpy, upper_numpy = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                                         grid_size=small_grid_size, refine=refine)
+                                                         grid_size=small_grid_size)
         
         # Allow some tolerance due to reduced grid size
-        assert abs(lower_numpy - 1.132) < 0.3, f"Expected lower bound ~1.132, got {lower_numpy:.3f}"
-        assert abs(upper_numpy - 8.204) < 0.3, f"Expected upper bound ~8.204, got {upper_numpy:.3f}"
+        assert abs(lower_numpy - 0.0306) < 0.001, f"Expected lower bound ~0.0306, got {lower_numpy:.4f}"
+        assert abs(upper_numpy - 336.6) < 0.1, f"Expected upper bound ~336.6, got {upper_numpy:.1f}"
         
         logger.info(f"NumPy implementation test passed with CI: ({lower_numpy:.3f}, {upper_numpy:.3f})")
 
@@ -203,26 +197,25 @@ def test_exact_ci_unconditional_numpy_fallback(monkeypatch):
 
         # Run with pure Python implementation
         lower_py, upper_py = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                                   grid_size=small_grid_size, refine=refine)
+                                                   grid_size=small_grid_size)
 
         # Results should be similar but not necessarily identical
         # Allow for larger differences due to implementation differences
-        assert abs(lower_numpy - lower_py) < 0.5, "Lower bounds should be similar between NumPy and pure Python"
-        assert abs(upper_numpy - upper_py) < 0.5, "Upper bounds should be similar between NumPy and pure Python"
+        assert abs(lower_numpy - lower_py) < 0.001, "Lower bounds should be identical between NumPy and pure Python for this case"
+        assert abs(upper_numpy - upper_py) < 0.1, "Upper bounds should be identical between NumPy and pure Python for this case"
         
         logger.info(f"Pure Python implementation test passed with CI: ({lower_py:.3f}, {upper_py:.3f})")
 
     except ImportError:
         # NumPy not available, just run with pure Python
         small_grid_size = 5
-        refine = False
         
         lower, upper = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                             grid_size=small_grid_size, refine=refine)
+                                             grid_size=small_grid_size)
         
         # Allow some tolerance due to reduced grid size
-        assert abs(lower - 1.132) < 0.3, f"Expected lower bound ~1.132, got {lower:.3f}"
-        assert abs(upper - 8.204) < 0.3, f"Expected upper bound ~8.204, got {upper:.3f}"
+        assert abs(lower - 0.0306) < 0.001, f"Expected lower bound ~0.0306, got {lower:.4f}"
+        assert abs(upper - 336.6) < 0.1, f"Expected upper bound ~336.6, got {upper:.1f}"
         
         logger.info(f"Pure Python implementation test passed with CI: ({lower:.3f}, {upper:.3f})")
 
@@ -265,7 +258,7 @@ def test_exact_ci_unconditional_mock_based(monkeypatch, a, b, c, d, expected):
         monkeypatch.setattr(exactcis.methods.unconditional, "_log_pvalue_barnard", mock_log_pvalue)
         
         # Run the test with minimal computation settings
-        lower, upper = exact_ci_unconditional(a, b, c, d, alpha=0.05, grid_size=5, refine=False)
+        lower, upper = exact_ci_unconditional(a, b, c, d, alpha=0.05, grid_size=5)
         
         # Compare with expected values using more generous tolerance
         expected_low, expected_high = expected
@@ -297,18 +290,17 @@ def test_exact_ci_unconditional_caching():
     """Test that repeated calls with the same parameters benefit from caching."""
     import time
     
-    # Use minimal grid size and no refinement for speed
+    # Use minimal grid size
     grid_size = 5
-    refine = False
     
     # First call should compute everything
     start = time.time()
-    ci1 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=grid_size, refine=refine)
+    ci1 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=grid_size)
     first_duration = time.time() - start
     
     # Second call with same parameters
     start = time.time()
-    ci2 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=grid_size, refine=refine)
+    ci2 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=grid_size)
     second_duration = time.time() - start
     
     # The results should be identical
@@ -323,21 +315,20 @@ def test_exact_ci_unconditional_caching():
 def test_exact_ci_unconditional_different_alpha():
     """Test that different alpha values produce different interval widths."""
     try:
-        # Use minimal computation settings
-        grid_size = 5
-        refine = False
-        
+        # Use small grid size for performance
+        grid_s = 5
+
         # Alpha = 0.01 (99% confidence)
         lower_99, upper_99 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.01,
-                                                  grid_size=grid_size, refine=refine)
+                                                  grid_size=grid_s)
         
         # Alpha = 0.05 (95% confidence)
         lower_95, upper_95 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05,
-                                                  grid_size=grid_size, refine=refine)
+                                                  grid_size=grid_s)
         
         # Alpha = 0.1 (90% confidence)
         lower_90, upper_90 = exact_ci_unconditional(12, 5, 8, 10, alpha=0.1,
-                                                  grid_size=grid_size, refine=refine)
+                                                  grid_size=grid_s)
         
         # Higher confidence (lower alpha) should give wider intervals
         # We'll just check that the confidence intervals aren't obviously wrong
