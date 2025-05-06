@@ -4,34 +4,197 @@ This document provides detailed information about the functions, classes, and pa
 
 ## Table of Contents
 
-1. [Core Functions](#core-functions)
-2. [Utility Functions](#utility-functions)
-3. [Performance Optimization](#performance-optimization)
-4. [Error Handling](#error-handling)
+1. [Main Interface](#main-interface)
+2. [Method Functions](#method-functions)
+3. [Core Utilities](#core-utilities)
+4. [Performance Optimization](#performance-optimization)
+5. [Error Handling](#error-handling)
 
-## Core Functions
+## Main Interface
+
+### compute_all_cis
+
+```python
+exactcis.compute_all_cis(a, b, c, d, alpha=0.05, grid_size=200, timeout=None)
+```
+
+Computes confidence intervals for odds ratios using all available methods.
+
+**Parameters**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| a | int | Count in cell (1,1) - successes in group 1 | required |
+| b | int | Count in cell (1,2) - failures in group 1 | required |
+| c | int | Count in cell (2,1) - successes in group 2 | required |
+| d | int | Count in cell (2,2) - failures in group 2 | required |
+| alpha | float | Significance level (1-confidence level) | 0.05 |
+| grid_size | int | Size of grid for unconditional method | 200 |
+| timeout | float or None | Maximum computation time in seconds | None |
+
+**Returns**
+
+dict
+    Dictionary with method names as keys and (lower, upper) tuples as values.
+
+**Raises**
+
+- `ValueError`: If input counts are invalid or if margins are zero
+- `TimeoutError`: If computation exceeds the specified timeout (when provided)
+
+**Examples**
+
+```python
+from exactcis import compute_all_cis
+
+results = compute_all_cis(12, 5, 8, 10, alpha=0.05)
+for method, (lower, upper) in results.items():
+    print(f"{method:12s}: ({lower:.3f}, {upper:.3f})")
+```
+
+**Notes**
+
+This function validates the input counts before calculation and handles zero cells appropriately for each method.
+
+**See Also**
+
+- `validate_counts`: For input validation
+- Method-specific functions for individual confidence interval calculations
+
+## Method Functions
+
+### exact_ci_conditional
+
+```python
+exactcis.methods.exact_ci_conditional(a, b, c, d, alpha=0.05)
+```
+
+Calculates Fisher's exact conditional confidence interval for the odds ratio of a 2×2 contingency table.
+
+**Parameters**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| a | int | Count in cell (1,1) - successes in group 1 | required |
+| b | int | Count in cell (1,2) - failures in group 1 | required |
+| c | int | Count in cell (2,1) - successes in group 2 | required |
+| d | int | Count in cell (2,2) - failures in group 2 | required |
+| alpha | float | Significance level (1-confidence level) | 0.05 |
+
+**Returns**
+
+tuple
+    A tuple of (lower_bound, upper_bound) representing the confidence interval for the odds ratio.
+
+**Raises**
+
+- `ValueError`: If input parameters are invalid
+
+**Examples**
+
+```python
+from exactcis.methods import exact_ci_conditional
+
+lower, upper = exact_ci_conditional(12, 5, 8, 10, alpha=0.05)
+print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+# Output: 95% CI: (1.059, 8.726)
+```
+
+**Notes**
+
+This implementation uses the non-central hypergeometric distribution and is guaranteed to have coverage ≥ 1-α.
+
+### exact_ci_midp
+
+```python
+exactcis.methods.exact_ci_midp(a, b, c, d, alpha=0.05)
+```
+
+Calculates mid-P adjusted confidence interval for the odds ratio.
+
+**Parameters**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| a | int | Count in cell (1,1) - successes in group 1 | required |
+| b | int | Count in cell (1,2) - failures in group 1 | required |
+| c | int | Count in cell (2,1) - successes in group 2 | required |
+| d | int | Count in cell (2,2) - failures in group 2 | required |
+| alpha | float | Significance level (1-confidence level) | 0.05 |
+
+**Returns**
+
+tuple
+    A tuple of (lower_bound, upper_bound) representing the confidence interval for the odds ratio.
+
+**Raises**
+
+- `ValueError`: If input parameters are invalid
+
+**Examples**
+
+```python
+from exactcis.methods import exact_ci_midp
+
+lower, upper = exact_ci_midp(12, 5, 8, 10, alpha=0.05)
+print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+# Output: 95% CI: (1.205, 7.893)
+```
+
+**Notes**
+
+The mid-P adjustment gives half-weight to the observed table, resulting in narrower intervals than the conditional method with slightly lower coverage.
+
+### exact_ci_blaker
+
+```python
+exactcis.methods.exact_ci_blaker(a, b, c, d, alpha=0.05)
+```
+
+Calculates Blaker's exact confidence interval for the odds ratio.
+
+**Parameters**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| a | int | Count in cell (1,1) - successes in group 1 | required |
+| b | int | Count in cell (1,2) - failures in group 1 | required |
+| c | int | Count in cell (2,1) - successes in group 2 | required |
+| d | int | Count in cell (2,2) - failures in group 2 | required |
+| alpha | float | Significance level (1-confidence level) | 0.05 |
+
+**Returns**
+
+tuple
+    A tuple of (lower_bound, upper_bound) representing the confidence interval for the odds ratio.
+
+**Raises**
+
+- `ValueError`: If input parameters are invalid
+
+**Examples**
+
+```python
+from exactcis.methods import exact_ci_blaker
+
+lower, upper = exact_ci_blaker(12, 5, 8, 10, alpha=0.05)
+print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+# Output: 95% CI: (1.114, 8.312)
+```
+
+**Notes**
+
+Uses the acceptability function to create non-flip intervals that are typically narrower than Fisher's while maintaining exact coverage.
 
 ### exact_ci_unconditional
 
 ```python
-from exactcis.methods.unconditional import exact_ci_unconditional
-
-exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05, 
-                      grid_size: int = 50,
-                      theta_min: Optional[float] = None,
-                      theta_max: Optional[float] = None,
-                      haldane: bool = False,
-                      refine: bool = True,
-                      use_profile: bool = True,
-                      custom_range: Optional[Tuple[float, float]] = None,
-                      theta_factor: float = 10,
-                      optimization_params: Optional[Dict[str, Any]] = None)
+exactcis.methods.exact_ci_unconditional(a, b, c, d, alpha=0.05, grid_size=50, timeout=None)
 ```
 
-**Description**:  
-Calculates Barnard's unconditional exact confidence interval for the odds ratio of a 2×2 contingency table.
+Calculates Barnard's unconditional exact confidence interval for the odds ratio.
 
-**Parameters**:
+**Parameters**
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -41,50 +204,41 @@ Calculates Barnard's unconditional exact confidence interval for the odds ratio 
 | d | int | Count in cell (2,2) - failures in group 2 | required |
 | alpha | float | Significance level (1-confidence level) | 0.05 |
 | grid_size | int | Size of grid for numerical optimization | 50 |
-| theta_min | float | Minimum theta value for search (auto if None) | None |
-| theta_max | float | Maximum theta value for search (auto if None) | None |
-| haldane | bool | Apply Haldane's correction for zero cells | False |
-| refine | bool | Use adaptive grid refinement for precision | True |
-| use_profile | bool | Use profile likelihood for zero counts | True |
-| custom_range | Tuple[float, float] | Custom (min, max) for theta search | None |
-| theta_factor | float | Factor for determining auto theta range | 10 |
-| optimization_params | Dict[str, Any] | Additional optimization parameters | None |
+| timeout | float or None | Maximum computation time in seconds | None |
 
-**Returns**:  
-A tuple of `(lower_bound, upper_bound)` representing the confidence interval for the odds ratio.
+**Returns**
 
-**Raises**:
+tuple
+    A tuple of (lower_bound, upper_bound) representing the confidence interval for the odds ratio.
+
+**Raises**
+
 - `ValueError`: If input parameters are invalid
-- `RuntimeError`: If computation fails to converge
+- `TimeoutError`: If computation exceeds the specified timeout (when provided)
 
-**Example**:
-```python
-lower, upper = exact_ci_unconditional(7, 3, 2, 8, alpha=0.05)
-print(f"95% CI: ({lower:.6f}, {upper:.6f})")
-```
-
-**Notes**:
-- This is the original implementation of Barnard's unconditional exact test
-- For better performance, consider using `improved_ci_unconditional`
-
-### improved_ci_unconditional
+**Examples**
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods import exact_ci_unconditional
 
-improved_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05, 
-                        grid_size: int = 50,
-                        theta_min: Optional[float] = None,
-                        theta_max: Optional[float] = None,
-                        adaptive_grid: bool = True,
-                        use_cache: bool = True,
-                        cache_instance: Optional['CICache'] = None)
+lower, upper = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, grid_size=200)
+print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+# Output: 95% CI: (1.132, 8.204)
 ```
 
-**Description**:  
-Calculates Barnard's unconditional exact confidence interval with improved performance using caching and adaptive search strategies.
+**Notes**
 
-**Parameters**:
+This method treats both margins as independent binomials and maximizes over nuisance parameters. It is computationally intensive but provides the narrowest exact intervals.
+
+### ci_wald_haldane
+
+```python
+exactcis.methods.ci_wald_haldane(a, b, c, d, alpha=0.05)
+```
+
+Calculates Wald-Haldane confidence interval for the odds ratio.
+
+**Parameters**
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -93,130 +247,159 @@ Calculates Barnard's unconditional exact confidence interval with improved perfo
 | c | int | Count in cell (2,1) - successes in group 2 | required |
 | d | int | Count in cell (2,2) - failures in group 2 | required |
 | alpha | float | Significance level (1-confidence level) | 0.05 |
-| grid_size | int | Size of grid for numerical optimization | 50 |
-| theta_min | float | Minimum theta value for search (auto if None) | None |
-| theta_max | float | Maximum theta value for search (auto if None) | None |
-| adaptive_grid | bool | Use adaptive grid refinement | True |
-| use_cache | bool | Use caching for speedup | True |
-| cache_instance | CICache | Cache instance to use (creates new if None) | None |
 
-**Returns**:  
-A tuple of `(lower_bound, upper_bound)` representing the confidence interval for the odds ratio.
+**Returns**
 
-**Raises**:
+tuple
+    A tuple of (lower_bound, upper_bound) representing the confidence interval for the odds ratio.
+
+**Raises**
+
 - `ValueError`: If input parameters are invalid
-- `RuntimeError`: If computation fails to converge
 
-**Example**:
-```python
-lower, upper = improved_ci_unconditional(7, 3, 2, 8, alpha=0.05)
-print(f"95% CI: ({lower:.6f}, {upper:.6f})")
-```
-
-**Notes**:
-- This implementation produces identical results to `exact_ci_unconditional` but with significantly improved performance
-- Recommended for most use cases, especially when calculating multiple confidence intervals
-
-## Utility Functions
-
-### unconditional_log_pvalue
+**Examples**
 
 ```python
-from exactcis.methods.unconditional import unconditional_log_pvalue
+from exactcis.methods import ci_wald_haldane
 
-unconditional_log_pvalue(a: int, b: int, c: int, d: int, 
-                       theta: float = 1.0, 
-                       p1_values: Optional[np.ndarray] = None,
-                       refine: bool = True,
-                       use_profile: bool = False,
-                       progress_callback: Optional[Callable[[float], None]] = None,
-                       timeout_checker: Optional[Callable[[], bool]] = None)
+lower, upper = ci_wald_haldane(12, 5, 8, 10, alpha=0.05)
+print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+# Output: 95% CI: (1.024, 8.658)
 ```
 
-**Description**:  
-Calculates the log p-value for Barnard's unconditional exact test at a given odds ratio (theta).
+**Notes**
 
-**Parameters**:
+This method adds 0.5 to each cell count (Haldane-Anscombe correction) and applies the standard log-OR ± z·SE formula. It is very fast but provides only approximate coverage.
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| a | int | Count in cell (1,1) | required |
-| b | int | Count in cell (1,2) | required |
-| c | int | Count in cell (2,1) | required |
-| d | int | Count in cell (2,2) | required |
-| theta | float | Odds ratio parameter | 1.0 |
-| p1_values | np.ndarray | Optional array of p1 values to evaluate | None |
-| refine | bool | Whether to use refinement for precision | True |
-| use_profile | bool | Whether to use profile likelihood | False |
-| progress_callback | Callable | Optional callback for progress reporting | None |
-| timeout_checker | Callable | Optional callback for timeout checking | None |
+## Core Utilities
 
-**Returns**:  
-The natural logarithm of the p-value.
+### validate_counts
+
+```python
+exactcis.core.validate_counts(a, b, c, d)
+```
+
+Validates the counts in a 2×2 contingency table.
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| a | int or float | Count in cell (1,1) |
+| b | int or float | Count in cell (1,2) |
+| c | int or float | Count in cell (2,1) |
+| d | int or float | Count in cell (2,2) |
+
+**Returns**
+
+None
+
+**Raises**
+
+- `ValueError`: If any count is negative or if any margin is zero
+
+**Examples**
+
+```python
+from exactcis.core import validate_counts
+
+# Valid counts
+validate_counts(12, 5, 8, 10)  # No error
+
+# Invalid counts - will raise ValueError
+try:
+    validate_counts(0, 0, 8, 10)
+except ValueError as e:
+    print(e)
+    # Output: Cannot compute odds ratio with empty margins
+```
 
 ## Performance Optimization
 
 ### CICache
 
+A cache class for storing and retrieving confidence interval calculations to improve performance.
+
+**Methods**
+
+- `get`: Get cached result for specified parameters
+- `add`: Add result to cache
+- `clear`: Clear all cached results
+
+**Examples**
+
 ```python
-from exactcis.utils.optimization import CICache
-
-cache = CICache(max_size=100)
-```
-
-**Description**:  
-Cache class for storing and retrieving confidence interval calculations to improve performance.
-
-**Parameters**:
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| max_size | int | Maximum number of cache entries | 100 |
-
-**Methods**:
-
-| Method | Description |
-|--------|-------------|
-| `get_exact(a, b, c, d, alpha)` | Get exact cache hit for the given parameters |
-| `get_similar(a, b, c, d, alpha)` | Get similar cache entry for approximation |
-| `add(a, b, c, d, alpha, ci, metadata)` | Add entry to cache |
-| `clear()` | Clear all cache entries |
-
-**Example**:
-```python
-from exactcis.utils.optimization import CICache
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.utils import CICache
+from exactcis.methods import exact_ci_unconditional
 
 # Create a cache instance
-cache = CICache(max_size=1000)
+cache = CICache(max_size=100)
 
 # Use the cache for multiple calculations
-tables = [(7, 3, 2, 8), (8, 2, 3, 7), (10, 5, 3, 12)]
+tables = [(12, 5, 8, 10), (7, 3, 2, 8), (10, 5, 3, 12)]
 results = []
 
 for a, b, c, d in tables:
-    ci = improved_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
+    ci = exact_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
     results.append(ci)
+```
+
+### create_timeout_checker
+
+```python
+exactcis.utils.create_timeout_checker(timeout)
+```
+
+Creates a function that checks if a computation has exceeded its time limit.
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| timeout | float or None | Maximum allowed computation time in seconds |
+
+**Returns**
+
+function
+    A function that returns True if the timeout has been exceeded
+
+**Examples**
+
+```python
+from exactcis.utils import create_timeout_checker
+import time
+
+checker = create_timeout_checker(5.0)  # 5-second timeout
+
+start = time.time()
+while not checker():
+    # Do computation
+    time.sleep(0.1)
+    if time.time() - start > 10:  # Artificial break for example
+        break
+
+print("Done or timed out")
 ```
 
 ## Error Handling
 
-The ExactCIs package includes comprehensive error handling for various edge cases:
+### TimeoutError
 
-### Common Errors
+Exception raised when a computation exceeds the specified timeout.
 
-| Error | Description | Solution |
-|-------|-------------|----------|
-| `ValueError: Invalid table: negative counts` | Negative values in table | Ensure all counts are non-negative |
-| `ValueError: Invalid table: non-integer counts` | Non-integer values in table | Ensure all counts are integers |
-| `RuntimeError: Failed to converge` | Algorithm failed to converge | Try increasing grid_size or set custom bounds |
-| `Warning: Large table detected` | Table dimensions are large | Consider using normal approximation for large tables |
-| `ValueError: Invalid alpha value` | Alpha outside (0,1) range | Ensure alpha is between 0 and 1 |
+**Attributes**
 
-### Handling Zero Cells
+- `message`: Error message
+- `elapsed`: Time elapsed before timeout (seconds)
 
-When one or more cells contain zeros, consider:
+**Example**
 
-1. Using `haldane=True` to apply Haldane's correction
-2. Using `use_profile=True` for profile likelihood approach
-3. Specifying custom bounds with `custom_range` if automatic bounds fail
+```python
+from exactcis.exceptions import TimeoutError
+
+try:
+    # Code that might timeout
+    raise TimeoutError("Computation exceeded time limit", 30.5)
+except TimeoutError as e:
+    print(f"{e.message} (ran for {e.elapsed:.1f}s)")
+```
