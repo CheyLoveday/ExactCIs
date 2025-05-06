@@ -74,9 +74,17 @@ Subtle differences in how p-values are calculated can lead to substantial differ
 Based on these findings, here are recommendations for using ExactCIs:
 
 1. **Method Selection Guidance**:
-   - For balanced data with moderate sample sizes, all methods in ExactCIs perform reasonably
-   - For small sample sizes or zeros, the conditional method is most reliable
-   - Avoid unconditional methods for extreme edge cases until the implementation differences are resolved
+
+   | Data Characteristics | Recommended Method | Alternative Method | Methods to Avoid |
+   |----------------------|-------------------|-------------------|-----------------|
+   | Balanced data with moderate sample sizes | Any method | - | - |
+   | Small sample sizes (n < 20) | Conditional (Fisher) | Blaker | Unconditional |
+   | Tables with zeros in any cell | Conditional (Fisher) | Wald-Haldane | Unconditional |
+   | Large sample sizes (n > 100) | Wald-Haldane | MidP | - |
+   | Fixed margins (case-control studies) | Conditional (Fisher) | MidP | - |
+   | Need for narrower intervals with slight undercoverage acceptable | MidP | Blaker | - |
+   | Extreme imbalance between groups | Conditional (Fisher) | Wald-Haldane | Unconditional |
+   | Regulatory/safety-critical applications | Conditional (Fisher) | - | MidP |
 
 2. **Implementation Improvements**:
    - Review the unconditional method implementation, particularly for upper bound calculations

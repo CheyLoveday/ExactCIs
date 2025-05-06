@@ -103,7 +103,7 @@ The project includes several tools for profiling and optimizing performance:
 
 - **`profile_with_timeout.py`**: Tests various confidence interval methods with timeout protection to identify problematic calculations.
 - **`optimize_unconditional.py`**: Optimizes parameters for the unconditional method such as grid size and refinement settings.
-- **Performance Documentation**: See `docs/performance.md` for comprehensive performance guidance.
+- **Performance Documentation**: See [Performance Guide](performance.md) for comprehensive performance guidance and optimization strategies.
 
 ## Current Status
 

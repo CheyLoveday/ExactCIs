@@ -69,11 +69,11 @@ def exact_ci_conditional(a, b, c, d, alpha=0.05):
 
 The documentation follows this overall structure, similar to SciPy:
 
-1. **User Guide**: High-level overview and introduction
-2. **API Reference**: Detailed function documentation
-3. **Examples**: Executable code examples
-4. **Architecture**: Package design and internals
-5. **Development Guide**: For contributors
+- **User Guide**: High-level overview and introduction
+- **API Reference**: Detailed function documentation
+- **Examples**: Executable code examples
+- **Architecture**: Package design and internals
+- **Development Guide**: For contributors
 
 ## Testing
 

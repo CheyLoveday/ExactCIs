@@ -99,7 +99,7 @@ function calculate_CI(a, b, c, d, alpha):
     # Initial bounds
     lower_bound = initial_lower_guess()
     upper_bound = initial_upper_guess()
-    
+
     # Refine lower bound
     while not converged(lower_bound):
         p_value = max_p_value_over_nuisance_parameters(a, b, c, d, lower_bound)
@@ -107,7 +107,7 @@ function calculate_CI(a, b, c, d, alpha):
             decrease lower_bound
         else:
             increase lower_bound
-    
+
     # Refine upper bound
     while not converged(upper_bound):
         p_value = max_p_value_over_nuisance_parameters(a, b, c, d, upper_bound)
@@ -115,13 +115,13 @@ function calculate_CI(a, b, c, d, alpha):
             increase upper_bound
         else:
             decrease upper_bound
-    
+
     return (lower_bound, upper_bound)
 ```
 
 ## Edge Cases and Special Handling
 
-The implementation includes special handling for various edge cases:
+The implementation includes special handling for various edge cases (building on the [Numerical Implementation](#numerical-implementation) techniques described above):
 
 1. **Zero Cells**: When any cell contains zero, special approaches are used to avoid undefined odds ratios.
 
