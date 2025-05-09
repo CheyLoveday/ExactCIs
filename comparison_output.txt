@@ -1,0 +1,949 @@
+2025-05-09 09:50:05,245 - exactcis.methods.unconditional - INFO - Parallel processing not available
+2025-05-09 09:50:05,263 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Point OR estimate (Haldane corrected) for (5,2,9995,9998) is 2.5008
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Lower bound. Input (5,2,9995,9998). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=0.000000
+2025-05-09 09:50:05,263 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding lower bound for (5,2,9995,9998), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:50:05,263 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = -5.0000e-02
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - find_smallest_theta: Root not bracketed for g. g(1.00e-09)=-5.0000e-02, g(1.00e+07)=-5.0000e-02. Will attempt find_plateau_edge.
+2025-05-09 09:50:05,263 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - find_root_log: Initial interval [1.00e-09, 1.00e+07] (f_lo=-5.00e-02, f_hi=-5.00e-02) does not bracket root. Attempting to expand.
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,263 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - ERROR - find_root_log: Could not bracket root for f after expanding search. Final interval [9.77e-13, 1.00e+07], f_values [-5.00e-02, -5.00e-02]
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - find_smallest_theta: find_root_log failed: Cannot bracket root in find_root_log: f(9.77e-13) = -5.00e-02, f(1.00e+07) = -5.00e-02. Proceeding to find_plateau_edge.
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Calling find_plateau_edge for func=blaker_p with target=5.0000e-02, lo=1.00e-09, hi=1.00e+07, increasing=False
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: find_plateau_edge returned: (1e-09, 0)
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: func(plateau_edge_theta=1.0000e-09) = 2.1021e-44 (target_alpha=5.0000e-02, diff=-5.00e-02)
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Upper bound. Input (5,2,9995,9998). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=0.000000
+2025-05-09 09:50:05,264 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding upper bound for (5,2,9995,9998), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = -5.0000e-02
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - find_smallest_theta: Root not bracketed for g. g(1.00e-09)=-5.0000e-02, g(1.00e+07)=-5.0000e-02. Will attempt find_plateau_edge.
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - find_root_log: Initial interval [1.00e-09, 1.00e+07] (f_lo=-5.00e-02, f_hi=-5.00e-02) does not bracket root. Attempting to expand.
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - ERROR - find_root_log: Could not bracket root for f after expanding search. Final interval [9.77e-13, 1.00e+07], f_values [-5.00e-02, -5.00e-02]
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - find_smallest_theta: find_root_log failed: Cannot bracket root in find_root_log: f(9.77e-13) = -5.00e-02, f(1.00e+07) = -5.00e-02. Proceeding to find_plateau_edge.
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Calling find_plateau_edge for func=blaker_p with target=5.0000e-02, lo=1.00e-09, hi=1.00e+07, increasing=False
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: find_plateau_edge returned: (1e-09, 0)
+2025-05-09 09:50:05,264 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=7, n2=19993, m=10000
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: func(plateau_edge_theta=1.0000e-09) = 2.1021e-44 (target_alpha=5.0000e-02, diff=-5.00e-02)
+2025-05-09 09:50:05,264 - exactcis.methods.midp - INFO - Applied Haldane correction: a=5.0, b=2.0, c=9995.0, d=9998.0
+2025-05-09 09:50:05,264 - exactcis.methods.midp - INFO - Computing Mid-P CI: a=5.0, b=2.0, c=9995.0, d=9998.0, alpha=0.05
+2025-05-09 09:50:05,264 - exactcis.methods.midp - INFO - Finding lower bound for Mid-P interval
+2025-05-09 09:50:05,264 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-08, hi=1.00e+00, two_sided=False, increasing=False
+2025-05-09 09:50:05,265 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-08) = -5.0000e-02, g(1.00e+00) = 2.3899e-01
+2025-05-09 09:50:05,265 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-08, hi=1.00e+00
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: -0.7072176971116696
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: func(root=4.9301e-01) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=-4.90e-11)
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: Root 4.9301e-01 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:50:05,267 - exactcis.methods.midp - INFO - Lower bound found: 0.493014
+2025-05-09 09:50:05,267 - exactcis.methods.midp - INFO - Finding upper bound for Mid-P interval
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e+00, hi=1.00e+04, two_sided=False, increasing=False
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e+00) = 2.3899e-01, g(1.00e+04) = -5.0000e-02
+2025-05-09 09:50:05,267 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e+00, hi=1.00e+04
+2025-05-09 09:50:05,270 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: 2.9239535724109498
+2025-05-09 09:50:05,270 - exactcis.core - INFO - find_smallest_theta: func(root=1.8615e+01) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=-2.16e-10)
+2025-05-09 09:50:05,270 - exactcis.core - INFO - find_smallest_theta: Root 1.8615e+01 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:50:05,270 - exactcis.methods.midp - INFO - Upper bound found: 18.614737
+2025-05-09 09:50:05,270 - exactcis.methods.midp - INFO - Mid-P CI result: (0.493014, 18.6147368804405)
+2025-05-09 09:50:05,270 - exactcis.methods.unconditional - INFO - Auto-determined theta range: (0.02500750375187594, 250.0750375187594) based on OR=2.500750375187594
+2025-05-09 09:50:05,270 - exactcis.methods.unconditional - INFO - Using 46 adaptive grid points around p1_mle=0.7143
+2025-05-09 09:50:05,270 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.025008
+2025-05-09 09:50:05,270 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:05,719 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:05,719 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.158138
+2025-05-09 09:50:05,719 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:06,238 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.003013
+2025-05-09 09:50:06,238 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.034517
+2025-05-09 09:50:06,238 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:07,002 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000759
+2025-05-09 09:50:07,002 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.044026
+2025-05-09 09:50:07,002 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:07,781 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:07,781 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.053535
+2025-05-09 09:50:07,781 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:08,567 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000001
+2025-05-09 09:50:08,567 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.063045
+2025-05-09 09:50:08,567 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:09,364 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:09,364 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.072554
+2025-05-09 09:50:09,364 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:10,174 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:10,174 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.082063
+2025-05-09 09:50:10,174 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:10,984 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000429
+2025-05-09 09:50:10,984 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.091573
+2025-05-09 09:50:10,984 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:11,799 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000004
+2025-05-09 09:50:11,799 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.101082
+2025-05-09 09:50:11,799 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:12,617 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.007120
+2025-05-09 09:50:12,618 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.110591
+2025-05-09 09:50:12,618 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:13,442 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000088
+2025-05-09 09:50:13,442 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.120100
+2025-05-09 09:50:13,442 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:14,269 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.013466
+2025-05-09 09:50:14,269 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.129610
+2025-05-09 09:50:14,269 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:15,094 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.002300
+2025-05-09 09:50:15,094 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.139119
+2025-05-09 09:50:15,094 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:15,948 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.011108
+2025-05-09 09:50:15,948 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.148628
+2025-05-09 09:50:15,948 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:16,783 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.034617
+2025-05-09 09:50:16,784 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.115346
+2025-05-09 09:50:16,784 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:17,605 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:17,605 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.124855
+2025-05-09 09:50:17,605 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:18,429 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.247226
+2025-05-09 09:50:18,429 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.143874
+2025-05-09 09:50:18,429 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:19,257 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.334598
+2025-05-09 09:50:19,257 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.153383
+2025-05-09 09:50:19,257 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:20,087 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000020
+2025-05-09 09:50:20,088 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.117723
+2025-05-09 09:50:20,088 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:20,911 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000109
+2025-05-09 09:50:20,911 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.122478
+2025-05-09 09:50:20,911 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:21,760 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.141553
+2025-05-09 09:50:21,760 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.127232
+2025-05-09 09:50:21,760 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:22,586 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.067899
+2025-05-09 09:50:22,586 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.141496
+2025-05-09 09:50:22,586 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:23,415 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.117443
+2025-05-09 09:50:23,415 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.146251
+2025-05-09 09:50:23,415 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:24,246 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.196888
+2025-05-09 09:50:24,246 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.151006
+2025-05-09 09:50:24,246 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:25,075 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.001909
+2025-05-09 09:50:25,075 - exactcis.methods.unconditional - INFO - Found lower bound using adaptive search: 0.120779
+2025-05-09 09:50:25,075 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.108701
+2025-05-09 09:50:25,075 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:25,918 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.006687
+2025-05-09 09:50:25,918 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.132856
+2025-05-09 09:50:25,918 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:26,747 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000001
+2025-05-09 09:50:26,747 - exactcis.methods.unconditional - INFO - Lower bound calculated: 0.132856
+2025-05-09 09:50:26,747 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=15.813761
+2025-05-09 09:50:26,747 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:27,172 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:27,172 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=250.075038
+2025-05-09 09:50:27,172 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:27,554 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:27,555 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=32.546709
+2025-05-09 09:50:27,555 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:28,252 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:28,252 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=49.279658
+2025-05-09 09:50:28,252 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:28,938 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:28,938 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=66.012606
+2025-05-09 09:50:28,938 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:29,620 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:29,621 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=82.745554
+2025-05-09 09:50:29,621 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:30,322 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:30,322 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=99.478503
+2025-05-09 09:50:30,322 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:30,998 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:30,998 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=116.211451
+2025-05-09 09:50:30,998 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:31,674 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:31,674 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=132.944399
+2025-05-09 09:50:31,674 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:32,352 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:32,352 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=149.677348
+2025-05-09 09:50:32,352 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:33,033 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:33,033 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=166.410296
+2025-05-09 09:50:33,033 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:33,821 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:33,821 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=183.143244
+2025-05-09 09:50:33,821 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:34,704 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:34,704 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=199.876193
+2025-05-09 09:50:34,704 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:35,379 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:35,379 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=216.609141
+2025-05-09 09:50:35,380 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:36,053 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:36,053 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=233.342089
+2025-05-09 09:50:36,053 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:36,754 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:36,754 - exactcis.methods.unconditional - WARNING - Using fallback upper bound: 250.0750375187594
+2025-05-09 09:50:36,754 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=225.067534
+2025-05-09 09:50:36,754 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:37,136 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:37,136 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=275.082541
+2025-05-09 09:50:37,136 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:37,515 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:37,515 - exactcis.methods.unconditional - INFO - Upper bound calculated: 275.082541
+2025-05-09 09:50:37,515 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.130199
+2025-05-09 09:50:37,515 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:37,835 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:37,835 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=0.135513
+2025-05-09 09:50:37,835 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:38,154 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:38,155 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=269.580890
+2025-05-09 09:50:38,155 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:38,625 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:38,625 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=271.414774
+2025-05-09 09:50:38,625 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:39,000 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:39,000 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=273.248658
+2025-05-09 09:50:39,000 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:39,277 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:39,277 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=275.082541
+2025-05-09 09:50:39,277 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:39,551 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:39,551 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=276.916425
+2025-05-09 09:50:39,552 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:39,828 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:39,828 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=278.750308
+2025-05-09 09:50:39,828 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:40,105 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:40,105 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=5, c=9995, n1=7, n2=19993, theta=280.584192
+2025-05-09 09:50:40,105 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:50:40,380 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:40,380 - exactcis.methods.unconditional - INFO - Refined bounds: (0.135513, 280.58419209604807)
+2025-05-09 09:50:40,380 - exactcis.methods.unconditional - INFO - Unconditional CI calculated: (0.13551349057504, 280.58419209604807)
+2025-05-09 09:50:40,385 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Point OR estimate (Haldane corrected) for (10,7,9990,9993) is 1.4290
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Lower bound. Input (10,7,9990,9993). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=0.000000
+2025-05-09 09:50:40,385 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding lower bound for (10,7,9990,9993), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:50:40,385 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = -5.0000e-02
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - find_smallest_theta: Root not bracketed for g. g(1.00e-09)=-5.0000e-02, g(1.00e+07)=-5.0000e-02. Will attempt find_plateau_edge.
+2025-05-09 09:50:40,385 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - find_root_log: Initial interval [1.00e-09, 1.00e+07] (f_lo=-5.00e-02, f_hi=-5.00e-02) does not bracket root. Attempting to expand.
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,385 - exactcis.core - ERROR - find_root_log: Could not bracket root for f after expanding search. Final interval [9.77e-13, 1.00e+07], f_values [-5.00e-02, -5.00e-02]
+2025-05-09 09:50:40,385 - exactcis.core - WARNING - find_smallest_theta: find_root_log failed: Cannot bracket root in find_root_log: f(9.77e-13) = -5.00e-02, f(1.00e+07) = -5.00e-02. Proceeding to find_plateau_edge.
+2025-05-09 09:50:40,385 - exactcis.core - INFO - find_smallest_theta: Calling find_plateau_edge for func=blaker_p with target=5.0000e-02, lo=1.00e-09, hi=1.00e+07, increasing=False
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: find_plateau_edge returned: (1e-09, 0)
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: func(plateau_edge_theta=1.0000e-09) = 1.9585e-86 (target_alpha=5.0000e-02, diff=-5.00e-02)
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Upper bound. Input (10,7,9990,9993). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=0.000000
+2025-05-09 09:50:40,386 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding upper bound for (10,7,9990,9993), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = -5.0000e-02
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - find_smallest_theta: Root not bracketed for g. g(1.00e-09)=-5.0000e-02, g(1.00e+07)=-5.0000e-02. Will attempt find_plateau_edge.
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - find_root_log: Initial interval [1.00e-09, 1.00e+07] (f_lo=-5.00e-02, f_hi=-5.00e-02) does not bracket root. Attempting to expand.
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - ERROR - find_root_log: Could not bracket root for f after expanding search. Final interval [9.77e-13, 1.00e+07], f_values [-5.00e-02, -5.00e-02]
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - find_smallest_theta: find_root_log failed: Cannot bracket root in find_root_log: f(9.77e-13) = -5.00e-02, f(1.00e+07) = -5.00e-02. Proceeding to find_plateau_edge.
+2025-05-09 09:50:40,386 - exactcis.core - INFO - find_smallest_theta: Calling find_plateau_edge for func=blaker_p with target=5.0000e-02, lo=1.00e-09, hi=1.00e+07, increasing=False
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,386 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,387 - exactcis.core - INFO - find_smallest_theta: find_plateau_edge returned: (1e-09, 0)
+2025-05-09 09:50:40,387 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=17, n2=19983, m=10000
+2025-05-09 09:50:40,387 - exactcis.core - INFO - find_smallest_theta: func(plateau_edge_theta=1.0000e-09) = 1.9585e-86 (target_alpha=5.0000e-02, diff=-5.00e-02)
+2025-05-09 09:50:40,387 - exactcis.methods.midp - INFO - Applied Haldane correction: a=10.0, b=7.0, c=9990.0, d=9993.0
+2025-05-09 09:50:40,387 - exactcis.methods.midp - INFO - Computing Mid-P CI: a=10.0, b=7.0, c=9990.0, d=9993.0, alpha=0.05
+2025-05-09 09:50:40,387 - exactcis.methods.midp - INFO - Finding lower bound for Mid-P interval
+2025-05-09 09:50:40,387 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-08, hi=1.00e+00, two_sided=False, increasing=False
+2025-05-09 09:50:40,387 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-08) = -5.0000e-02, g(1.00e+00) = 4.3050e-01
+2025-05-09 09:50:40,387 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-08, hi=1.00e+00
+2025-05-09 09:50:40,398 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: -0.6206562820121722
+2025-05-09 09:50:40,398 - exactcis.core - INFO - find_smallest_theta: func(root=5.3759e-01) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=-1.71e-10)
+2025-05-09 09:50:40,398 - exactcis.core - INFO - find_smallest_theta: Root 5.3759e-01 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:50:40,398 - exactcis.methods.midp - INFO - Lower bound found: 0.537592
+2025-05-09 09:50:40,398 - exactcis.methods.midp - INFO - Finding upper bound for Mid-P interval
+2025-05-09 09:50:40,398 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e+00, hi=1.00e+04, two_sided=False, increasing=False
+2025-05-09 09:50:40,399 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e+00) = 4.3050e-01, g(1.00e+04) = -5.0000e-02
+2025-05-09 09:50:40,399 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e+00, hi=1.00e+04
+2025-05-09 09:50:40,409 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: 1.3801295594248777
+2025-05-09 09:50:40,409 - exactcis.core - INFO - find_smallest_theta: func(root=3.9754e+00) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=1.55e-10)
+2025-05-09 09:50:40,409 - exactcis.core - INFO - find_smallest_theta: Root 3.9754e+00 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:50:40,409 - exactcis.methods.midp - INFO - Upper bound found: 3.975417
+2025-05-09 09:50:40,409 - exactcis.methods.midp - INFO - Mid-P CI result: (0.537592, 3.9754166468256353)
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Using search parameters derived from similar tables: {'grid_size': 50, 'predicted_theta_range': (0.038718145978994645, 320.66769626769633), 'estimated_iterations': 53}
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Using predicted theta range from similar tables: (0.038718145978994645, 320.66769626769633)
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Using provided theta range: (0.038718145978994645, 320.66769626769633)
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Using 46 adaptive grid points around p1_mle=0.5882
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.038718
+2025-05-09 09:50:40,409 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:41,868 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:41,869 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.196769
+2025-05-09 09:50:41,869 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:42,866 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:42,867 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.050008
+2025-05-09 09:50:42,867 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:44,382 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:44,382 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.061297
+2025-05-09 09:50:44,382 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:45,893 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000029
+2025-05-09 09:50:45,893 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.072586
+2025-05-09 09:50:45,893 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:47,426 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:47,426 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.083876
+2025-05-09 09:50:47,426 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:48,980 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:48,980 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.095165
+2025-05-09 09:50:48,980 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:50,530 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:50,530 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.106454
+2025-05-09 09:50:50,530 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:52,092 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:52,092 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.117744
+2025-05-09 09:50:52,092 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:53,694 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.002471
+2025-05-09 09:50:53,694 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.129033
+2025-05-09 09:50:53,694 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:55,320 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:50:55,320 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.140322
+2025-05-09 09:50:55,320 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:56,908 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000015
+2025-05-09 09:50:56,908 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.151612
+2025-05-09 09:50:56,908 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:50:58,507 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000960
+2025-05-09 09:50:58,507 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.162901
+2025-05-09 09:50:58,507 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:00,116 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:00,116 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.174191
+2025-05-09 09:51:00,116 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:01,728 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.003526
+2025-05-09 09:51:01,729 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.185480
+2025-05-09 09:51:01,729 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:03,353 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000744
+2025-05-09 09:51:03,353 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.112099
+2025-05-09 09:51:03,353 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:04,922 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000007
+2025-05-09 09:51:04,922 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.123388
+2025-05-09 09:51:04,922 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:06,530 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000003
+2025-05-09 09:51:06,530 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.168546
+2025-05-09 09:51:06,530 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:08,141 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000001
+2025-05-09 09:51:08,141 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.179835
+2025-05-09 09:51:08,141 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:09,751 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.020431
+2025-05-09 09:51:09,752 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.114921
+2025-05-09 09:51:09,752 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:11,321 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000712
+2025-05-09 09:51:11,321 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.120566
+2025-05-09 09:51:11,321 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:12,894 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000423
+2025-05-09 09:51:12,894 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.157256
+2025-05-09 09:51:12,894 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:14,503 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:14,504 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.171368
+2025-05-09 09:51:14,504 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:16,138 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000164
+2025-05-09 09:51:16,138 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.177013
+2025-05-09 09:51:16,138 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:17,748 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.015904
+2025-05-09 09:51:17,748 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.182658
+2025-05-09 09:51:17,748 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:19,361 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.007053
+2025-05-09 09:51:19,361 - exactcis.methods.unconditional - WARNING - Using fallback lower bound: 0.038718145978994645
+2025-05-09 09:51:19,361 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.034846
+2025-05-09 09:51:19,361 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:20,916 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:20,916 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.042590
+2025-05-09 09:51:20,916 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:22,386 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:22,386 - exactcis.methods.unconditional - INFO - Lower bound calculated: 0.042590
+2025-05-09 09:51:22,386 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=17.907197
+2025-05-09 09:51:22,386 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:23,237 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:23,237 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=320.667696
+2025-05-09 09:51:23,237 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:23,999 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:24,000 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=39.532947
+2025-05-09 09:51:24,000 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:25,362 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:25,362 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=61.158697
+2025-05-09 09:51:25,362 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:26,700 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:26,700 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=82.784447
+2025-05-09 09:51:26,700 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:28,030 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:28,030 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=104.410197
+2025-05-09 09:51:28,030 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:29,366 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:29,366 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=126.035947
+2025-05-09 09:51:29,366 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:30,694 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:30,694 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=147.661697
+2025-05-09 09:51:30,694 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:32,042 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:32,042 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=169.287447
+2025-05-09 09:51:32,042 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:33,362 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:33,362 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=190.913196
+2025-05-09 09:51:33,362 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:34,683 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:34,683 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=212.538946
+2025-05-09 09:51:34,683 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:35,998 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:35,998 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=234.164696
+2025-05-09 09:51:35,998 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:37,318 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:37,318 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=255.790446
+2025-05-09 09:51:37,318 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:38,669 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:38,669 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=277.416196
+2025-05-09 09:51:38,669 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:39,987 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:39,988 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=299.041946
+2025-05-09 09:51:39,988 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:41,308 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:41,308 - exactcis.methods.unconditional - WARNING - Using fallback upper bound: 320.66769626769633
+2025-05-09 09:51:41,308 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=288.600927
+2025-05-09 09:51:41,308 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:42,048 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:42,048 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=352.734466
+2025-05-09 09:51:42,048 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:42,792 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:42,792 - exactcis.methods.unconditional - INFO - Upper bound calculated: 352.734466
+2025-05-09 09:51:42,792 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.041738
+2025-05-09 09:51:42,792 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:43,328 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:43,329 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=0.043442
+2025-05-09 09:51:43,329 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:43,865 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:43,865 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=345.679777
+2025-05-09 09:51:43,865 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:44,355 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:44,356 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=348.031340
+2025-05-09 09:51:44,356 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:44,868 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:44,868 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=350.382903
+2025-05-09 09:51:44,868 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:45,358 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:45,358 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=352.734466
+2025-05-09 09:51:45,358 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:45,849 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:45,849 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=355.086029
+2025-05-09 09:51:45,849 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:46,338 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:46,338 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=357.437592
+2025-05-09 09:51:46,338 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:46,828 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:46,828 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=10, c=9990, n1=17, n2=19983, theta=359.789155
+2025-05-09 09:51:46,828 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:51:47,318 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:47,318 - exactcis.methods.unconditional - INFO - Refined bounds: (0.043442, 359.7891552123553)
+2025-05-09 09:51:47,318 - exactcis.methods.unconditional - INFO - Unconditional CI calculated: (0.043441759788432, 359.7891552123553)
+/Users/chey/Analytical_Projects/ExactCIs/.venv/lib/python3.11/site-packages/scipy/stats/_odds_ratio.py:156: RuntimeWarning: divide by zero encountered in divide
+  se = np.sqrt((1/table).sum())
+/Users/chey/Analytical_Projects/ExactCIs/.venv/lib/python3.11/site-packages/scipy/stats/_odds_ratio.py:168: RuntimeWarning: invalid value encountered in scalar subtract
+  loglow = log_or - z*se
+2025-05-09 09:51:47,322 - exactcis.core - INFO - Applying Haldane's correction (adding 0.5 to each cell)
+2025-05-09 09:51:47,323 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Point OR estimate (Haldane corrected) for (3,0,9997,10000) is 7.0021
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Lower bound. Input (3,0,9997,10000). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=1.000000
+2025-05-09 09:51:47,323 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding lower bound for (3,0,9997,10000), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = 9.5000e-01
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: -0.5389997461124247
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: func(root=5.8333e-01) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=1.92e-10)
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Root 5.8333e-01 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker DEBUG: Upper bound. Input (3,0,9997,10000). Alpha=0.05. Search range=[1e-09, 10000000.0]. blaker_p(1e-09)=0.000000, blaker_p(10000000.0)=1.000000
+2025-05-09 09:51:47,323 - exactcis.methods.blaker - INFO - Blaker exact_ci_blaker: Finding upper bound for (3,0,9997,10000), alpha=0.05 with range lo=1e-09, hi=10000000.0
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Initial call with func=blaker_p, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-09, hi=1.00e+07, two_sided=False, increasing=False
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Boundary values for g(theta)=func(theta)-target_alpha: g(1.00e-09) = -5.0000e-02, g(1.00e+07) = 9.5000e-01
+2025-05-09 09:51:47,323 - exactcis.core - INFO - find_smallest_theta: Attempting find_root_log for g with lo=1.00e-09, hi=1.00e+07
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,323 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - INFO - find_smallest_theta: find_root_log returned: -0.5389997461124247
+2025-05-09 09:51:47,324 - exactcis.core - WARNING - Large values detected in pmf_weights: n1=3, n2=19997, m=10000
+2025-05-09 09:51:47,324 - exactcis.core - INFO - find_smallest_theta: func(root=5.8333e-01) from find_root_log = 5.0000e-02 (target_alpha=5.0000e-02, diff=1.92e-10)
+2025-05-09 09:51:47,324 - exactcis.core - INFO - find_smallest_theta: Root 5.8333e-01 found by find_root_log is close to target and not at boundary. Returning this root.
+2025-05-09 09:51:47,324 - exactcis.core - INFO - Applying Haldane's correction (adding 0.5 to each cell)
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Applied Haldane correction: a=3.5, b=0.5, c=9997.5, d=10000.5
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Computing Mid-P CI: a=3.5, b=0.5, c=9997.5, d=10000.5, alpha=0.05
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Finding lower bound for Mid-P interval
+2025-05-09 09:51:47,324 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e-08, hi=1.00e+00, two_sided=False, increasing=False
+2025-05-09 09:51:47,324 - exactcis.core - ERROR - find_smallest_theta: Error evaluating g at boundaries (1.00e-08, 1.00e+00): tuple.index(x): x not in tuple
+2025-05-09 09:51:47,324 - exactcis.methods.midp - WARNING - Error finding lower bound: unsupported format string passed to NoneType.__format__
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Using fallback lower bound: 0.000000
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Finding upper bound for Mid-P interval
+2025-05-09 09:51:47,324 - exactcis.core - INFO - find_smallest_theta: Initial call with func=midp, alpha(input)=5.0000e-02, target_alpha=5.0000e-02, lo=1.00e+00, hi=1.00e+04, two_sided=False, increasing=False
+2025-05-09 09:51:47,324 - exactcis.core - ERROR - find_smallest_theta: Error evaluating g at boundaries (1.00e+00, 1.00e+04): tuple.index(x): x not in tuple
+2025-05-09 09:51:47,324 - exactcis.methods.midp - WARNING - Error finding upper bound: unsupported format string passed to NoneType.__format__
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Using fallback upper bound: inf
+2025-05-09 09:51:47,324 - exactcis.methods.midp - INFO - Mid-P CI result: (0.000000, inf)
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Using search parameters derived from similar tables: {'grid_size': 50, 'predicted_theta_range': (1.5200051345967425, 50355.36000000001), 'estimated_iterations': 53}
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Using predicted theta range from similar tables: (1.5200051345967425, 50355.36000000001)
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Using provided theta range: (1.5200051345967425, 50355.36000000001)
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Using 46 adaptive grid points around p1_mle=1.0000
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.152001
+2025-05-09 09:51:47,324 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:48,003 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:48,003 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.520005
+2025-05-09 09:51:48,003 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:48,668 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:48,668 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.249715
+2025-05-09 09:51:48,668 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:49,346 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000020
+2025-05-09 09:51:49,346 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.347430
+2025-05-09 09:51:49,346 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:50,024 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.518849
+2025-05-09 09:51:50,024 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.445144
+2025-05-09 09:51:50,024 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:50,702 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.602915
+2025-05-09 09:51:50,702 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.542859
+2025-05-09 09:51:50,702 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:51,376 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.590256
+2025-05-09 09:51:51,376 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.640574
+2025-05-09 09:51:51,376 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:52,050 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.004469
+2025-05-09 09:51:52,051 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.738288
+2025-05-09 09:51:52,051 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:52,725 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:52,725 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.836003
+2025-05-09 09:51:52,725 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:53,395 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:53,395 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.933717
+2025-05-09 09:51:53,395 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:54,065 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:54,065 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.031432
+2025-05-09 09:51:54,065 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:54,762 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:54,762 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.129147
+2025-05-09 09:51:54,762 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:55,429 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:55,429 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.226861
+2025-05-09 09:51:55,429 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:56,096 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:56,096 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.324576
+2025-05-09 09:51:56,096 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:56,764 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:56,764 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=1.422291
+2025-05-09 09:51:56,764 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:57,450 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:51:57,450 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.298572
+2025-05-09 09:51:57,450 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:58,208 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.024898
+2025-05-09 09:51:58,208 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.396287
+2025-05-09 09:51:58,208 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:58,929 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.744787
+2025-05-09 09:51:58,930 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.591716
+2025-05-09 09:51:58,930 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:51:59,664 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.151607
+2025-05-09 09:51:59,664 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.689431
+2025-05-09 09:51:59,664 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:00,393 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.014768
+2025-05-09 09:52:00,393 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.274144
+2025-05-09 09:52:00,393 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:01,153 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.583419
+2025-05-09 09:52:01,153 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.323001
+2025-05-09 09:52:01,153 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:01,902 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.007941
+2025-05-09 09:52:01,902 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.371858
+2025-05-09 09:52:01,903 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:02,746 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000097
+2025-05-09 09:52:02,746 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.567288
+2025-05-09 09:52:02,746 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:03,508 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.008668
+2025-05-09 09:52:03,508 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.616145
+2025-05-09 09:52:03,508 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:04,266 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.165405
+2025-05-09 09:52:04,266 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.713860
+2025-05-09 09:52:04,266 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:05,018 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:05,018 - exactcis.methods.unconditional - INFO - Found lower bound using adaptive search: 0.251808
+2025-05-09 09:52:05,018 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.226627
+2025-05-09 09:52:05,018 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:05,780 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.036024
+2025-05-09 09:52:05,780 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.276989
+2025-05-09 09:52:05,781 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:06,542 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.247847
+2025-05-09 09:52:06,542 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.251808
+2025-05-09 09:52:06,542 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:07,357 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000001
+2025-05-09 09:52:07,357 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.264398
+2025-05-09 09:52:07,357 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:08,138 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.165449
+2025-05-09 09:52:08,138 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.258103
+2025-05-09 09:52:08,138 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:08,925 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.001169
+2025-05-09 09:52:08,925 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.261251
+2025-05-09 09:52:08,925 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:09,715 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.023808
+2025-05-09 09:52:09,715 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262825
+2025-05-09 09:52:09,715 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:10,508 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.057115
+2025-05-09 09:52:10,509 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262038
+2025-05-09 09:52:10,509 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:11,341 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.036164
+2025-05-09 09:52:11,341 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262431
+2025-05-09 09:52:11,341 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:12,149 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.045385
+2025-05-09 09:52:12,149 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262628
+2025-05-09 09:52:12,149 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:12,967 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.051020
+2025-05-09 09:52:12,968 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262529
+2025-05-09 09:52:12,968 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:13,789 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.048013
+2025-05-09 09:52:13,789 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262579
+2025-05-09 09:52:13,789 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:14,615 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049493
+2025-05-09 09:52:14,615 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262603
+2025-05-09 09:52:14,616 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:15,451 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.050142
+2025-05-09 09:52:15,452 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262591
+2025-05-09 09:52:15,452 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:16,322 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049494
+2025-05-09 09:52:16,322 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262597
+2025-05-09 09:52:16,322 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:17,177 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049925
+2025-05-09 09:52:17,177 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262600
+2025-05-09 09:52:17,177 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:18,051 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049926
+2025-05-09 09:52:18,051 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262602
+2025-05-09 09:52:18,051 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:18,926 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.050142
+2025-05-09 09:52:18,926 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262601
+2025-05-09 09:52:18,926 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:19,805 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049926
+2025-05-09 09:52:19,805 - exactcis.methods.unconditional - INFO - Lower bound calculated: 0.262602
+2025-05-09 09:52:19,805 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=224.400000
+2025-05-09 09:52:19,805 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:20,508 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:20,508 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=50355.360000
+2025-05-09 09:52:20,508 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:21,216 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:21,216 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=3805.182857
+2025-05-09 09:52:21,216 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:22,107 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:22,107 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=7385.965714
+2025-05-09 09:52:22,107 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:22,997 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:22,997 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=10966.748571
+2025-05-09 09:52:22,997 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:23,881 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:23,881 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=14547.531429
+2025-05-09 09:52:23,881 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:24,770 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:24,770 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=18128.314286
+2025-05-09 09:52:24,770 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:25,686 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:25,686 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=21709.097143
+2025-05-09 09:52:25,686 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:26,613 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:26,613 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=25289.880000
+2025-05-09 09:52:26,613 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:27,554 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:27,554 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=28870.662857
+2025-05-09 09:52:27,554 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:28,508 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:28,508 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=32451.445714
+2025-05-09 09:52:28,508 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:29,477 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:29,477 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=36032.228571
+2025-05-09 09:52:29,477 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:30,533 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:30,534 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=39613.011429
+2025-05-09 09:52:30,534 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:31,547 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:31,547 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=43193.794286
+2025-05-09 09:52:31,547 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:32,565 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:32,566 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=46774.577143
+2025-05-09 09:52:32,566 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:33,594 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:33,595 - exactcis.methods.unconditional - WARNING - Using fallback upper bound: 50355.36000000001
+2025-05-09 09:52:33,595 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=45319.824000
+2025-05-09 09:52:33,595 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:34,501 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:34,501 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=55390.896000
+2025-05-09 09:52:34,501 - exactcis.methods.unconditional - INFO - Using 46 provided p1 grid points.
+2025-05-09 09:52:35,417 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:35,418 - exactcis.methods.unconditional - INFO - Upper bound calculated: 55390.896000
+2025-05-09 09:52:35,418 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.257350
+2025-05-09 09:52:35,418 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:35,778 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.019231
+2025-05-09 09:52:35,778 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.267854
+2025-05-09 09:52:35,778 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:36,127 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.966797
+2025-05-09 09:52:36,127 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.262602
+2025-05-09 09:52:36,127 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:36,502 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.310172
+2025-05-09 09:52:36,502 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259976
+2025-05-09 09:52:36,502 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:36,852 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.085971
+2025-05-09 09:52:36,852 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.258663
+2025-05-09 09:52:36,853 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:37,201 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.038229
+2025-05-09 09:52:37,201 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259319
+2025-05-09 09:52:37,201 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:37,573 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.056755
+2025-05-09 09:52:37,573 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.258991
+2025-05-09 09:52:37,573 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:37,972 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.046450
+2025-05-09 09:52:37,972 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259155
+2025-05-09 09:52:37,972 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:38,371 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.051344
+2025-05-09 09:52:38,371 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259073
+2025-05-09 09:52:38,371 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:38,730 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.048941
+2025-05-09 09:52:38,730 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259114
+2025-05-09 09:52:38,730 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:39,075 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.050238
+2025-05-09 09:52:39,075 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259093
+2025-05-09 09:52:39,075 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:39,433 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049585
+2025-05-09 09:52:39,433 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259104
+2025-05-09 09:52:39,433 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:39,789 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049802
+2025-05-09 09:52:39,789 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259109
+2025-05-09 09:52:39,789 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:40,288 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049803
+2025-05-09 09:52:40,288 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259111
+2025-05-09 09:52:40,288 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:40,688 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.049804
+2025-05-09 09:52:40,688 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259113
+2025-05-09 09:52:40,688 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:41,086 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.050021
+2025-05-09 09:52:41,086 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=0.259112
+2025-05-09 09:52:41,086 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:41,483 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.050021
+2025-05-09 09:52:41,484 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=54283.078080
+2025-05-09 09:52:41,484 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:41,819 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:41,819 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=54652.350720
+2025-05-09 09:52:41,819 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:42,130 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:42,130 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=55021.623360
+2025-05-09 09:52:42,130 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:42,447 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:42,447 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=55390.896000
+2025-05-09 09:52:42,447 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:42,760 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:42,760 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=55760.168640
+2025-05-09 09:52:42,760 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:43,071 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:43,071 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=56129.441280
+2025-05-09 09:52:43,071 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:43,432 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:43,433 - exactcis.methods.unconditional - INFO - Calculating log p-value with Barnard's method: a=3, c=9997, n1=3, n2=19997, theta=56498.713920
+2025-05-09 09:52:43,433 - exactcis.methods.unconditional - INFO - Using 20 provided p1 grid points.
+2025-05-09 09:52:43,769 - exactcis.methods.unconditional - INFO - Completed Barnard's log p-value calculation: result=0.000000
+2025-05-09 09:52:43,769 - exactcis.methods.unconditional - INFO - Refined bounds: (0.259112, 56498.71392000002)
+2025-05-09 09:52:43,769 - exactcis.methods.unconditional - INFO - Unconditional CI calculated: (0.25911208209707537, 56498.71392000002)
+--- Comparison of CI Methods --- (alpha=0.05)
+
+=== Table 1 (5,2,9995,9998) ===
+  Input: a=5, b=2, c=9995, d=9998
+  Our_Conditional_Exact       : Lower=0.409276, Upper=26.266032
+  SciPy_Fisher_Exact          : Lower=0.409276, Upper=26.266032
+  Our_Wald_Logit_Haldane      : Lower=0.493205, Upper=9.819253
+  SciPy_Wald_Logit            : Lower=0.485068, Upper=12.892538
+  Our_Blaker_Exact            : Lower=0.0, Upper=0.0
+  Our_MidP_Conditional        : Lower=0.493014, Upper=18.614737
+  Our_Unconditional_Exact     : Lower=0.135513, Upper=280.584192
+
+=== Table 2 (10,7,9990,9993) ===
+  Input: a=10, b=7, c=9990, d=9993
+  Our_Conditional_Exact       : Lower=0.490777, Upper=4.425027
+  SciPy_Fisher_Exact          : Lower=0.490777, Upper=4.425027
+  Our_Wald_Logit_Haldane      : Lower=0.548326, Upper=3.576665
+  SciPy_Wald_Logit            : Lower=0.543729, Upper=3.755622
+  Our_Blaker_Exact            : Lower=0.0, Upper=0.0
+  Our_MidP_Conditional        : Lower=0.537592, Upper=3.975417
+  Our_Unconditional_Exact     : Lower=0.043442, Upper=359.789155
+
+=== Table 3 (3,0,9997,10000) ===
+  Input: a=3, b=0, c=9997, d=10000
+  Our_Conditional_Exact       : Lower=0.270543, Upper=inf
+  SciPy_Fisher_Exact          : Lower=0.413256, Upper=inf
+  Our_Wald_Logit_Haldane      : Lower=0.361404, Upper=135.663612
+  SciPy_Wald_Logit            : Lower=nan, Upper=inf
+  Our_Blaker_Exact            : Lower=0.583331, Upper=0.583331
+  Our_MidP_Conditional        : Lower=0.0, Upper=inf
+  Our_Unconditional_Exact     : Lower=0.259112, Upper=56498.71392

@@ -1,0 +1,14 @@
+include LICENSE
+include CHANGELOG.md
+include README.md
+include CONTRIBUTING.md
+include pyproject.toml
+
+recursive-include tests *.py
+recursive-include docs *.rst *.py *.md
+recursive-include examples *.py *.ipynb
+recursive-include src *.py *.pyi *.typed
+
+prune docs/build
+prune .github
+prune .windsurf
