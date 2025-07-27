@@ -1,12 +1,7 @@
-.qodo
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
 
 # Distribution / packaging
 .Python
@@ -27,35 +22,89 @@ wheels/
 *.egg
 MANIFEST
 
-# Unit test / coverage reports
+# Testing and coverage
+.pytest_cache/
+.coverage*
 htmlcov/
 .tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
 coverage.xml
 *.cover
-.hypothesis/
-.pytest_cache/
 
-# Sphinx documentation
-docs/build/
+# Profiling and analysis outputs
+profiling_results/
+optimization_results/
+profile_results.txt
+*.prof
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Environment directories
+# Virtual environments
 .env
 .venv
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
-# IDE specific files
-.idea/
+# IDEs
 .vscode/
+.idea/
 *.swp
 *.swo
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Documentation builds
+docs/build/
+docs/_build/
+
+# Temporary files
+temp_*.py
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Data files
+*.csv
+*.json
+*.pkl
+*.npy
+*.npz
+*.png  # Plot files
+_temporary/research/analysis_scripts/**/results/
+_temporary/research/r_comparisons/results/
+benchmarks/**/*.csv
+benchmarks/**/*.json
+
+# Analysis outputs
+analysis/plots/**/*.png
+analysis/**/*.json
+
+# R files
+.Rhistory
+.RData
+*.Rout
+*.Rproj.user/
+*.Rproj
+
+# Specific project directories
+archive/legacy_config/
+.cadence/
+.junie/
+.qodo/
+.windsurf/
+
+# Jupyter notebooks (except example notebooks)
+**/*.ipynb
+!examples/**/*.ipynb
+!docs/user_guide/examples/**/*.ipynb
+
+# Log files
+*.log
+*.out
+results_*.txt
+
+# Compiled extensions
+*.so
+*.pyd
+*.dll

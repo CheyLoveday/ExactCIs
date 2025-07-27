@@ -92,9 +92,9 @@ def test_main_with_haldane(mock_stdout):
     """Test the main function with Haldane's correction."""
     main(["1", "20", "5", "25", "--method", "wald", "--apply-haldane", "--verbose"])
     output = mock_stdout.getvalue()
-    assert "Applied Haldane's correction" in output
+    assert "Haldane's correction was requested" in output
     assert "Original: a=1" in output
-    assert "Corrected: a=1.5" in output
+    assert "Values used for calculation: a=1.0" in output
 
 
 @patch('sys.stderr', new_callable=StringIO)

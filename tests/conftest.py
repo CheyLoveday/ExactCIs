@@ -12,6 +12,7 @@ import pytest
 import logging
 import time
 from _pytest.logging import LogCaptureFixture
+from exactcis.methods.midp import _cache as midp_cache
 
 # Set up logging
 logging.basicConfig(
@@ -68,6 +69,14 @@ def caplog_custom(caplog: LogCaptureFixture):
     """Enhanced log capture fixture with automatic level setting."""
     caplog.set_level(logging.INFO)
     return caplog
+
+
+@pytest.fixture(autouse=True)
+def clear_midp_cache_globally():
+    """Clears the midp method's internal cache before and after each test run globally."""
+    midp_cache.clear()
+    yield
+    midp_cache.clear()
 
 
 @pytest.fixture(scope="session", autouse=True)

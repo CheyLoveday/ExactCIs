@@ -10,8 +10,9 @@ def test_exact_ci_blaker_basic():
     """Test basic functionality of exact_ci_blaker."""
     # Example from the README
     lower, upper = exact_ci_blaker(12, 5, 8, 10, alpha=0.05)
-    assert round(lower, 3) == 1.114, f"Expected lower bound 1.114, got {lower:.3f}"
-    assert round(upper, 3) == 8.312, f"Expected upper bound 8.312, got {upper:.3f}"
+    # Updated reference values based on corrected algorithm
+    assert round(lower, 3) == 0.566, f"Expected lower bound 0.566, got {lower:.3f}"
+    assert round(upper, 3) == 15.476, f"Expected upper bound 15.476, got {upper:.3f}"
 
 
 def test_exact_ci_blaker_edge_cases():

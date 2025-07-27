@@ -143,3 +143,70 @@ This document provides concise guidance for developers working on the ExactCIs p
 - **Versioning**:
   - Follow semantic versioning (MAJOR.MINOR.PATCH)
   - Document breaking changes clearly
+
+## 6. Test Data Generation
+
+- **2x2 Contingency Tables for Testing**:
+  - Use standardized test tables with known properties to verify implementation consistency
+  - Test with tables having the same odds ratio but varying precision to validate CI calculations
+  - Include edge cases and tables with zeros to test robustness
+  - Monitor performance with progress markers to identify slow calculations
+
+- **Standard Test Tables with Fixed Odds Ratio (OR = 3.0)**:
+  ```
+  # Table 1: Small sample size
+  a=3, b=1, c=1, d=1
+  OR = (3*1)/(1*1) = 3.0
+  Total sample size = 6
+
+  # Table 2: Medium sample size
+  a=6, b=2, c=1, d=1
+  OR = (6*1)/(2*1) = 3.0
+  Total sample size = 10
+
+  # Table 3: Larger sample size
+  a=15, b=5, c=1, d=1
+  OR = (15*1)/(5*1) = 3.0
+  Total sample size = 22
+
+  # Table 4: Even larger sample size
+  a=30, b=10, c=1, d=1
+  OR = (30*1)/(10*1) = 3.0
+  Total sample size = 42
+
+  # Table 5: Very large sample size
+  a=90, b=30, c=1, d=1
+  OR = (90*1)/(30*1) = 3.0
+  Total sample size = 122
+  ```
+
+- **Logical Comparison Tables with Fixed Odds Ratio (OR = 2.0)**:
+  - Located in `analysis/logical_comparison/logical_comparison_tables.py`
+  - Uses 1000 cases and 1000 controls for all tables
+  - Varies exposure proportion to create tables with increasing precision
+  - Automatically calculates CIs using all available methods
+  - Includes progress markers to monitor performance of each calculation
+  
+  ```python
+  # Run the script with:
+  uv run python analysis/logical_comparison/logical_comparison_tables.py
+  
+  # The script generates 5 tables with:
+  # - Fixed OR of 2.0
+  # - 1000 cases and 1000 controls
+  # - Increasing precision (tightening CIs)
+  # - Progress markers for performance monitoring
+  ```
+
+- **Performance Monitoring**:
+  - The logical comparison script includes timestamps and execution times for each calculation
+  - Use these markers to identify which methods or tables are causing performance issues
+  - Compare execution times across different CI methods for the same table
+  - Monitor how execution time changes as table properties change
+
+- **Using Test Tables**:
+  - Compare confidence interval widths across tables with the same OR
+  - Verify that CIs get tighter as sample size increases
+  - Check that all methods produce logically consistent results
+  - Use these tables to validate new implementations against existing ones
+  - Ensure that performance remains acceptable across all test cases

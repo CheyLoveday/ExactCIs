@@ -23,10 +23,10 @@ Welcome to the ExactCIs documentation. This package provides methods for calcula
 
 ## Examples
 
-- [Quick Start Example](../examples/quick_start.ipynb)
-- [Method Comparison Example](../examples/method_comparison.ipynb)
-- [Handling Edge Cases](../examples/edge_cases.ipynb)
-- [Using Timeout Functionality](../examples/timeout_example.ipynb)
+- [Quick Start Example](../_temporary/examples/quick_start.ipynb)
+- [Method Comparison Example](../_temporary/examples/method_comparison.ipynb)
+- [Handling Edge Cases](../_temporary/examples/edge_cases.ipynb)
+- [Using Timeout Functionality](../_temporary/examples/timeout_example.ipynb)
 
 ## Visual Documentation
 

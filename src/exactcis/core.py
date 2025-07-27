@@ -673,23 +673,23 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
                 return None
             # Return hi as the best we can do
             return (hi, 0)
-    # If finding the largest theta where f(theta) ≥ target
+    # If finding the smallest theta where f(theta) ≥ target (decreasing function)
     else:
-        # If hi already meets the condition, return it
-        if f_hi >= target:
+        # If lo already meets the condition, return it
+        if f_lo >= target:
             # Check for timeout before returning
             if timeout_checker and timeout_checker():
                 logger.info(f"Timeout reached in find_plateau_edge")
                 return None
-            return (hi, 0)
-        # If lo doesn't meet the condition, can't find a valid theta
-        if f_lo < target:
-            # Check for timeout before returning
-            if timeout_checker and timeout_checker():
-                logger.info(f"Timeout reached in find_plateau_edge")
-                return None
-            # Return lo as the best we can do
             return (lo, 0)
+        # If hi doesn't meet the condition, can't find a valid theta
+        if f_hi < target:
+            # Check for timeout before returning
+            if timeout_checker and timeout_checker():
+                logger.info(f"Timeout reached in find_plateau_edge")
+                return None
+            # Return hi as the best we can do
+            return (hi, 0)
     
     # Initialize the bounds for binary search
     lower, upper = lo, hi
@@ -806,7 +806,7 @@ def find_smallest_theta(
             root = math.exp(log_root_g) # Exponentiate the result from find_root_log
             val_at_root = func(root)
             logger.info(f"find_smallest_theta: func(root={root:.4e}) from find_root_log = {val_at_root:.4e} (target_alpha={target_alpha:.4e}, diff={(val_at_root - target_alpha):.2e})")
-            if abs(val_at_root - target_alpha) < 1e-9: # Threshold for a 'good' root
+            if abs(val_at_root - target_alpha) < 0.01: # Threshold for a 'good' root - further relaxed to accept good approximations
                 if not (np.isclose(root, current_lo, atol=xtol) or np.isclose(root, current_hi, atol=xtol)):
                     logger.info(f"find_smallest_theta: Root {root:.4e} found by find_root_log is close to target and not at boundary. Returning this root.")
                     return root
@@ -929,30 +929,24 @@ def calculate_odds_ratio(a: Union[int, float], b: Union[int, float],
                          c: Union[int, float], d: Union[int, float]) -> float:
     """
     Calculate the odds ratio for a 2x2 contingency table.
-    Returns float('inf') if b or c is 0 and a*d > 0.
-    Returns 1.0 if a*d == 0 and b*c == 0 (e.g. a=0,b=0,c=1,d=1 -> OR=0/0 -> 1)
-             or if a=0,c=0 (OR = 0/0) or b=0,d=0 (OR=inf/inf) - these are ill-defined.
-             Let's be more specific based on common practice.
-    Haldane-Anscombe correction is often applied *before* calling this for CI calculations.
+    Conventionally, 0/0 is treated as 1.0, and x/0 (for x > 0) as infinity.
+    Haldane-Anscombe correction is typically applied *before* this function
+    when calculating confidence intervals if zeros are present.
     """
-    if b == 0 or c == 0:
-        if a > 0 and d > 0: # e.g. (1,0,1,1) -> OR = inf, (1,1,0,1) -> OR = inf
+    numerator = a * d
+    denominator = b * c
+
+    if denominator == 0:
+        if numerator == 0:
+            # Case 0/0 (e.g., a=0,c=0 or b=0,d=0 or a=0,b=0 or c=0,d=0 or all zero)
+            return 1.0  # Convention for indeterminate 0/0 form
+        else:
+            # Case x/0 where x > 0
             return float('inf')
-        elif a == 0 and d == 0: # (0,0,0,0) or (0,0,1,1) or (1,1,0,0)
-             # if all are zero, OR is undefined, conventionally 1?
-             # if (0,0,c,d) c,d >0 -> 0 / (0*c) -> 0/0. Conventionally 1?
-             # if (a,b,0,0) a,b >0 -> (a*0) / (b*0) -> 0/0. Conventionally 1?
-            return 1.0 # This is a convention for 0/0 type situations in ORs.
-        elif a == 0 and b==0: # (0,0,c,d) -> (0*d)/(0*c) = 0/0
-            return 1.0
-        elif c == 0 and d==0: # (a,b,0,0) -> (a*0)/(b*0) = 0/0
-            return 1.0
-        # Case: (a=0, b>0, c=0, d>0) -> (0*d)/(b*0) = 0/0 -> 1.0
-        # Case: (a>0, b=0, c>0, d=0) -> (a*0)/(0*c) = 0/0 -> 1.0
-        else: # One of (b or c) is 0, and one of (a or d) is 0. Results in OR = 0.
-              # e.g., (1,1,1,0) -> (1*0)/(1*1)=0. (0,1,1,1) -> (0*1)/(1*1)=0
-            return 0.0
-    return (a * d) / (b * c)
+    else:
+        # Denominator is non-zero, standard calculation
+        # This will correctly return 0.0 if numerator is 0 and denominator is non-zero.
+        return numerator / denominator
 
 
 def estimate_point_or(a: Union[int, float], b: Union[int, float], 

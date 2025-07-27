@@ -24,10 +24,11 @@ classifiers = [
 ]
 # Core dependencies - minimal requirements for basic functionality
 dependencies = [
-    "numpy>=1.21,<2.0",  # Constraining to pre-2.0 for broader compatibility
+    "numpy>=1.21,<2.0", # Constraining to pre-2.0 for broader compatibility
     "scipy>=1.12.0",
-    "typing-extensions; python_version < '3.10'",  # For older Python versions that need newer typing features
-    "statsmodels>=0.14.0"  # Added for comparison script
+    "typing-extensions; python_version < '3.10'", # For older Python versions that need newer typing features # Added for comparison script
+    "statsmodels>=0.14.0",
+    "pytest>=8.3.5",
 ]
 
 [project.optional-dependencies]

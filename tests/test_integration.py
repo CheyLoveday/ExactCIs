@@ -294,7 +294,16 @@ def test_odds_ratio_various_inputs(input_values, expected, timer):
             # Check that odds ratio is within all CIs
             for method, (lower, upper) in results.items():
                 logger.info(f"Method {method}: CI = ({lower:.6f}, {upper:.6f})")
-                assert lower <= odds_ratio <= upper, f"{method}: OR {odds_ratio} not in CI ({lower}, {upper})"
+                
+                # Wald-Haldane method uses corrected values, so for zero cell cases,
+                # we check if the corrected OR is within the CI instead of the original OR
+                if method == "wald_haldane" and (a == 0 or b == 0 or c == 0 or d == 0):
+                    # Calculate Haldane-corrected OR
+                    corrected_or = ((a + 0.5) * (d + 0.5)) / ((b + 0.5) * (c + 0.5))
+                    assert lower <= corrected_or <= upper, f"{method}: Corrected OR {corrected_or:.6f} not in CI ({lower:.6f}, {upper:.6f})"
+                    logger.info(f"Method {method}: Corrected OR {corrected_or:.6f} is within CI")
+                else:
+                    assert lower <= odds_ratio <= upper, f"{method}: OR {odds_ratio} not in CI ({lower}, {upper})"
     except (ValueError, RuntimeError) as e:
         logger.warning(f"Error computing CIs for {input_values}: {str(e)}")
         # Some edge cases might legitimately raise errors

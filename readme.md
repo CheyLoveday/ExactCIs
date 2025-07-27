@@ -7,7 +7,7 @@ Provides five methods to compute confidence intervals for the odds ratio of a 2Ã
 - [User Guide](docs/user_guide.md): Comprehensive guide to using ExactCIs
 - [API Reference](docs/api_reference.md): Detailed function and parameter documentation
 - [Architecture](docs/architecture.md): Package design, data flow, and implementation details
-- [Examples](examples/): Jupyter notebooks with practical examples
+- [Examples](_temporary/examples/): Jupyter notebooks with practical examples
 - [Method Comparison](docs/method_comparison.md): Detailed analysis of different CI methods
 - [Performance](docs/performance.md): Performance considerations and optimization
 
@@ -110,7 +110,7 @@ unconditional CI: (1.132, 8.204)
 wald_haldane CI: (1.024, 8.658)
 ```
 
-For more detailed examples, see the [Quick Start Notebook](examples/quick_start.ipynb) and [Method Comparison Notebook](examples/method_comparison.ipynb).
+For more detailed examples, see the [Quick Start Notebook](_temporary/examples/quick_start.ipynb) and [Method Comparison Notebook](_temporary/examples/method_comparison.ipynb).
 
 ## Method-Specific Usage
 
