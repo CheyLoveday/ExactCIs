@@ -90,8 +90,9 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     # comparing against a_eff_obs, using PMF from original counts.
     def midp_pval_func(theta: float) -> float:
         # log_nchg_pmf uses n1_orig, n2_orig, m1_orig
-        log_probs_values = [log_nchg_pmf(k_val, n1_orig, n2_orig, m1_orig, theta) for k_val in supp_orig_list]
-        probs = np.exp(np.array(log_probs_values))
+        # Vectorized calculation of log probabilities
+        log_probs_values = np.vectorize(log_nchg_pmf)(supp_orig.x, n1_orig, n2_orig, m1_orig, theta)
+        probs = np.exp(log_probs_values)
 
         # P(X = effective discrete point related to a_eff_obs)
         prob_at_a_eff_discrete_point = 0.0

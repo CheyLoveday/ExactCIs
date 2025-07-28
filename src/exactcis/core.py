@@ -156,14 +156,15 @@ def log_nchg_pmf(k: int, n1: int, n2: int, m1: int, theta: float) -> float:
     # Unnormalized log probability
     log_p_unnorm = log_comb_n1_k + log_comb_n2_m1_k + k * log_theta
     
-    # Calculate normalizing constant in log space
-    log_norm_terms = []
-    for i in supp.x:
-        log_comb_n1_i = log_binom_coeff(n1, i)
-        log_comb_n2_m1_i = log_binom_coeff(n2, m1 - i)
-        log_norm_terms.append(log_comb_n1_i + log_comb_n2_m1_i + i * log_theta)
+    # Vectorized calculation of normalizing constant in log space
+    i = supp.x
+    with np.errstate(divide='ignore'):
+        log_comb_n1_i = np.vectorize(log_binom_coeff)(n1, i)
+        log_comb_n2_m1_i = np.vectorize(log_binom_coeff)(n2, m1 - i)
     
-    log_norm = logsumexp(log_norm_terms)
+    log_norm_terms = log_comb_n1_i + log_comb_n2_m1_i + i * log_theta
+    
+    log_norm = logsumexp(log_norm_terms.tolist())
     
     # Return normalized log probability
     return log_p_unnorm - log_norm
@@ -339,25 +340,29 @@ def _pmf_weights_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int
         logger.info(f"[DEBUG_PMF_WEIGHTS] n1=5,n2=10,m=7,theta={theta:.2e}")
         logger.info(f"[DEBUG_PMF_WEIGHTS] supp={supp.x}")
 
-    # Calculate log-probabilities with safeguards against overflow
-    logs = []
-    for k in supp.x:  # k from support() is guaranteed to be int
-        try:
-            # Use log-space calculations to avoid overflow
-            # Use log_binom_coeff which handles float inputs for n1, n2, m
-            log_comb_n1_k = log_binom_coeff(n1, k)
-            log_comb_n2_m_k = log_binom_coeff(n2, m - k)
-            log_term = log_comb_n1_k + log_comb_n2_m_k + k * logt
-            logs.append(log_term)
-            
-            if is_debug_case_pmf:
-                logger.info(f"[DEBUG_PMF_WEIGHTS] k={k}: log_comb_n1_k={log_comb_n1_k:.2e}, " 
-                           f"log_comb_n2_m_k={log_comb_n2_m_k:.2e}, k*logt={k*logt:.2e}, " 
-                           f"log_term={log_term:.2e}")
-        except (OverflowError, ValueError) as e:
-            logger.warning(f"Numerical error in pmf_weights for k={k}: {e}")
-            # Assign a very small probability to this value
-            logs.append(float('-inf'))
+    # Vectorized calculation of log-probabilities with safeguards against overflow
+    k = supp.x
+    logs = np.full(len(k), float('-inf'))  # Initialize with -inf
+    
+    try:
+        # Use np.errstate to ignore divide by zero warnings
+        with np.errstate(divide='ignore'):
+            # Vectorized calculation of binomial coefficients
+            log_comb_n1_k = np.vectorize(log_binom_coeff)(n1, k)
+            log_comb_n2_m_k = np.vectorize(log_binom_coeff)(n2, m - k)
+        
+        # Vectorized calculation of log terms
+        log_terms = log_comb_n1_k + log_comb_n2_m_k + k * logt
+        logs = log_terms
+        
+        if is_debug_case_pmf:
+            for i, k_val in enumerate(k):
+                logger.info(f"[DEBUG_PMF_WEIGHTS] k={k_val}: log_comb_n1_k={log_comb_n1_k[i]:.2e}, " 
+                           f"log_comb_n2_m_k={log_comb_n2_m_k[i]:.2e}, k*logt={k_val*logt:.2e}, " 
+                           f"log_term={log_terms[i]:.2e}")
+    except (OverflowError, ValueError) as e:
+        logger.warning(f"Numerical error in pmf_weights: {e}")
+        # logs already initialized with -inf
 
     # Filter out -inf values
     valid_logs = [l for l in logs if l != float('-inf')]

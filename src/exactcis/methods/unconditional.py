@@ -13,6 +13,7 @@ from typing import Tuple, List, Dict, Optional, Callable, Union, Any
 import concurrent.futures
 import os
 from functools import lru_cache
+from scipy.stats import binom
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -211,69 +212,25 @@ def _process_grid_point(args):
     
     if has_numpy:
         try:
-            # Pre-calculate log probabilities for all k values that matter
-            mean1 = n1 * p1
-            std1 = math.sqrt(n1 * p1 * (1-p1)) if n1 * p1 * (1-p1) > 0 else 0
-            relevant_k = [k_val for k_val in k_range if abs(k_val - mean1) <= 5 * std1 or k_val == a] if std1 > 0 else [k_val for k_val in k_range if k_val == a]
+            # Vectorized calculation of binomial probabilities
+            x_vals = np.arange(n1 + 1)
+            y_vals = np.arange(n2 + 1)
 
-            # Calculate log probabilities for relevant k values
-            log_pk = np.array([_log_binom_pmf(n1, k_val, p1) for k_val in relevant_k])
+            log_px_all = _log_binom_pmf(n1, x_vals, p1)
+            log_py_all = _log_binom_pmf(n2, y_vals, current_p2)
             
-            # Pre-calculate log probabilities for all l values that matter
-            mean2 = n2 * current_p2
-            std2 = math.sqrt(n2 * current_p2 * (1-current_p2)) if n2 * current_p2 * (1-current_p2) > 0 else 0
-            relevant_l = [l_val for l_val in l_range if abs(l_val - mean2) <= 5 * std2 or l_val == c] if std2 > 0 else [l_val for l_val in l_range if l_val == c]
+            # Calculate the joint log probability matrix using outer addition
+            # This is significantly faster than nested loops for large n1, n2
+            log_joint = np.add.outer(log_px_all, log_py_all)
+            
+            # Find tables with probability <= observed table
+            mask = log_joint <= log_p_obs_for_this_p1
 
-            # Calculate log probabilities for relevant l values
-            log_pl = np.array([_log_binom_pmf(n2, l_val, current_p2) for l_val in relevant_l])
-            
-            # Create mesh grid of log probabilities
-            # Ensure relevant_k and relevant_l are not empty before meshgrid
-            if not relevant_k or not relevant_l:
-                # This case implies observed table is extremely unlikely or n1/n2 is zero,
-                # or p1/current_p2 is 0 or 1 leading to std=0 and only a or c are relevant.
-                # If a is in relevant_k and c is in relevant_l, log_joint will be log_p_obs_for_this_p1
-                # If not, then the observed table itself isn't even considered "relevant",
-                # which means its probability is extremely low.
-                # The sum of probabilities less than or equal to an extremely low P(obs)
-                # would be just P(obs) or P(obs) + other equally tiny probabilities.
-                # This path needs careful handling, for now, if P(obs) is calculated,
-                # and it's the only one <= itself, then result is P(obs).
-                # If P(obs) is -inf, then the sum is -inf.
-                if log_p_obs_for_this_p1 == float('-inf'):
-                    return float('-inf')
-                # If only the observed table itself matches the criteria.
-                # This happens if std1 or std2 is 0 and relevant_k=[a], relevant_l=[c]
-                # And no other table X' has P(X') <= P(X_obs)
-                # Sum is P(X_obs)
-                # A more robust way for empty relevant_k/l is to fall back to pure python version or sum only P(obs)
-                # For now, let's assume if relevant_k/l are empty, it implies P(obs) is the only relevant term.
-                # This will be covered by the log_joint <= log_p_obs_for_this_p1 logic.
-                # If relevant_k or relevant_l is empty, log_pk or log_pl would be empty.
-                # meshgrid of an empty array with another is empty.
-                # log_joint will be empty, mask will be empty, np.any(mask) false. returns -inf.
-                # This seems okay if P(obs) itself was -inf.
-                # If P(obs) was not -inf but relevant lists are empty, it implies P(obs) was filtered out, which is an issue.
-                # The conditions `k_val == a` and `l_val == c` should ensure P(obs) is included if p1, p2 are not 0 or 1.
-                # Adding a check: if relevant_k or relevant_l become empty, switch to pure python, it's safer.
-                if not relevant_k or not relevant_l:
-                    # Fallback to pure Python if NumPy path has empty relevant arrays
-                    pass
-                else:
-                    LOG_K, LOG_L = np.meshgrid(log_pk, log_pl, indexing='ij')
-            
-                    # Joint log probability
-                    log_joint = LOG_K + LOG_L
-            
-                    # Find tables with probability <= observed table (using the new log_p_obs_for_this_p1)
-                    mask = log_joint <= log_p_obs_for_this_p1
-            
-                    if np.any(mask):
-                        # Use logsumexp for numerical stability when summing in log space
-                        return logsumexp(log_joint[mask].flatten().tolist())
-                    else:
-                        return float('-inf')
-                
+            if np.any(mask):
+                return logsumexp(log_joint[mask].flatten().tolist())
+            else:
+                return float('-inf')
+
         except Exception as e:
             # Fallback to pure Python if NumPy fails
             logger.debug(f"NumPy version in _process_grid_point failed: {e}, falling back to pure Python.")
