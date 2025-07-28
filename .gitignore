@@ -93,6 +93,16 @@ archive/legacy_config/
 .junie/
 .qodo/
 .windsurf/
+.gemini/
+.agent_guidelines/
+
+# Additional cache directories
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Windsurf-specific files
+.windsurfrules
 
 # Jupyter notebooks (except example notebooks)
 **/*.ipynb

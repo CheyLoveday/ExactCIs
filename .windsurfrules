@@ -1,2 +1,0 @@
-We are using UV venv and .toml for this project so use uv to call functions run tests etc
-No hard coding values just to pass tests
