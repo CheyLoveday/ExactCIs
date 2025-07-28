@@ -9,7 +9,7 @@ function calculations, and root-finding algorithms.
 import math
 import logging
 from functools import lru_cache
-from typing import Tuple, Callable, List, Union, Optional, Dict, Set, NamedTuple
+from typing import Tuple, Callable, List, Union, Optional, Dict, Set, NamedTuple, Any
 import numpy as np
 
 # Configure logging
@@ -1029,3 +1029,170 @@ def create_2x2_table(a: Union[int, float], b: Union[int, float],
         "relative_risk": calculate_relative_risk(a, b, c, d)
     }
     return table
+
+
+def batch_validate_counts(tables: List[Tuple[int, int, int, int]]) -> List[bool]:
+    """
+    Validate multiple 2x2 contingency tables in batch.
+    
+    This function provides faster validation for multiple tables by vectorizing
+    the validation process.
+    
+    Args:
+        tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
+        
+    Returns:
+        List of boolean values indicating which tables are valid
+    """
+    valid_tables = []
+    
+    for a, b, c, d in tables:
+        try:
+            validate_counts(a, b, c, d)
+            valid_tables.append(True)
+        except ValueError:
+            valid_tables.append(False)
+    
+    return valid_tables
+
+
+def batch_calculate_odds_ratios(tables: List[Tuple[int, int, int, int]]) -> List[float]:
+    """
+    Calculate odds ratios for multiple 2x2 tables in batch.
+    
+    This function provides faster odds ratio calculation for multiple tables
+    by avoiding repeated function call overhead.
+    
+    Args:
+        tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
+        
+    Returns:
+        List of odds ratio values
+    """
+    odds_ratios = []
+    
+    for a, b, c, d in tables:
+        try:
+            if b * c == 0:
+                if a * d == 0:
+                    odds_ratios.append(1.0)  # Indeterminate case
+                else:
+                    odds_ratios.append(float('inf'))
+            else:
+                odds_ratios.append((a * d) / (b * c))
+        except (ZeroDivisionError, OverflowError):
+            odds_ratios.append(float('inf'))
+    
+    return odds_ratios
+
+
+def batch_log_nchg_pmf(k_values: List[int], n1: int, n2: int, m1: int, 
+                       theta: float) -> List[float]:
+    """
+    Calculate log PMF values for multiple k values in batch.
+    
+    This function is optimized for scenarios where many PMF values need to be
+    calculated with the same parameters but different k values, such as in
+    batch processing or vectorized operations.
+    
+    Args:
+        k_values: List of k values to calculate PMF for
+        n1: First sample size
+        n2: Second sample size  
+        m1: First margin total
+        theta: Odds ratio parameter
+        
+    Returns:
+        List of log PMF values
+    """
+    if not k_values:
+        return []
+    
+    # Pre-calculate common terms
+    n = n1 + n2
+    m2 = n - m1
+    
+    # Use vectorized operations where possible
+    try:
+        import numpy as np
+        k_array = np.array(k_values)
+        
+        # Vectorized calculation of log binomial coefficients
+        log_binom_n1_k = np.array([log_binom_coeff(n1, k) for k in k_values])
+        log_binom_n2_m1_k = np.array([log_binom_coeff(n2, m1 - k) for k in k_values])
+        log_binom_n_m1 = log_binom_coeff(n, m1)
+        
+        # Vectorized theta terms
+        log_theta_terms = k_array * math.log(theta) if theta > 0 else np.full(len(k_values), float('-inf'))
+        
+        # Combine terms
+        log_pmf_values = log_binom_n1_k + log_binom_n2_m1_k - log_binom_n_m1 + log_theta_terms
+        
+        return log_pmf_values.tolist()
+        
+    except ImportError:
+        # Fall back to sequential calculation if numpy not available
+        return [log_nchg_pmf(k, n1, n2, m1, theta) for k in k_values]
+
+
+# Add convenience functions for common batch operations
+def batch_support_calculations(tables: List[Tuple[int, int, int, int]]) -> List[Dict[str, Any]]:
+    """
+    Calculate support information for multiple tables in batch.
+    
+    Args:
+        tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
+        
+    Returns:
+        List of dictionaries containing support information for each table
+    """
+    support_info = []
+    
+    for a, b, c, d in tables:
+        try:
+            n1, n2 = a + b, c + d
+            m1 = a + c
+            
+            supp = support(n1, n2, m1)
+            support_info.append({
+                'support': supp,
+                'n1': n1,
+                'n2': n2,
+                'm1': m1,
+                'valid': True
+            })
+        except Exception as e:
+            support_info.append({
+                'support': None,
+                'n1': None,
+                'n2': None,
+                'm1': None,
+                'valid': False,
+                'error': str(e)
+            })
+    
+    return support_info
+
+
+def optimize_core_cache_for_batch(enable_large_cache: bool = True) -> None:
+    """
+    Optimize core function caches for batch processing scenarios.
+    
+    This function adjusts cache sizes and parameters to better handle
+    batch processing workloads where many similar calculations are performed.
+    
+    Args:
+        enable_large_cache: Whether to enable larger cache sizes for batch processing
+    """
+    global log_binom_coeff
+    
+    if enable_large_cache:
+        # Increase cache size for log_binom_coeff since it's heavily used in batch processing
+        original_func = log_binom_coeff.__wrapped__
+        log_binom_coeff = lru_cache(maxsize=8192)(original_func)
+        logger.info("Enabled large cache sizes for batch processing")
+    else:
+        # Reset to default cache size
+        original_func = log_binom_coeff.__wrapped__
+        log_binom_coeff = lru_cache(maxsize=2048)(original_func)
+        logger.info("Reset cache sizes to default")

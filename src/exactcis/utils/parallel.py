@@ -31,7 +31,8 @@ def parallel_map(func: Callable, items: List[Any],
                  max_workers: Optional[int] = None,
                  chunk_size: Optional[int] = None,
                  timeout: Optional[float] = None,
-                 progress_callback: Optional[Callable[[float], None]] = None) -> List[Any]:
+                 progress_callback: Optional[Callable[[float], None]] = None,
+                 force_processes: bool = True) -> List[Any]:
     """
     Execute a function over a list of items in parallel.
     
@@ -43,6 +44,7 @@ def parallel_map(func: Callable, items: List[Any],
         chunk_size: Size of chunks for processing (default: auto-determined)
         timeout: Maximum time to wait for completion in seconds
         progress_callback: Optional callback to report progress (0-100)
+        force_processes: Force use of processes for CPU-bound tasks (default: True)
         
     Returns:
         List of results in the same order as input items
@@ -73,12 +75,13 @@ def parallel_map(func: Callable, items: List[Any],
     
     # For process pools, we need a simpler approach - progress tracking with shared
     # objects like multiprocessing.Value causes issues with serialization
-    if use_threads:
+    if use_threads and not force_processes:
         executor_class = ThreadPoolExecutor
     else:
         executor_class = ProcessPoolExecutor
         # Disable progress tracking for process pools to avoid serialization issues
         progress_callback = None
+        logger.info(f"Using ProcessPoolExecutor for CPU-bound parallelization")
     
     try:
         with executor_class(max_workers=max_workers) as executor:

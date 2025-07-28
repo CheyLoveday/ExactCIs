@@ -452,3 +452,192 @@ def test_parallel_error_recovery():
         items = [1, 2, 3]
         results = parallel_map(lambda x: x + 1, items, max_workers=2)
         assert results == [2, 3, 4]  # Should still work sequentially
+
+
+# ============================================================================
+# BATCH PROCESSING TESTS
+# ============================================================================
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_map_force_processes():
+    """Test parallel_map with force_processes parameter."""
+    def cpu_bound_func(x):
+        # Simulate CPU-bound work
+        return sum(range(x))
+    
+    items = [100, 200, 300]
+    
+    # Test with forced processes
+    results = parallel_map(cpu_bound_func, items, max_workers=2, force_processes=True)
+    expected = [sum(range(x)) for x in items]
+    assert results == expected
+
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_map_chunking():
+    """Test parallel_map with different chunk sizes."""
+    def simple_func(x):
+        return x * 2
+    
+    items = list(range(20))
+    
+    # Test with different chunk sizes
+    results_auto = parallel_map(simple_func, items, max_workers=2)
+    results_custom = parallel_map(simple_func, items, max_workers=2, chunk_size=5)
+    
+    expected = [x * 2 for x in items]
+    assert results_auto == expected
+    assert results_custom == expected
+
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_map_large_dataset():
+    """Test parallel_map with a larger dataset to test chunking behavior."""
+    def add_one(x):
+        return x + 1
+    
+    # Test with larger dataset
+    items = list(range(100))
+    results = parallel_map(add_one, items, max_workers=4)
+    
+    expected = [x + 1 for x in items]
+    assert results == expected
+    assert len(results) == 100
+
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_compute_ci_different_methods():
+    """Test parallel CI computation with different mock methods."""
+    
+    # Mock different CI methods
+    def fisher_like_method(a, b, c, d, alpha=0.05, **kwargs):
+        or_val = (a * d) / (b * c) if b * c > 0 else 1.0
+        margin = or_val * 0.2
+        return (max(0, or_val - margin), or_val + margin)
+    
+    def blaker_like_method(a, b, c, d, alpha=0.05, **kwargs):
+        or_val = (a * d) / (b * c) if b * c > 0 else 1.0
+        margin = or_val * 0.15  # Tighter interval
+        return (max(0, or_val - margin), or_val + margin)
+    
+    tables = [(2, 3, 4, 5), (3, 4, 5, 6), (4, 5, 6, 7)]
+    
+    # Test with different methods
+    results_fisher = parallel_compute_ci(fisher_like_method, tables)
+    results_blaker = parallel_compute_ci(blaker_like_method, tables)
+    
+    assert len(results_fisher) == len(tables)
+    assert len(results_blaker) == len(tables)
+    
+    # Blaker-like should generally have tighter intervals
+    for i in range(len(tables)):
+        fisher_width = results_fisher[i][1] - results_fisher[i][0]
+        blaker_width = results_blaker[i][1] - results_blaker[i][0]
+        assert blaker_width < fisher_width
+
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_compute_ci_edge_cases():
+    """Test parallel CI computation with edge case tables."""
+    def robust_ci_method(a, b, c, d, alpha=0.05, **kwargs):
+        # Handle edge cases
+        if a == 0 or d == 0:
+            return (0.0, 1.0)
+        if b == 0 or c == 0:
+            return (1.0, float('inf'))
+        
+        or_val = (a * d) / (b * c)
+        return (or_val * 0.5, or_val * 2.0)
+    
+    # Include tables with zeros
+    tables = [
+        (0, 1, 2, 3),  # Zero in a
+        (1, 0, 2, 3),  # Zero in b
+        (1, 2, 0, 3),  # Zero in c
+        (1, 2, 3, 0),  # Zero in d
+        (1, 2, 3, 4)   # Normal table
+    ]
+    
+    results = parallel_compute_ci(robust_ci_method, tables)
+    
+    assert len(results) == len(tables)
+    assert results[0] == (0.0, 1.0)  # Zero in a
+    assert results[1] == (1.0, float('inf'))  # Zero in b
+    assert results[2] == (1.0, float('inf'))  # Zero in c  
+    assert results[3] == (0.0, 1.0)  # Zero in d
+    assert results[4][0] > 0  # Normal table should have positive lower bound
+
+
+@pytest.mark.utils  
+@pytest.mark.fast
+def test_parallel_compute_ci_with_kwargs():
+    """Test parallel CI computation with additional keyword arguments."""
+    def parameterized_ci_method(a, b, c, d, alpha=0.05, grid_size=10, **kwargs):
+        # Method that uses additional parameters
+        or_val = (a * d) / (b * c) if b * c > 0 else 1.0
+        # Grid size affects precision (mock behavior)
+        precision = 1.0 / grid_size
+        margin = or_val * precision
+        return (max(0, or_val - margin), or_val + margin)
+    
+    tables = [(1, 2, 3, 4), (2, 3, 4, 5)]
+    
+    # Test with different grid sizes
+    results_coarse = parallel_compute_ci(parameterized_ci_method, tables, alpha=0.05, grid_size=5)
+    results_fine = parallel_compute_ci(parameterized_ci_method, tables, alpha=0.05, grid_size=20)
+    
+    assert len(results_coarse) == len(tables)
+    assert len(results_fine) == len(tables)
+    
+    # Finer grid should give tighter intervals
+    for i in range(len(tables)):
+        coarse_width = results_coarse[i][1] - results_coarse[i][0]
+        fine_width = results_fine[i][1] - results_fine[i][0]
+        assert fine_width < coarse_width
+
+
+@pytest.mark.utils
+@pytest.mark.fast  
+def test_parallel_map_timeout_behavior():
+    """Test parallel_map behavior with timeout parameter."""
+    def variable_time_func(x):
+        # Some items take longer than others
+        if x > 5:
+            time.sleep(0.01)  # Brief delay for larger values
+        return x * 2
+    
+    items = list(range(10))
+    
+    # Test with reasonable timeout
+    results = parallel_map(variable_time_func, items, max_workers=2, timeout=1.0)
+    expected = [x * 2 for x in items]
+    assert results == expected
+
+
+@pytest.mark.utils
+@pytest.mark.fast
+def test_parallel_chunk_parameter_space_edge_cases():
+    """Test parameter space chunking with edge cases."""
+    
+    # Test with very small range
+    chunks = chunk_parameter_space((0.999, 1.001), 2)
+    assert len(chunks) == 2  
+    assert chunks[0][0] >= 1e-9  # Should handle near-zero
+    
+    # Test with large range  
+    chunks = chunk_parameter_space((1e-6, 1e6), 5)
+    assert len(chunks) == 5
+    assert chunks[0][0] >= 1e-9
+    assert chunks[-1][1] <= 1e6 + 1e-10  # Allow small numerical error
+    
+    # Test logarithmic distribution - ratios should be similar
+    ratios = [chunks[i][1] / chunks[i][0] for i in range(len(chunks))]
+    # All ratios should be similar for logarithmic spacing
+    avg_ratio = sum(ratios) / len(ratios)
+    for ratio in ratios:
+        assert abs(ratio - avg_ratio) / avg_ratio < 0.5  # Within 50% of average
