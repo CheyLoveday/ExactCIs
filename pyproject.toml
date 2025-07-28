@@ -10,7 +10,7 @@ readme = "readme.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "ExactCIs Contributors", email = "example@example.com"},
+    {name = "ExactCIs Contributors", email = "exactcis-dev@example.org"},
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -26,12 +26,8 @@ classifiers = [
 dependencies = [
     "numpy>=1.21,<2.0", # Constraining to pre-2.0 for broader compatibility
     "scipy>=1.12.0",
-    "typing-extensions; python_version < '3.10'", # For older Python versions that need newer typing features # Added for comparison script
+    "typing-extensions; python_version < '3.10'", # For older Python versions that need newer typing features
     "statsmodels>=0.14.0",
-    "pytest>=8.3.5",
-    "psutil>=7.0.0",
-    "line-profiler>=5.0.0",
-    "memory-profiler>=0.61.0",
 ]
 
 [project.optional-dependencies]
@@ -51,10 +47,13 @@ full = [
 
 # Development dependencies
 dev = [
-    "pytest>=7.0.0",
+    "pytest>=8.3.5",
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.1",
     "pytest-cov>=4.1.0",
+    "psutil>=7.0.0",
+    "line-profiler>=5.0.0",
+    "memory-profiler>=0.61.0",
     "tqdm>=4.65.0",
     "black>=23.0.0",
     "ruff>=0.0.270",
@@ -63,9 +62,9 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/exactcis"
-"Bug Tracker" = "https://github.com/yourusername/exactcis/issues"
-"Documentation" = "https://github.com/yourusername/exactcis/docs"
+"Homepage" = "https://github.com/exactcis/exactcis"
+"Bug Tracker" = "https://github.com/exactcis/exactcis/issues"
+"Documentation" = "https://github.com/exactcis/exactcis/docs"
 
 [project.scripts]
 exactcis-cli = "exactcis.cli:main"
@@ -124,10 +123,13 @@ exclude_lines = [
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=7.0.0",
+    "pytest>=8.3.5",
     "pytest-timeout>=2.1.0", 
     "pytest-xdist>=3.3.1",
     "pytest-cov>=4.1.0",
+    "psutil>=7.0.0",
+    "line-profiler>=5.0.0",
+    "memory-profiler>=0.61.0",
     "tqdm>=4.65.0",
     "black>=23.0.0",
     "ruff>=0.0.270",
