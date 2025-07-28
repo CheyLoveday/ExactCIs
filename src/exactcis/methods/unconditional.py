@@ -356,13 +356,23 @@ def _log_pvalue_barnard(a: int, c: int, n1: int, n2: int,
         max_workers = min(get_optimal_workers(), len(grid_points))
         logger.info(f"Processing {len(grid_points)} grid points with {max_workers} workers")
         
+        # Include timeout information in args if needed
+        if start_time is not None and timeout is not None:
+            grid_args = [(p1, a, c, n1, n2, theta, start_time, timeout) for p1 in grid_points]
+        
         # Process grid points in parallel
         results = parallel_map(
             _process_grid_point, 
             grid_args,
             max_workers=max_workers,
+            timeout=timeout,
             progress_callback=lambda p: progress_callback(10 + p * 0.9) if progress_callback else None
         )
+        
+        # Check for timeout in results
+        if None in results:
+            logger.warning("Timeout occurred during parallel processing")
+            return None
         
         # Find the best p-value
         for log_p in results:

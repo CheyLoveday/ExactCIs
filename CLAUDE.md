@@ -23,6 +23,8 @@ This project uses **uv** for package management and virtual environment manageme
 - `uv run pytest tests/test_methods/test_blaker.py` - Run specific test file
 - `uv run pytest -k test_exact_ci_blaker_basic` - Run specific test by name pattern
 - `uv run pytest --cov=src/exactcis tests/` - Run tests with coverage report
+- `uv run pytest tests/test_batch_methods.py` - Run batch processing tests
+- `uv run pytest tests/test_utils/test_parallel.py` - Run parallel processing tests
 
 ### Code Quality
 - `uv run ruff check` - Lint code
@@ -77,6 +79,23 @@ This project uses **uv** for package management and virtual environment manageme
 - Unconditional method includes timeout protection (default 300s) to prevent infinite computations
 - Grid size parameter balances accuracy vs. computation time
 - LRU caching used for support calculations
+
+### Concurrency and Parallel Processing
+- **Batch Processing**: CLI supports batch processing of multiple tables from CSV files
+  - `exactcis-cli --batch input.csv --output results.csv --method blaker`
+  - Parallel processing automatically used for batch calculations
+- **Method-Specific Batch Functions**:
+  - `exact_ci_blaker_batch()` - Parallel Blaker CIs for multiple tables
+  - `exact_ci_midp_batch()` - Parallel Mid-P CIs for multiple tables
+  - `parallel_compute_ci()` - Generic parallel CI computation utility
+- **Core Parallelization**:
+  - Unconditional method uses ProcessPoolExecutor for grid point calculations
+  - `parallel_map()` utility provides robust parallel processing with fallback
+  - Automatic worker count optimization based on available CPU cores
+- **Batch Utilities**:
+  - `batch_validate_counts()` - Validate multiple tables efficiently
+  - `batch_calculate_odds_ratios()` - Calculate multiple odds ratios in batch
+  - `optimize_core_cache_for_batch()` - Optimize caching for batch scenarios
 
 ### Code Style Rules
 - Use uv for all package operations (per .windsurfrules)

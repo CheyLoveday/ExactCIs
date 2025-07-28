@@ -7,7 +7,7 @@ for the odds ratio of a 2x2 contingency table.
 
 import math
 import logging
-from typing import Tuple, List, Optional, Dict, Any
+from typing import Tuple, List, Optional, Dict, Any, Callable
 import numpy as np
 
 from exactcis.core import (
@@ -22,13 +22,21 @@ from exactcis.core import (
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Try to import parallel utilities
+try:
+    from ..utils.parallel import parallel_map, get_optimal_workers
+    has_parallel_support = True
+except ImportError:
+    has_parallel_support = False
+    logger.info("Parallel processing not available for Mid-P method")
+
 # Cache for previously computed values
 _cache: Dict[Tuple[int, int, int, int, float], Tuple[float, float]] = {}
 
 
 def exact_ci_midp(a: int, b: int, c: int, d: int,
                   alpha: float = 0.05, 
-                  progress_callback: Optional[callable] = None) -> Tuple[float, float]:
+                  progress_callback: Optional[Callable] = None) -> Tuple[float, float]:
     """
     Calculate the Mid-P adjusted confidence interval for the odds ratio.
 
@@ -209,3 +217,84 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     result = (low, high)
     _cache[cache_key] = result
     return result
+
+
+def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]], 
+                        alpha: float = 0.05,
+                        max_workers: Optional[int] = None,
+                        progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
+    """
+    Calculate Mid-P adjusted confidence intervals for multiple 2x2 tables in parallel.
+    
+    This function leverages parallel processing to compute confidence intervals for
+    multiple tables simultaneously, providing significant speedup for large datasets.
+    
+    Args:
+        tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
+        alpha: Significance level (default: 0.05)
+        max_workers: Maximum number of parallel workers (default: auto-detected)
+        progress_callback: Optional callback function to report progress (0-100)
+        
+    Returns:
+        List of (lower_bound, upper_bound) tuples, one for each input table
+        
+    Note:
+        Error Handling: If computation fails for any individual table (due to
+        numerical issues, invalid data, etc.), a conservative interval (0.0, inf)
+        is returned for that table, allowing the batch processing to complete
+        successfully.
+        
+    Example:
+        >>> tables = [(10, 20, 15, 30), (5, 10, 8, 12), (2, 3, 1, 4)]
+        >>> results = exact_ci_midp_batch(tables, alpha=0.05)
+        >>> print(results)
+        [(0.234, 1.567), (0.123, 2.345), (0.045, 8.901)]
+    """
+    if not tables:
+        return []
+    
+    if not has_parallel_support:
+        # Fall back to sequential processing
+        logger.info("Parallel support not available, using sequential processing")
+        results = []
+        for i, (a, b, c, d) in enumerate(tables):
+            try:
+                result = exact_ci_midp(a, b, c, d, alpha)
+                results.append(result)
+            except Exception as e:
+                logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
+                results.append((0.0, float('inf')))  # Conservative fallback
+            
+            if progress_callback:
+                progress_callback(min(100, int(100 * (i+1) / len(tables))))
+        
+        return results
+    
+    # Determine number of workers
+    if max_workers is None:
+        max_workers = get_optimal_workers()
+    
+    max_workers = min(max_workers, len(tables))  # Don't use more workers than tables
+    
+    logger.info(f"Processing {len(tables)} tables with Mid-P method using {max_workers} workers")
+    
+    # Create worker function that handles errors gracefully
+    def process_single_table(table_data):
+        a, b, c, d = table_data
+        try:
+            return exact_ci_midp(a, b, c, d, alpha)
+        except Exception as e:
+            logger.warning(f"Error processing table ({a},{b},{c},{d}): {e}")
+            return (0.0, float('inf'))  # Conservative fallback
+    
+    # Process tables in parallel
+    results = parallel_map(
+        process_single_table,
+        tables,
+        max_workers=max_workers,
+        force_processes=True,  # CPU-bound task
+        progress_callback=progress_callback
+    )
+    
+    logger.info(f"Completed batch processing of {len(tables)} tables with Mid-P method")
+    return results
