@@ -31,7 +31,7 @@ coverage.xml
 *.cover
 
 # Profiling and analysis outputs
-profiling_results/
+analysis/profiling_results/
 optimization_results/
 profile_results.txt
 *.prof
