@@ -109,6 +109,69 @@ Documentation is a critical part of ExactCIs:
 #. **Add examples** for new functionality
 #. **Update the API reference** if you've added or changed public interfaces
 
+Docstring Format
+^^^^^^^^^^^^^
+
+ExactCIs follows the `NumPy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html>`_. All public functions and classes should include:
+
+- Short summary
+- Extended description (if needed)
+- Parameters section
+- Returns section
+- Raises section (if applicable)
+- See Also section (if applicable)
+- Notes section (if applicable)
+- Examples section with runnable code
+
+Example:
+
+.. code-block:: python
+
+   def exact_ci_conditional(a, b, c, d, alpha=0.05):
+       """
+       Calculate Fisher's exact conditional confidence interval for the odds ratio.
+       
+       Parameters
+       ----------
+       a : int
+           Count in cell (1,1) - successes in group 1
+       b : int
+           Count in cell (1,2) - failures in group 1
+       c : int
+           Count in cell (2,1) - successes in group 2
+       d : int
+           Count in cell (2,2) - failures in group 2
+       alpha : float, default=0.05
+           Significance level (1-confidence level)
+       
+       Returns
+       -------
+       tuple
+           Lower and upper bounds of the confidence interval
+       
+       Raises
+       ------
+       ValueError
+           If any count is negative or if any margin is zero
+       
+       Examples
+       --------
+       >>> from exactcis.methods import exact_ci_conditional
+       >>> lower, upper = exact_ci_conditional(12, 5, 8, 10, alpha=0.05)
+       >>> print(f"95% CI: ({lower:.3f}, {upper:.3f})")
+       95% CI: (1.059, 8.726)
+       """
+       
+Building Documentation
+^^^^^^^^^^^^^^^^^
+
+The documentation is built using Sphinx with the numpydoc extension:
+
+.. code-block:: bash
+
+   cd docs
+   make html
+
 Submitting Changes
 ----------------
 
@@ -136,3 +199,23 @@ All pull requests will go through a review process:
 #. Code review by at least one maintainer
 #. Feedback and requested changes
 #. Merge once all issues are resolved
+
+Version Numbering
+--------------
+
+ExactCIs follows `Semantic Versioning <https://semver.org/>`_:
+
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for backwards-compatible functionality additions
+- **PATCH** version for backwards-compatible bug fixes
+
+Release Process
+------------
+
+When preparing a new release:
+
+#. Update version number in ``pyproject.toml``
+#. Update changelog (``CHANGELOG.md``)
+#. Create distribution packages: ``python -m build``
+#. Upload to PyPI: ``python -m twine upload dist/*``
+#. Create a new GitHub release with release notes

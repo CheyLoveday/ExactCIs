@@ -220,7 +220,7 @@ Use ExactCIs (Barnard's Unconditional Method) when:
 ## Quick Start Example
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example 2×2 table
 #      Success   Failure
@@ -228,7 +228,7 @@ from exactcis.methods.unconditional import improved_ci_unconditional
 # Grp2    2         8
 
 # Calculate 95% confidence interval
-lower, upper = improved_ci_unconditional(7, 3, 2, 8, alpha=0.05)
+lower, upper = exact_ci_unconditional(7, 3, 2, 8, alpha=0.05)
 print(f"95% CI for odds ratio: ({lower:.4f}, {upper:.4f})")
 # Output: 95% CI for odds ratio: (1.0472, 104.7200)
 ```

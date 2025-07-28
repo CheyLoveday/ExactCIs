@@ -41,13 +41,18 @@ except ImportError:
 try:
     from ..utils.parallel import (
         parallel_map, 
-        has_parallel_support
+        has_parallel_support,
+        get_optimal_workers
     )
     has_parallel = True
     logger.info("Using parallel processing for unconditional method")
 except ImportError:
     has_parallel = False
     logger.info("Parallel processing not available")
+    
+    # Fallback function if parallel utilities are not available
+    def get_optimal_workers():
+        return 1
 
 # Import optimization utilities
 from ..utils.optimization import (
@@ -65,7 +70,7 @@ except ImportError:
         return iterable
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=1024)
 def _log_binom_pmf(n: Union[int, float], k: Union[int, float], p: float) -> float:
     """
     Calculate log of binomial PMF with caching for performance.
@@ -198,11 +203,11 @@ def _process_grid_point(args):
 
     # Pre-calculate log probabilities
     # Handle ranges that work with both integers and floats
-    k_max = int(n1) if n1 == int(n1) else int(n1) + 1
-    l_max = int(n2) if n2 == int(n2) else int(n2) + 1
+    k_max = int(n1)
+    l_max = int(n2)
     
-    k_range = [i for i in range(k_max + 1) if i <= n1]
-    l_range = [i for i in range(l_max + 1) if i <= n2]
+    k_range = list(range(k_max + 1))
+    l_range = list(range(l_max + 1))
     
     if has_numpy:
         try:
@@ -476,7 +481,7 @@ def unconditional_log_pvalue(a: int, b: int, c: int, d: int,
 
 
 def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05, 
-                          grid_size: int = 50,
+                          grid_size: int = 15,
                           theta_min: Optional[float] = None,
                           theta_max: Optional[float] = None,
                           custom_range: Optional[Tuple[float, float]] = None,
@@ -484,12 +489,16 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
                           haldane: bool = False, 
                           timeout: Optional[float] = None,
                           optimization_params: Optional[Dict[str, Any]] = None,
-                          progress_callback: Optional[Callable[[float, str], None]] = None) -> Tuple[float, float]:
+                          progress_callback: Optional[Callable[[float, str], None]] = None,
+                          adaptive_grid: bool = True,
+                          use_cache: bool = True,
+                          optimization_strategy: str = "auto") -> Tuple[float, float]:
     """
     Calculate Barnard's exact unconditional confidence interval.
     
-    This function uses a grid search over the nuisance parameter p1 and then
-    finds the confidence interval for the odds ratio.
+    This unified function uses a grid search over the nuisance parameter p1 and then
+    finds the confidence interval for the odds ratio. It combines the best features
+    of the previous implementations with configurable optimization strategies.
     
     Args:
         a, b, c, d: Cell counts in the 2x2 table
@@ -503,6 +512,9 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
         timeout: Optional timeout in seconds
         optimization_params: Additional optimization parameters
         progress_callback: Optional callback for progress reporting
+        adaptive_grid: Whether to use adaptive grid refinement (default: True)
+        use_cache: Whether to use caching for speedup (default: True)
+        optimization_strategy: Strategy for optimization ("auto", "conservative", "aggressive")
         
     Returns:
         Tuple of (lower, upper) confidence interval bounds
@@ -849,302 +861,4 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
     return result
 
 
-def improved_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05, 
-                             grid_size: int = 50,
-                             theta_min: Optional[float] = None,
-                             theta_max: Optional[float] = None,
-                             adaptive_grid: bool = True,
-                             use_cache: bool = True,
-                             cache_instance: Optional['CICache'] = None) -> Tuple[float, float]:
-    """
-    Calculate Barnard's exact unconditional confidence interval with improved performance.
-    
-    This improved version uses caching and adaptive grid search strategies to make
-    the calculation more efficient, especially for similar 2x2 tables.
-    
-    Args:
-        a, b, c, d: Cell counts in the 2x2 table
-        alpha: Significance level (default: 0.05)
-        grid_size: Number of grid points for p1 (default: 50)
-        theta_min: Minimum value of theta to consider (default: None, auto-determined)
-        theta_max: Maximum value of theta to consider (default: None, auto-determined)
-        adaptive_grid: Whether to use adaptive grid refinement (default: True)
-        use_cache: Whether to use caching for speedup (default: True)
-        cache_instance: Optional cache instance to use (default: None, creates a new one)
-        
-    Returns:
-        Tuple of (lower, upper) confidence interval bounds
-    """
-    import logging
-    from exactcis.utils.optimization import CICache, get_global_cache
-    
-    logger = logging.getLogger(__name__)
-    
-    # Get cache instance if needed
-    if use_cache:
-        if cache_instance is None:
-            cache_instance = get_global_cache()
-        
-        # Check for exact cache hit
-        cache_result = cache_instance.get_exact(a, b, c, d, alpha)
-        if cache_result is not None:
-            ci, _ = cache_result
-            logger.info(f"Cache hit for table ({a},{b},{c},{d}) at alpha={alpha}")
-            return ci
-    
-    # Handle special cases such as zero cells
-    if a == 0 or b == 0 or c == 0 or d == 0:
-        logger.info(f"Table ({a},{b},{c},{d}) has zero cells, using regular exact_ci_unconditional")
-        # Fall back to standard method which handles zero cells better
-        result = exact_ci_unconditional(a, b, c, d, alpha, grid_size, theta_min, theta_max)
-        
-        # Cache the result if caching is enabled
-        if use_cache and cache_instance is not None:
-            cache_instance.add(a, b, c, d, alpha, result, {"method": "exact_fallback"})
-            
-        return result
-    
-    # For large tables, Fisher approximation is often very accurate
-    total_n = a + b + c + d
-    if total_n > 200:
-        logger.info(f"Large table with n={total_n}, using exact_ci_unconditional to ensure accuracy")
-        # For large tables, the standard method works well
-        result = exact_ci_unconditional(a, b, c, d, alpha, grid_size, theta_min, theta_max)
-        
-        # Cache the result if caching is enabled
-        if use_cache and cache_instance is not None:
-            cache_instance.add(a, b, c, d, alpha, result, {"method": "exact_fallback_large"})
-            
-        return result
-    
-    # Optimize grid size based on table dimensions
-    if total_n < 40:
-        optimal_grid_size = min(grid_size, 20)
-        logger.info(f"Optimized grid size to {optimal_grid_size} based on table dimensions")
-        grid_size = optimal_grid_size
-    
-    # Calculate MLE for p1 to center the adaptive grid
-    p1_mle = a / (a + b) if a + b > 0 else 0.5
-    
-    # Set up adaptive grid points if enabled
-    p1_values = None  # Default to None for standard grid
-    if adaptive_grid:
-        # More grid points around the MLE
-        n_adaptive = min(grid_size * 3 // 4, 30)  # Use at most 30 points for adaptive grid
-        logger.info(f"Using {n_adaptive} adaptive grid points around p1_mle={p1_mle:.4f}")
-        
-        # Create concentrated grid around MLE
-        if p1_mle > 0.1 and p1_mle < 0.9:
-            # Standard case: concentrate grid around MLE
-            width = 0.3  # Width of the concentrated region
-            p1_min = max(0, p1_mle - width/2)
-            p1_max = min(1, p1_mle + width/2)
-            p1_values = np.linspace(p1_min, p1_max, n_adaptive)
-            
-            # Add some points in the tails
-            tail_points = grid_size - n_adaptive
-            if tail_points > 0:
-                left_points = tail_points // 2
-                right_points = tail_points - left_points
-                
-                if p1_min > 0:
-                    left_tail = np.linspace(0.001, p1_min, left_points)
-                    p1_values = np.concatenate([left_tail, p1_values])
-                
-                if p1_max < 1:
-                    right_tail = np.linspace(p1_max, 0.999, right_points)
-                    p1_values = np.concatenate([p1_values, right_tail])
-        else:
-            # Edge case: MLE is close to 0 or 1
-            p1_values = np.linspace(0.001, 0.999, grid_size)
-    
-    # Auto-determine theta range if not provided
-    # First, calculate a reasonable point estimate of odds ratio
-    odds_ratio_est = ((a + 0.5) * (d + 0.5)) / ((b + 0.5) * (c + 0.5))  # Haldane correction
-    
-    if theta_min is None:
-        # Use a reasonable lower bound based on the approximate odds ratio
-        theta_min = max(0.0005, odds_ratio_est / 20)
-        logger.info(f"Auto-determined lower bound: {theta_min}")
-        
-    if theta_max is None:
-        # Use a reasonable upper bound based on the approximate odds ratio
-        theta_max = max(20, odds_ratio_est * 20)
-        logger.info(f"Auto-determined upper bound: {theta_max}")
-    
-    logger.info(f"Using theta range: ({theta_min}, {theta_max})")
-    
-    # Calculate confidence interval with possible refinement
-    try:
-        # Calculate lower bound
-        try:
-            log_alpha = np.log(alpha)
-            
-            # Function to find where log p-value equals log_alpha
-            def f_lower(theta):
-                # Using the standard function - the p1 grid is handled internally if p1_values is None
-                # Pass p1_values if constructed, otherwise None (grid_size will be used by unconditional_log_pvalue)
-                return unconditional_log_pvalue(a, b, c, d, theta, p1_values=p1_values, grid_size=grid_size, progress_callback=progress_callback, timeout_checker=None) - log_alpha
-            
-            # Search for lower bound
-            from exactcis.core import find_sign_change
-            from scipy.optimize import brentq
-            
-            # First try a wider range to ensure we don't miss sign changes
-            min_search = max(theta_min * 0.1, 1e-5)
-            
-            # Find sign change using a more reliable method - start with wider range
-            lower_bracket = find_sign_change(f_lower, min_search, odds_ratio_est * 2)
-            if lower_bracket is not None:
-                lo, hi = lower_bracket
-                lower = brentq(f_lower, lo, hi)
-                logger.info(f"Lower bound calculated: {lower}")
-            else:
-                logger.warning(f"No sign change found for lower bound in range [{min_search}, {odds_ratio_est * 2}]")
-                # Try a much wider range if first attempt fails
-                lower_bracket = find_sign_change(f_lower, min_search, max(theta_min, 0.001))
-                if lower_bracket is not None:
-                    lo, hi = lower_bracket
-                    lower = brentq(f_lower, lo, hi)
-                    logger.info(f"Lower bound (second attempt) calculated: {lower}")
-                else:
-                    # One more attempt with a tiny value for extreme cases
-                    lower_bracket = find_sign_change(f_lower, 1e-6, min(odds_ratio_est, 0.1))
-                    if lower_bracket is not None:
-                        lo, hi = lower_bracket
-                        lower = brentq(f_lower, lo, hi)
-                        logger.info(f"Lower bound (third attempt) calculated: {lower}")
-                    else:
-                        # Fall back to original method's approach
-                        logger.warning(f"Falling back to very conservative lower bound")
-                        lower = theta_min
-                
-        except Exception as e:
-            logger.error(f"Error calculating lower bound: {str(e)}")
-            lower = theta_min
-            logger.warning(f"Using fallback lower bound: {lower}")
-        
-        # Calculate upper bound
-        try:
-            # Function to find where log p-value equals log_alpha
-            def f_upper(theta):
-                # Similar to f_lower but for upper bound
-                # Pass p1_values if constructed, otherwise None (grid_size will be used by unconditional_log_pvalue)
-                return unconditional_log_pvalue(a, b, c, d, theta, p1_values=p1_values, grid_size=grid_size, progress_callback=progress_callback, timeout_checker=None) - log_alpha
-            
-            # Search for upper bound - start with a wider range
-            max_search = min(theta_max * 10, 1e6)
-            upper_bracket = find_sign_change(f_upper, odds_ratio_est * 0.5, max_search)
-            if upper_bracket is not None:
-                lo, hi = upper_bracket
-                upper = brentq(f_upper, lo, hi)
-                logger.info(f"Upper bound calculated: {upper}")
-            else:
-                logger.warning(f"No sign change found for upper bound in range [{odds_ratio_est * 0.5}, {max_search}]")
-                # Try a more extreme range
-                upper_bracket = find_sign_change(f_upper, odds_ratio_est, theta_max * 5)
-                if upper_bracket is not None:
-                    lo, hi = upper_bracket
-                    upper = brentq(f_upper, lo, hi)
-                    logger.info(f"Upper bound (second attempt) calculated: {upper}")
-                else:
-                    # One more attempt with a very large value for extreme cases
-                    upper_bracket = find_sign_change(f_upper, max(odds_ratio_est * 5, 10), max(theta_max * 10, 1e5))
-                    if upper_bracket is not None:
-                        lo, hi = upper_bracket
-                        upper = brentq(f_upper, lo, hi)
-                        logger.info(f"Upper bound (third attempt) calculated: {upper}")
-                    else:
-                        logger.warning(f"Falling back to very conservative upper bound")
-                        upper = theta_max
-                
-        except Exception as e:
-            logger.error(f"Error calculating upper bound: {str(e)}")
-            upper = theta_max
-            logger.warning(f"Using fallback upper bound: {upper}")
-        
-        # Add an additional check - if we're getting very different results from the standard method,
-        # log a warning but continue with our calculation
-        try:
-            # Calculate a quick estimate using the original method with fewer grid points
-            quick_check = exact_ci_unconditional(a, b, c, d, alpha, grid_size=20)
-            lower_ratio = lower / quick_check[0] if quick_check[0] > 0 else float('inf')
-            upper_ratio = upper / quick_check[1] if quick_check[1] < float('inf') else 1.0
-            
-            # If the difference is more than 3x in either direction, log warning
-            if lower_ratio < 0.33 or lower_ratio > 3.0 or upper_ratio < 0.33 or upper_ratio > 3.0:
-                logger.warning(f"Large discrepancy detected between methods: quick check={quick_check}, improved=({lower}, {upper})")
-                logger.warning(f"Proceeding with improved method calculation, but results may differ from standard method")
-                
-                # Additional refinement for cases with large discrepancies
-                if lower_ratio < 0.33:
-                    # Our lower bound might be too small, try to increase it
-                    extra_test_points = np.linspace(lower, quick_check[0] * 1.2, 15)
-                    for test_theta in extra_test_points:
-                        p_value = np.exp(_log_pvalue_barnard(a, c, a+b, c+d, test_theta, grid_size * 2, timeout_checker=None))
-                        if p_value > alpha:
-                            lower = test_theta
-                            logger.info(f"Refined lower bound to {lower} based on discrepancy check")
-                            break
-                
-                if upper_ratio > 3.0:
-                    # Our upper bound might be too large, try to decrease it
-                    extra_test_points = np.linspace(quick_check[1] * 0.8, upper, 15)
-                    for test_theta in sorted(extra_test_points, reverse=True):
-                        p_value = np.exp(_log_pvalue_barnard(a, c, a+b, c+d, test_theta, grid_size * 2, timeout_checker=None))
-                        if p_value > alpha:
-                            upper = test_theta
-                            logger.info(f"Refined upper bound to {upper} based on discrepancy check")
-                            break
-        except Exception as e:
-            logger.error(f"Error in comparison check: {str(e)}")
-            # Continue with existing calculation
-            
-        # Refinement step for more precision
-        try:
-            # Fine-tune lower bound with small steps
-            if lower > theta_min:
-                test_thetas = np.linspace(lower * 0.8, lower * 1.2, 10)
-                for theta in test_thetas:
-                    if theta > theta_min:
-                        p_value = np.exp(_log_pvalue_barnard(a, c, a+b, c+d, theta, grid_size, timeout_checker=None))
-                        if p_value > alpha:
-                            lower = theta
-                            break
-            
-            # Fine-tune upper bound with small steps
-            if upper < theta_max:
-                test_thetas = np.linspace(upper * 0.8, upper * 1.2, 10)
-                for theta in reversed(test_thetas):  # Go from largest to smallest
-                    if theta < theta_max:
-                        p_value = np.exp(_log_pvalue_barnard(a, c, a+b, c+d, theta, grid_size, timeout_checker=None))
-                        if p_value > alpha:
-                            upper = theta
-                            break
-                            
-            logger.info(f"Refined bounds: ({lower}, {upper})")
-            
-        except Exception as e:
-            logger.error(f"Error in refinement: {str(e)}")
-    
-    except Exception as e:
-        logger.error(f"Error in CI calculation: {str(e)}")
-        # Fall back to standard method as a last resort
-        logger.info("Falling back to standard method due to calculation errors")
-        return exact_ci_unconditional(a, b, c, d, alpha, grid_size, theta_min, theta_max)
-    
-    # Final confidence interval
-    result = (lower, upper)
-    
-    # Store in cache if enabled
-    if use_cache and cache_instance is not None:
-        search_params = {
-            "grid_size": grid_size,
-            "p1_mle": p1_mle,
-            "odds_ratio_est": odds_ratio_est,
-            "method": "improved"
-        }
-        cache_instance.add(a, b, c, d, alpha, result, search_params)
-    
-    logger.info(f"Unconditional CI calculated: ({lower}, {upper})")
-    return result
+

@@ -104,6 +104,13 @@ When one or more cells in the 2x2 table contain zeros, you may want to apply Hal
     # Calculate CI using corrected values
     lower, upper = exact_ci_blaker(a_corr, b_corr, c_corr, d_corr, alpha=0.05)
 
+.. note::
+   Command-line users can apply Haldane's correction more easily by using the ``--apply-haldane`` flag:
+   
+   .. code-block:: bash
+   
+       exactcis-cli 0 10 5 15 --method blaker --apply-haldane
+
 Command-Line Interface
 --------------------
 

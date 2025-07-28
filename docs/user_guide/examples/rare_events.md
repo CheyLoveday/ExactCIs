@@ -32,13 +32,13 @@ Rare events create several statistical challenges:
 Barnard's unconditional exact test (implemented in ExactCIs) is particularly well-suited for rare events:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Rare event example
 a, b, c, d = 1, 1000, 10, 990
 
 # Calculate confidence interval
-ci = improved_ci_unconditional(a, b, c, d, alpha=0.05)
+ci = exact_ci_unconditional(a, b, c, d, alpha=0.05)
 print(f"95% CI for odds ratio: ({ci[0]:.6f}, {ci[1]:.6f})")
 # Output: 95% CI for odds ratio: (0.012777, 0.782634)
 ```
@@ -64,7 +64,7 @@ def normal_approx_ci(a, b, c, d, alpha=0.05):
 a, b, c, d = 1, 1000, 10, 990
 
 # Calculate using different methods
-exactcis_ci = improved_ci_unconditional(a, b, c, d)
+exactcis_ci = exact_ci_unconditional(a, b, c, d)
 normal_ci = normal_approx_ci(a, b, c, d)
 or_point = (a*d)/(b*c)
 
@@ -80,20 +80,20 @@ print(f"Normal Approx: ({normal_ci[0]:.6f}, {normal_ci[1]:.6f})")
 When one or more cells contain zeros, consider:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example with zero cell
 a, b, c, d = 0, 100, 10, 90
 
 # Default approach
 try:
-    ci_default = improved_ci_unconditional(a, b, c, d)
+    ci_default = exact_ci_unconditional(a, b, c, d)
     print(f"Default: ({ci_default[0]:.6f}, {ci_default[1]:.6f})")
 except Exception as e:
     print(f"Default failed: {e}")
 
 # With custom bounds
-ci_custom = improved_ci_unconditional(a, b, c, d, theta_min=0.0001, theta_max=10.0)
+ci_custom = exact_ci_unconditional(a, b, c, d, theta_min=0.0001, theta_max=10.0)
 print(f"Custom bounds: ({ci_custom[0]:.6f}, {ci_custom[1]:.6f})")
 ```
 
@@ -102,13 +102,13 @@ print(f"Custom bounds: ({ci_custom[0]:.6f}, {ci_custom[1]:.6f})")
 For rare but non-zero events:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example with small expected frequencies
 a, b, c, d = 3, 997, 15, 985
 
 # Use improved implementation with adaptive grid
-ci = improved_ci_unconditional(a, b, c, d, adaptive_grid=True, grid_size=100)
+ci = exact_ci_unconditional(a, b, c, d, adaptive_grid=True, grid_size=100)
 print(f"95% CI: ({ci[0]:.6f}, {ci[1]:.6f})")
 ```
 
@@ -117,13 +117,13 @@ print(f"95% CI: ({ci[0]:.6f}, {ci[1]:.6f})")
 Perfect separation occurs when all events are in one group and none in the other:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example with perfect separation
 a, b, c, d = 10, 990, 0, 1000
 
 # Use improved implementation with custom bounds
-ci = improved_ci_unconditional(a, b, c, d, theta_min=1.0, theta_max=1000.0)
+ci = exact_ci_unconditional(a, b, c, d, theta_min=1.0, theta_max=1000.0)
 print(f"95% CI: ({ci[0]:.6f}, {ci[1]:.6f})")
 ```
 
@@ -137,21 +137,21 @@ print(f"95% CI: ({ci[0]:.6f}, {ci[1]:.6f})")
    ```python
    # Specify custom bounds based on observed odds ratio
    or_est = (a*d)/(b*c) if b*c > 0 else 0.0001  # Handle zero division
-   ci = improved_ci_unconditional(a, b, c, d, 
+   ci = exact_ci_unconditional(a, b, c, d, 
                                 theta_min=max(0.0001, or_est/100),
                                 theta_max=min(10000, or_est*100))
    ```
 
 4. **Increase grid size for precision**: With rare events, using a larger grid can improve accuracy:
    ```python
-   ci = improved_ci_unconditional(a, b, c, d, grid_size=100)
+   ci = exact_ci_unconditional(a, b, c, d, grid_size=100)
    ```
 
 5. **Validate results**: When working with extreme tables, validate results against multiple methods:
    ```python
    # Compare original and improved implementations
    ci1 = exact_ci_unconditional(a, b, c, d)
-   ci2 = improved_ci_unconditional(a, b, c, d)
+   ci2 = exact_ci_unconditional(a, b, c, d)
    print(f"Original: ({ci1[0]:.6f}, {ci1[1]:.6f})")
    print(f"Improved: ({ci2[0]:.6f}, {ci2[1]:.6f})")
    ```
@@ -161,7 +161,7 @@ print(f"95% CI: ({ci[0]:.6f}, {ci[1]:.6f})")
 The following code compares multiple methods on extreme tables:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import numpy as np
 import scipy.stats as stats
 
@@ -188,7 +188,7 @@ for a, b, c, d in extreme_tables:
     
     # ExactCIs
     try:
-        exactcis_ci = improved_ci_unconditional(a, b, c, d)
+        exactcis_ci = exact_ci_unconditional(a, b, c, d)
         exactcis_width = exactcis_ci[1] - exactcis_ci[0]
         print(f"  ExactCIs: ({exactcis_ci[0]:.6f}, {exactcis_ci[1]:.6f}), width={exactcis_width:.6f}")
     except Exception as e:

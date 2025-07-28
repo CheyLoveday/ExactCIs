@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Import our methods
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 from exactcis.methods.fixed_ci import fisher_approximation
 from exactcis.utils.optimization import CICache
 
@@ -88,7 +88,7 @@ def test_table(a, b, c, d, alpha=0.05, cache_instance=None, description=""):
     # Improved Barnard's exact method
     start_time = time.time()
     try:
-        results["improved"] = improved_ci_unconditional(a, b, c, d, alpha=alpha, 
+        results["improved"] = exact_ci_unconditional(a, b, c, d, alpha=alpha, adaptive_grid=True, use_cache=True, 
                                                        use_cache=True, 
                                                        cache_instance=cache_instance)
         results["improved_time"] = time.time() - start_time

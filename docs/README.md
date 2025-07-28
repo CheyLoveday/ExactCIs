@@ -37,7 +37,7 @@ pip install exactcis
 ## Quick Start
 
 ```python
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example 2×2 table
 #      Success   Failure
@@ -45,7 +45,7 @@ from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_u
 # Grp2    2         8
 
 # Calculate 95% confidence interval for the odds ratio
-lower, upper = improved_ci_unconditional(7, 3, 2, 8, alpha=0.05)
+lower, upper = exact_ci_unconditional(7, 3, 2, 8, alpha=0.05)
 print(f"95% CI for odds ratio: ({lower:.6f}, {upper:.6f})")
 ```
 

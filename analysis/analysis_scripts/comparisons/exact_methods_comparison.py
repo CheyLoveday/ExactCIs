@@ -2,7 +2,7 @@
 import time
 import numpy as np
 import pandas as pd
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -93,7 +93,7 @@ def evaluate_extreme_cases(a, b, c, d, alpha=0.05):
     # Get results from ExactCIs methods
     try:
         orig_ci = exact_ci_unconditional(a, b, c, d, alpha)
-        imp_ci = improved_ci_unconditional(a, b, c, d, alpha)
+        imp_ci = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
         
         # Check if methods give same results
         consistency = check_internal_consistency(orig_ci, imp_ci)

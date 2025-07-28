@@ -31,7 +31,8 @@ This project uses **uv** for package management and virtual environment manageme
 - `make lint` - Run pre-commit hooks (includes formatting, linting, type checking)
 
 ### Development Setup
-- `uv pip install -e ".[dev]"` - Install package in development mode with dev dependencies
+- `uv sync` - Install locked dependencies for development (recommended)
+- `uv pip install -e ".[dev]"` - Install package in development mode with dev dependencies  
 - `uv pip install -e ".[full]"` - Install with all optional dependencies (pandas, sympy, tqdm, matplotlib)
 
 ### Package Building and Documentation  

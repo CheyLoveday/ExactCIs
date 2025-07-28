@@ -99,7 +99,8 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     Raises:
-        ValueError: If inputs are invalid (negative counts, empty margins, invalid alpha)
+        ValueError: If inputs are invalid (negative counts, empty margins, invalid alpha).
+        RuntimeError: If the root-finding algorithm fails to converge.
     """
     validate_counts(a, b, c, d)
     if not (0 < alpha < 1):
@@ -181,54 +182,31 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
         raw_theta_high = float('inf') # Keep default if search fails
 
     # Convert, check finiteness, and check for crossed bounds
-    try:
-        logger.info(f"Blaker exact_ci_blaker DEBUG: raw_theta_low IS: {raw_theta_low}, TYPE IS: {type(raw_theta_low)}")
-        theta_low = float(raw_theta_low) # Attempt conversion
-        logger.info(f"Blaker exact_ci_blaker DEBUG: converted theta_low IS: {theta_low}, TYPE IS: {type(theta_low)}")
+    theta_low = float(raw_theta_low)
+    theta_high = float(raw_theta_high)
 
-        logger.info(f"Blaker exact_ci_blaker DEBUG: raw_theta_high IS: {raw_theta_high}, TYPE IS: {type(raw_theta_high)}")
-        theta_high = float(raw_theta_high) # Attempt conversion
-        logger.info(f"Blaker exact_ci_blaker DEBUG: converted theta_high IS: {theta_high}, TYPE IS: {type(theta_high)}")
-        
-        is_finite_low = np.isfinite(theta_low)
-        is_finite_high = np.isfinite(theta_high)
-        logger.info(f"Blaker exact_ci_blaker DEBUG: is_finite_low IS: {is_finite_low}, TYPE IS: {type(is_finite_low)}")
-        logger.info(f"Blaker exact_ci_blaker DEBUG: is_finite_high IS: {is_finite_high}, TYPE IS: {type(is_finite_high)}")
+    if not (np.isfinite(theta_low) and np.isfinite(theta_high)):
+        logger.warning(f"Blaker CI calculation resulted in non-finite bounds for ({a},{b},{c},{d}): low={theta_low}, high={theta_high}. Defaulting to (0, inf) for safety.")
+        return 0.0, float('inf')
 
-        both_finite = is_finite_low and is_finite_high
-        logger.info(f"Blaker exact_ci_blaker DEBUG: combined 'both_finite' IS: {both_finite}, TYPE IS: {type(both_finite)}")
-
-        if not both_finite:
-            logger.warning(f"Blaker CI calculation resulted in non-finite bounds for ({a},{b},{c},{d}): low={theta_low}, high={theta_high}. Defaulting to (0, inf) for safety.")
-            return 0.0, float('inf')
-        
-        # Check for crossed bounds AFTER ensuring they are finite numbers
-        # Allow for small numerical precision errors
-        tolerance = 1e-6
-        if theta_low > theta_high + tolerance:
-            logger.warning(f"Blaker CI: Lower bound {theta_low:.4f} > Upper bound {theta_high:.4f} for ({a},{b},{c},{d}). This can indicate issues with root finding or p-value function. Returning (0, inf) as a safe default. Original raw values: low={raw_theta_low}, high={raw_theta_high}")
-            return 0.0, float('inf')
-        elif theta_low > theta_high:
-            # Small numerical precision issue - but check for zero cell first
-            if a == 0:
-                logger.info(f"Blaker CI: Zero cell case with numerical precision issue. Overriding lower bound to 0.0")
-                return 0.0, theta_high
-            # Normal numerical precision issue - average the bounds
-            avg_bound = (theta_low + theta_high) / 2.0
-            logger.info(f"Blaker CI: Minor numerical precision issue. Lower {theta_low:.8f} > Upper {theta_high:.8f} by {theta_low - theta_high:.2e}. Using average {avg_bound:.8f} for both bounds.")
-            return avg_bound, avg_bound
-
-        # Override lower bound for zero cell cases to ensure true OR is included
+    # Check for crossed bounds AFTER ensuring they are finite numbers
+    tolerance = 1e-6
+    if theta_low > theta_high + tolerance:
+        logger.warning(f"Blaker CI: Lower bound {theta_low:.4f} > Upper bound {theta_high:.4f} for ({a},{b},{c},{d}). This can indicate issues with root finding or p-value function. Returning (0, inf) as a safe default. Original raw values: low={raw_theta_low}, high={raw_theta_high}")
+        return 0.0, float('inf')
+    elif theta_low > theta_high:
+        # Small numerical precision issue - but check for zero cell first
         if a == 0:
-            logger.info(f"Blaker CI: Overriding lower bound to 0.0 for zero cell case")
+            logger.info(f"Blaker CI: Zero cell case with numerical precision issue. Overriding lower bound to 0.0")
             return 0.0, theta_high
-        
-        return theta_low, theta_high
+        # Normal numerical precision issue - average the bounds
+        avg_bound = (theta_low + theta_high) / 2.0
+        logger.info(f"Blaker CI: Minor numerical precision issue. Lower {theta_low:.8f} > Upper {theta_high:.8f} by {theta_low - theta_high:.2e}. Using average {avg_bound:.8f} for both bounds.")
+        return avg_bound, avg_bound
 
-    except ValueError as e:
-        logger.error(f"Blaker exact_ci_blaker: ValueError during float conversion or finiteness check for ({a},{b},{c},{d}): {e}. Details: raw_theta_low='{raw_theta_low}' (type {type(raw_theta_low)}), raw_theta_high='{raw_theta_high}' (type {type(raw_theta_high)})", exc_info=True)
-        # Return strings to indicate error type, consistent with previous error handling pattern
-        return (f"ValueError: {e}", f"ValueError: {e}") 
-    except TypeError as e:
-        logger.error(f"Blaker exact_ci_blaker: TypeError during float conversion or finiteness check for ({a},{b},{c},{d}): {e}. Details: raw_theta_low='{raw_theta_low}' (type {type(raw_theta_low)}), raw_theta_high='{raw_theta_high}' (type {type(raw_theta_high)})", exc_info=True)
-        return (f"TypeError: {e}", f"TypeError: {e}")
+    # Override lower bound for zero cell cases to ensure true OR is included
+    if a == 0:
+        logger.info(f"Blaker CI: Overriding lower bound to 0.0 for zero cell case")
+        return 0.0, theta_high
+    
+    return theta_low, theta_high

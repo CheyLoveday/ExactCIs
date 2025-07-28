@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 from scipy import stats
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import warnings
 import inspect
 import textwrap
@@ -43,7 +43,7 @@ def compare_implementations(a, b, c, d, alpha=0.05):
         exact_time = time.time() - start
         
         start = time.time()
-        improved_ci = improved_ci_unconditional(a, b, c, d, alpha)
+        improved_ci = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
         improved_time = time.time() - start
         
         print(f"\nExactCIs Original: ({exact_ci[0]:.6f}, {exact_ci[1]:.6f}) - {exact_time:.6f}s")

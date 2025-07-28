@@ -15,7 +15,7 @@ pip install exactcis
 The most common use case is calculating a confidence interval for the odds ratio of a 2×2 contingency table:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Example 2×2 table:
 #      Success   Failure
@@ -25,12 +25,12 @@ from exactcis.methods.unconditional import improved_ci_unconditional
 a, b, c, d = 7, 3, 2, 8  # Cell counts
 
 # Calculate 95% confidence interval
-lower, upper = improved_ci_unconditional(a, b, c, d, alpha=0.05)
+lower, upper = exact_ci_unconditional(a, b, c, d, alpha=0.05)
 print(f"95% CI for odds ratio: ({lower:.4f}, {upper:.4f})")
 # Output: 95% CI for odds ratio: (1.0472, 104.7200)
 
 # Calculate 90% confidence interval
-lower, upper = improved_ci_unconditional(a, b, c, d, alpha=0.10)
+lower, upper = exact_ci_unconditional(a, b, c, d, alpha=0.10)
 print(f"90% CI for odds ratio: ({lower:.4f}, {upper:.4f})")
 # Output: 90% CI for odds ratio: (1.3810, 41.4300)
 ```
@@ -41,7 +41,7 @@ You can compare the results from different methods:
 
 ```python
 import scipy.stats as stats
-from exactcis.methods.unconditional import improved_ci_unconditional, exact_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import numpy as np
 
 def normal_approx_ci(a, b, c, d, alpha=0.05):
@@ -70,7 +70,7 @@ def normal_approx_ci(a, b, c, d, alpha=0.05):
 a, b, c, d = 7, 3, 2, 8
 
 # Calculate using different methods
-unconditional_ci = improved_ci_unconditional(a, b, c, d)
+unconditional_ci = exact_ci_unconditional(a, b, c, d)
 original_unconditional_ci = exact_ci_unconditional(a, b, c, d)
 normal_ci = normal_approx_ci(a, b, c, d)
 _, fisher_p = stats.fisher_exact([[a, b], [c, d]])
@@ -88,7 +88,7 @@ When processing multiple tables, using caching can significantly improve perform
 
 ```python
 from exactcis.utils.optimization import CICache
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import time
 
 # Create a cache instance
@@ -108,7 +108,7 @@ tables = [
 start_time = time.time()
 results_no_cache = []
 for a, b, c, d in tables:
-    ci = improved_ci_unconditional(a, b, c, d, alpha=0.05, use_cache=False)
+    ci = exact_ci_unconditional(a, b, c, d, alpha=0.05, use_cache=False)
     results_no_cache.append(ci)
 time_no_cache = time.time() - start_time
 
@@ -116,7 +116,7 @@ time_no_cache = time.time() - start_time
 start_time = time.time()
 results_with_cache = []
 for a, b, c, d in tables:
-    ci = improved_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
+    ci = exact_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
     results_with_cache.append(ci)
 time_with_cache = time.time() - start_time
 
@@ -130,18 +130,18 @@ print(f"Speedup: {time_no_cache/time_with_cache:.2f}x")
 For more precision or faster calculation, you can adjust the grid size:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 a, b, c, d = 7, 3, 2, 8
 
 # Default grid size
-ci_default = improved_ci_unconditional(a, b, c, d)
+ci_default = exact_ci_unconditional(a, b, c, d)
 
 # Larger grid for more precision
-ci_precise = improved_ci_unconditional(a, b, c, d, grid_size=100)
+ci_precise = exact_ci_unconditional(a, b, c, d, grid_size=100)
 
 # Smaller grid for faster calculation
-ci_fast = improved_ci_unconditional(a, b, c, d, grid_size=20)
+ci_fast = exact_ci_unconditional(a, b, c, d, grid_size=20)
 
 print(f"Default grid (50): ({ci_default[0]:.6f}, {ci_default[1]:.6f})")
 print(f"Precise grid (100): ({ci_precise[0]:.6f}, {ci_precise[1]:.6f})")
@@ -175,18 +175,18 @@ print(f"Custom bounds CI: ({ci_custom[0]:.6f}, {ci_custom[1]:.6f})")
 It's important to handle potential errors, especially for edge cases:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 def safe_ci_calculation(a, b, c, d, alpha=0.05):
     """Safely calculate CI with fallback options"""
     try:
         # Try standard calculation
-        lower, upper = improved_ci_unconditional(a, b, c, d, alpha=alpha)
+        lower, upper = exact_ci_unconditional(a, b, c, d, alpha=alpha)
         return lower, upper, "standard"
     except RuntimeError:
         try:
             # Try with larger grid
-            lower, upper = improved_ci_unconditional(a, b, c, d, alpha=alpha, grid_size=100)
+            lower, upper = exact_ci_unconditional(a, b, c, d, alpha=alpha, grid_size=100)
             return lower, upper, "large_grid"
         except RuntimeError:
             try:
@@ -197,7 +197,7 @@ def safe_ci_calculation(a, b, c, d, alpha=0.05):
                     or_est = (a*d)/(b*c)
                     theta_min, theta_max = or_est/100, or_est*100
                 
-                lower, upper = improved_ci_unconditional(
+                lower, upper = exact_ci_unconditional(
                     a, b, c, d, alpha=alpha, 
                     theta_min=theta_min, theta_max=theta_max
                 )

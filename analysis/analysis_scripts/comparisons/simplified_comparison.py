@@ -2,7 +2,7 @@
 import json
 import numpy as np
 import pandas as pd
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 def run_comparison():
     # Load R results from the JSON file
@@ -53,7 +53,7 @@ def run_comparison():
                 py_orig_ci = (np.nan, np.nan)
             
             try:
-                py_imp_ci = improved_ci_unconditional(a, b, c, d, alpha)
+                py_imp_ci = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
             except Exception as e:
                 print(f"  Error in Python improved method: {str(e)}")
                 py_imp_ci = (np.nan, np.nan)

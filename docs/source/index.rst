@@ -6,10 +6,11 @@ ExactCIs: Exact Confidence Intervals for Odds Ratios
    :caption: Contents:
 
    installation
-   usage-guide
+   user_guide/index
    api-reference
    contributing
    changelog
+   development/index
 
 ExactCIs is a Python package that provides methods for calculating exact confidence intervals for odds ratios in 2x2 contingency tables. It implements several statistical methods including Blaker's exact method, conditional exact method, mid-P method, and unconditional exact method.
 

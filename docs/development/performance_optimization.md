@@ -30,23 +30,23 @@ where `caching_factor` is < 1 for repeated similar calculations.
 
 ## Using the Improved Implementation
 
-Always use the `improved_ci_unconditional` function instead of `exact_ci_unconditional` for better performance:
+Always use the `exact_ci_unconditional` function which now includes improved performance features:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
-# Instead of exact_ci_unconditional(a, b, c, d, alpha)
-result = improved_ci_unconditional(a, b, c, d, alpha)
+# Use exact_ci_unconditional with improved performance features
+result = exact_ci_unconditional(a, b, c, d, alpha)
 ```
 
-The improved implementation includes:
+The exact_ci_unconditional function now includes:
 
-1. Adaptive grid strategies
-2. Caching of results
+1. Adaptive grid strategies (enabled with adaptive_grid=True)
+2. Caching of results (enabled with use_cache=True)
 3. Better handling of edge cases
 4. More efficient numerical methods
 
-The improved implementation provides identical results with substantially better performance.
+The function provides identical results with substantially better performance when using the adaptive_grid and use_cache parameters.
 
 ## Caching Strategies
 
@@ -54,7 +54,7 @@ For scenarios requiring multiple confidence interval calculations, use the cachi
 
 ```python
 from exactcis.utils.optimization import CICache
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import time
 
 # Create a cache instance
@@ -73,7 +73,7 @@ start_time = time.time()
 results = []
 
 for a, b, c, d in tables:
-    ci = improved_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
+    ci = exact_ci_unconditional(a, b, c, d, alpha=0.05, cache_instance=cache)
     results.append(ci)
 
 print(f"Time with caching: {time.time() - start_time:.6f} seconds")
@@ -102,10 +102,10 @@ Consider the memory-performance tradeoff when setting the cache size. Larger cac
 ExactCIs supports parallel processing for grid evaluation:
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Use parallel processing with specified number of workers
-result = improved_ci_unconditional(
+result = exact_ci_unconditional(
     a, b, c, d, 
     alpha=0.05,
     optimization_params={"max_workers": 4}  # Use 4 worker processes
@@ -126,13 +126,13 @@ The `grid_size` parameter significantly impacts both precision and performance:
 
 ```python
 # For quick, approximate results
-result_fast = improved_ci_unconditional(a, b, c, d, grid_size=20)
+result_fast = exact_ci_unconditional(a, b, c, d, grid_size=20)
 
 # Default balance of precision and performance
-result_default = improved_ci_unconditional(a, b, c, d, grid_size=50)
+result_default = exact_ci_unconditional(a, b, c, d, grid_size=50)
 
 # For high-precision results
-result_precise = improved_ci_unconditional(a, b, c, d, grid_size=100)
+result_precise = exact_ci_unconditional(a, b, c, d, grid_size=100)
 ```
 
 Recommendations for grid size:
@@ -160,7 +160,7 @@ def process_in_batches(tables, batch_size=100):
         batch_results = []
         
         for a, b, c, d in batch:
-            ci = improved_ci_unconditional(a, b, c, d, cache_instance=cache)
+            ci = exact_ci_unconditional(a, b, c, d, cache_instance=cache)
             batch_results.append(ci)
         
         all_results.extend(batch_results)
@@ -176,7 +176,7 @@ def process_in_batches(tables, batch_size=100):
 
 ```python
 # Use smaller grid for very large simulations
-results = [improved_ci_unconditional(*table, grid_size=30) for table in tables]
+results = [exact_ci_unconditional(*table, grid_size=30) for table in tables]
 ```
 
 3. **Selective Caching**: Cache only certain types of tables:
@@ -187,10 +187,10 @@ cache = CICache(max_size=1000)
 for a, b, c, d in tables:
     # Only cache tables with small counts
     if min(a, b, c, d) < 10:
-        ci = improved_ci_unconditional(a, b, c, d, cache_instance=cache)
+        ci = exact_ci_unconditional(a, b, c, d, cache_instance=cache)
     else:
         # For larger tables, don't use cache
-        ci = improved_ci_unconditional(a, b, c, d, use_cache=False)
+        ci = exact_ci_unconditional(a, b, c, d, use_cache=False)
     results.append(ci)
 ```
 
@@ -201,7 +201,7 @@ For Monte Carlo simulations or bootstrapping with thousands of tables:
 ```python
 import numpy as np
 from exactcis.utils.optimization import CICache
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import time
 
 def large_scale_simulation(n_iter=1000, p1=0.3, p2=0.2, n1=20, n2=20):
@@ -231,7 +231,7 @@ def large_scale_simulation(n_iter=1000, p1=0.3, p2=0.2, n1=20, n2=20):
                 # Common events can use fewer grid points
                 grid_size = 30
                 
-            ci = improved_ci_unconditional(
+            ci = exact_ci_unconditional(
                 a, b, c, d, 
                 grid_size=grid_size,
                 cache_instance=cache,

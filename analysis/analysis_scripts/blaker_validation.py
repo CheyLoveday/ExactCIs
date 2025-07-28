@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+"""
+Blaker Method Validation Script
+
+This script is a development and debugging utility for validating the Blaker method
+implementation against known test cases. It is NOT part of the formal test suite
+but serves as a manual validation tool for developers working on the Blaker method.
+
+Usage:
+    cd /path/to/exactcis && uv run python analysis/analysis_scripts/blaker_validation.py
+
+This script runs specific checks on the Blaker method implementation using
+predefined test tables with known characteristics.
+"""
+
 import logging
 from exactcis.methods.blaker import exact_ci_blaker
 from exactcis.core import estimate_point_or, validate_counts

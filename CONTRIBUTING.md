@@ -63,27 +63,86 @@ uv pip install -e ".[dev]"
 
 ## Testing
 
-All changes must include appropriate tests:
+ExactCIs uses a unified testing strategy with a single, feature-rich test runner. All changes must include appropriate tests:
 
-1. **Run existing tests** to ensure your changes don't break existing functionality:
-   ```bash
-   uv run pytest
-   ```
+### Running Tests Locally
 
-2. **Add new tests** for new functionality:
+**Use the unified test runner** for all local test execution:
+
+```bash
+# Run fast tests only (default, recommended for development)
+python scripts/run_tests_unified.py
+
+# Run all tests including slow tests (for comprehensive validation)
+python scripts/run_tests_unified.py --all
+
+# Run tests with coverage reporting
+python scripts/run_tests_unified.py --coverage
+
+# Run tests with progress visualization (requires rich/tqdm)
+python scripts/run_tests_unified.py --progress
+
+# Run tests in parallel for faster execution
+python scripts/run_tests_unified.py --parallel
+
+# Run a specific test module
+python scripts/run_tests_unified.py --module=methods/blaker
+
+# Run a specific test function
+python scripts/run_tests_unified.py --test=test_blaker_ci
+```
+
+### Test Categories
+
+- **Fast tests** (`@pytest.mark.fast`): Quick unit tests that run in under 1 second
+- **Slow tests** (`@pytest.mark.slow`): Comprehensive tests that may take longer
+- **Integration tests**: Tests that verify interactions between components
+
+### Adding New Tests
+
+1. **Add new tests** for new functionality:
    - Unit tests for individual functions
    - Integration tests for interactions between components
    - Edge case tests for boundary conditions
 
-3. **Run the full test suite** including slow tests:
-   ```bash
-   uv run pytest --run-slow
+2. **Mark your tests appropriately**:
+   ```python
+   import pytest
+   
+   @pytest.mark.fast
+   def test_quick_function():
+       # Fast test that runs quickly
+       pass
+   
+   @pytest.mark.slow
+   def test_comprehensive_analysis():
+       # Slower, more comprehensive test
+       pass
    ```
 
-4. **Check test coverage**:
-   ```bash
-   uv run pytest --cov=src/exactcis
-   ```
+### Alternative Test Commands
+
+You can also run tests directly with pytest if needed:
+
+```bash
+# Basic pytest command (matches CI)
+uv run pytest
+
+# Run with coverage (matches CI)
+uv run pytest --cov=src/exactcis --cov-report=xml
+
+# Run slow tests
+uv run pytest --run-slow
+```
+
+### Development Utilities
+
+The `analysis/analysis_scripts/` directory contains development utilities that are NOT part of the formal test suite:
+
+- `blaker_validation.py`: Manual validation tool for the Blaker method implementation
+- Other analysis scripts for debugging and validation
+
+These scripts can be run directly for development purposes but are not included in the standard test execution.
 
 ## Documentation
 

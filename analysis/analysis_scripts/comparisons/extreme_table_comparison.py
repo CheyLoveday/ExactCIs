@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 from scipy import stats
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -77,7 +77,7 @@ def compare_table(a, b, c, d, alpha=0.05):
     # ExactCIs improved
     try:
         start_time = time.time()
-        imp_lower, imp_upper = improved_ci_unconditional(a, b, c, d, alpha)
+        imp_lower, imp_upper = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
         imp_time = time.time() - start_time
         results.append({
             "Method": "ExactCIs Improved",

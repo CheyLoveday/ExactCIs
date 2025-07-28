@@ -5,8 +5,12 @@ This directory contains validation scripts, comparisons, and exploratory work th
 ## Contents
 
 - `analysis_scripts/`: Scripts for analyzing and comparing statistical methods
-- `documentation/`: Additional documentation resources
+  - `blaker_validation.py`: Manual validation tool for the Blaker method implementation
+  - `comparisons/`: Method comparison scripts
+  - `optimizations/`: Performance optimization analysis
+  - `profiling/`: Performance profiling utilities
 - `literature/`: Research papers and references
+- `logical_comparison/`: Logical validation and comparison scripts
 - `plots/`: Generated plots and visualizations
 - `r_comparison/`: Scripts for comparing results with R implementations
 

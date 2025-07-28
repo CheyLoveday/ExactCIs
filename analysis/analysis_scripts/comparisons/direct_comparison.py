@@ -2,7 +2,7 @@
 # Direct comparison of methods for the specific table we're investigating
 import time
 import numpy as np
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Table we're focusing on
 a, b, c, d = 7, 3, 2, 8  # The specific table we're investigating
@@ -39,7 +39,7 @@ for alpha in alpha_values:
     
     # Get times and results for Python improved method
     start_time = time.time()
-    py_imp_lower, py_imp_upper = improved_ci_unconditional(a, b, c, d, alpha)
+    py_imp_lower, py_imp_upper = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
     py_imp_time = time.time() - start_time
     
     # Get R results
@@ -61,7 +61,7 @@ print("-" * 95)
 for alpha in alpha_values:
     # Get results
     py_orig_lower, py_orig_upper = exact_ci_unconditional(a, b, c, d, alpha)
-    py_imp_lower, py_imp_upper = improved_ci_unconditional(a, b, c, d, alpha)
+    py_imp_lower, py_imp_upper = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
     r_uncond_lower, r_uncond_upper = r_results[alpha]["unconditional"]
     
     # Calculate differences
@@ -88,7 +88,7 @@ total_imp_diff = 0
 
 for alpha in alpha_values:
     py_orig_lower, py_orig_upper = exact_ci_unconditional(a, b, c, d, alpha)
-    py_imp_lower, py_imp_upper = improved_ci_unconditional(a, b, c, d, alpha)
+    py_imp_lower, py_imp_upper = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
     r_uncond_lower, r_uncond_upper = r_results[alpha]["unconditional"]
     
     # Sum of absolute differences

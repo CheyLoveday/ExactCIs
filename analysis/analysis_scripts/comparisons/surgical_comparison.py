@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional, _log_pvalue_barnard
+from exactcis.methods.unconditional import exact_ci_unconditional, _log_pvalue_barnard
 import time
 import inspect
 import warnings

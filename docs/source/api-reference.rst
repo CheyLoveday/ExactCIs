@@ -54,13 +54,6 @@ Wald Method
    :undoc-members:
    :show-inheritance:
 
-Fixed CI Method
-~~~~~~~~~~~~~
-
-.. automodule:: exactcis.methods.fixed_ci
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Utils
 -----

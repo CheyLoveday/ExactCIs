@@ -199,7 +199,7 @@ This approach directly solves for the exact values where the p-value equals α/2
 
 ```python
 # Pseudocode for edge case handling in ExactCIs
-def improved_ci_unconditional(a, b, c, d, alpha=0.05, ...):
+def exact_ci_unconditional(a, b, c, d, alpha=0.05, ...):
     # Check for zero cells
     if a*b*c*d == 0:
         # Apply special handling

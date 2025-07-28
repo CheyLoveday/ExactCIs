@@ -96,6 +96,7 @@ def logsumexp(log_terms: List[float]) -> float:
     ))
 
 
+@lru_cache(maxsize=2048)
 def log_binom_coeff(n: Union[int, float], k: Union[int, float]) -> float:
     """
     Calculate log of binomial coefficient in a numerically stable way.
@@ -261,7 +262,7 @@ SupportData = NamedTuple('SupportData', [
 ])
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=2048)
 def support(n1: Union[int, float], n2: Union[int, float], m1: Union[int, float]) -> SupportData:
     """
     Calculate the support of the noncentral hypergeometric distribution.
@@ -299,19 +300,13 @@ def support(n1: Union[int, float], n2: Union[int, float], m1: Union[int, float])
     return SupportData(x=support_array, min_val=k_min, max_val=k_max, offset=calculated_offset)
 
 
-def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
-    """
-    Calculate the weights for the probability mass function of the noncentral hypergeometric distribution.
+@lru_cache(maxsize=512)
+def _pmf_weights_cached(n1: float, n2: float, m: float, theta_rounded: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
+    """Cached version of pmf_weights with rounded theta for cache stability."""
+    return _pmf_weights_impl(n1, n2, m, theta_rounded)
 
-    Args:
-        n1: Size of first group
-        n2: Size of second group
-        m: Number of successes
-        theta: Odds ratio parameter
-
-    Returns:
-        Tuple containing (support, probabilities)
-    """
+def _pmf_weights_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
+    """Implementation of pmf_weights calculation."""
     supp = support(n1, n2, m)
     
     # Special cases handling for theta
@@ -341,21 +336,6 @@ def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, floa
 
     if check_n1 > 100 or check_n2 > 100 or check_m > 100:
         logger.warning(f"Large values detected in pmf_weights: n1={n1}, n2={n2}, m={m}")
-        # Use Stirling's approximation for very large factorials
-        # or return a simplified distribution for extremely large values
-        # if check_n1 > 1000 or check_n2 > 1000 or check_m > 1000:
-        #     logger.warning("Extremely large values, using simplified distribution (NOW DISABLED)")
-        #     # For extremely large values, return a simplified distribution
-        #     # centered around the expected value
-        #     expected_k = check_m * check_n1 / (check_n1 + check_n2)
-        #     w = [math.exp(-0.5 * ((k - expected_k) / (0.1 * check_n1))**2) for k in supp.x]
-        #     # Normalize
-        #     sum_w = sum(w)
-        #     if sum_w == 0: # Avoid division by zero if all weights are tiny
-        #         w = [1.0/len(supp.x)] * len(supp.x) if supp.x else []
-        #     else:
-        #         w = [wi / sum_w for wi in w]
-        #     return supp.x, tuple(w)
 
     # DEBUG LOGGING FOR SPECIFIC CASE
     is_debug_case_pmf = (n1 == 5 and n2 == 10 and m == 7)
@@ -441,6 +421,29 @@ def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, floa
         logger.info(f"[DEBUG_PMF_WEIGHTS] Normalized pmf_vals: {normalized_w}")
 
     return supp.x, tuple(normalized_w)
+
+def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
+    """
+    Calculate the weights for the probability mass function of the noncentral hypergeometric distribution.
+
+    Args:
+        n1: Size of first group
+        n2: Size of second group
+        m: Number of successes
+        theta: Odds ratio parameter
+
+    Returns:
+        Tuple containing (support, probabilities)
+    """
+    # Use much higher precision rounding to avoid numerical artifacts in root finding
+    theta_rounded = round(theta, 12)  # Increased from 8 to 12 decimal places
+    
+    # Use cached version if theta is reasonable for caching
+    if abs(theta) < 1e6 and not (np.isinf(theta) or np.isnan(theta)):
+        return _pmf_weights_cached(float(n1), float(n2), float(m), theta_rounded)
+    else:
+        # For extreme theta values, use uncached implementation
+        return _pmf_weights_impl(n1, n2, m, theta)
 
 
 def pmf(k: int, n1: int, n2: int, m: int, theta: float) -> float:

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 from scipy import stats
-from exactcis.methods.unconditional import exact_ci_unconditional, improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 def fisher_exact_ci_scipy(a, b, c, d, alpha=0.05):
     """Calculate Fisher's exact confidence interval using SciPy."""
@@ -52,9 +52,9 @@ def compare_methods_for_table(a, b, c, d, alpha_values=[0.05, 0.01, 0.1]):
         py_orig_lower, py_orig_upper = exact_ci_unconditional(a, b, c, d, alpha)
         py_orig_time = time.time() - start_time
         
-        # Compute ExactCIs improved method
+        # Compute ExactCIs improved method (using unified function with adaptive_grid=True)
         start_time = time.time()
-        py_imp_lower, py_imp_upper = improved_ci_unconditional(a, b, c, d, alpha)
+        py_imp_lower, py_imp_upper = exact_ci_unconditional(a, b, c, d, alpha, adaptive_grid=True, use_cache=True)
         py_imp_time = time.time() - start_time
         
         # Compute SciPy approximation

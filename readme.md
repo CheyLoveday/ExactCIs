@@ -4,12 +4,12 @@ Provides five methods to compute confidence intervals for the odds ratio of a 2�
 
 ## Documentation
 
-- [User Guide](docs/user_guide.md): Comprehensive guide to using ExactCIs
-- [API Reference](docs/api_reference.md): Detailed function and parameter documentation
-- [Architecture](docs/architecture.md): Package design, data flow, and implementation details
-- [Examples](_temporary/examples/): Jupyter notebooks with practical examples
-- [Method Comparison](docs/method_comparison.md): Detailed analysis of different CI methods
-- [Performance](docs/performance.md): Performance considerations and optimization
+- [User Guide](https://exactcis.readthedocs.io/en/latest/usage-guide.html): Comprehensive guide to using ExactCIs
+- [API Reference](https://exactcis.readthedocs.io/en/latest/api-reference.html): Detailed function and parameter documentation
+- [Architecture](https://exactcis.readthedocs.io/en/latest/development/architecture.html): Package design, data flow, and implementation details
+- [Examples](https://exactcis.readthedocs.io/en/latest/user_guide/examples.html): Jupyter notebooks with practical examples
+- [Method Comparison](https://exactcis.readthedocs.io/en/latest/user_guide/method-comparison.html): Detailed analysis of different CI methods
+- [Performance](https://exactcis.readthedocs.io/en/latest/user_guide/performance.html): Performance considerations and optimization
 
 ## Installation
 
@@ -82,7 +82,7 @@ exactcis-cli --help
 | **unconditional**<br/>(Barnard's) | Treats both margins as independent binomials, optimizes over nuisance \(p_1\) via grid (or NumPy) search, and inverts the worst‑case p‑value. | • Small clinical trials or pilot studies with unfixed margins<br/>• Need maximum power and narrowest exact CI<br/>• Compute budget allows optimization or vectorized acceleration |
 | **wald_haldane**<br/>(Haldane–Anscombe) | Adds 0.5 to each cell and applies the standard log‑OR ± z·SE formula; includes a pure‑Python normal quantile fallback if SciPy is absent. | • Large samples where asymptotic Wald is reasonable<br/>• Quick, approximate intervals for routine reporting<br/>• When speed and convenience outweigh strict exactness |
 
-For a detailed guide on selecting the appropriate method, see the [Method Selection Guide](docs/img/method_selection.md).
+For a detailed guide on selecting the appropriate method, see the [Method Selection Guide](https://exactcis.readthedocs.io/en/latest/user_guide/method-selection.html).
 
 ---
 
@@ -130,22 +130,6 @@ lower, upper = exact_ci_conditional(12, 5, 8, 10, alpha=0.01)
 print(f"99% CI: ({lower:.3f}, {upper:.3f})")
 ```
 
-## Timeout Functionality
-
-The `exact_ci_unconditional` method (Barnard's) includes timeout protection to prevent long-running calculations:
-
-```python
-from exactcis.methods import exact_ci_unconditional
-
-# With a 30-second timeout
-result = exact_ci_unconditional(12, 5, 8, 10, alpha=0.05, timeout=30)
-
-# If the calculation exceeds the timeout, it will return None or raise an exception
-# depending on the context
-```
-
-This timeout feature is particularly useful for large or imbalanced tables that might otherwise cause 
-computationally intensive calculations to run indefinitely.
 
 ## Running Tests
 
@@ -168,7 +152,7 @@ For optimal performance with the unconditional method:
 - Use appropriate grid sizes based on your precision requirements
 - Set reasonable timeouts for large or imbalanced tables
 
-For detailed performance information, see the [Performance Documentation](docs/performance.md).
+For detailed performance information, see the [Performance Documentation](https://exactcis.readthedocs.io/en/latest/user_guide/performance.html).
 
 ## Comparison with Other Implementations
 
@@ -177,7 +161,7 @@ ExactCIs has been benchmarked against:
 - SciPy's fisher_exact function
 - StatXact
 
-For benchmark results, see the [Implementation Comparison](docs/implementation_comparison.md).
+For benchmark results, see the [Implementation Comparison](https://exactcis.readthedocs.io/en/latest/development/implementation-comparison.html).
 
 ## Citation
 

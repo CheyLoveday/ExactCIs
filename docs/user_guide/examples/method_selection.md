@@ -165,7 +165,7 @@ Legend: ✓✓✓ Highly recommended, ✓✓ Recommended, ✓ Acceptable, ✗ No
 - When margins are not fixed by design
 
 **Implementation details**:
-- `improved_ci_unconditional()` - Recommended for most cases
+- `exact_ci_unconditional()` - Recommended for all cases, includes both original and improved functionality
 - `exact_ci_unconditional()` - Original implementation
 
 **Computational characteristics**:
@@ -209,7 +209,7 @@ Legend: ✓✓✓ Highly recommended, ✓✓ Recommended, ✓ Acceptable, ✗ No
 ## Example Comparison of Methods
 
 ```python
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 import numpy as np
 import scipy.stats as stats
 
@@ -250,7 +250,7 @@ for scenario in scenarios:
     
     # Calculate CIs
     try:
-        exact_ci = improved_ci_unconditional(a, b, c, d)
+        exact_ci = exact_ci_unconditional(a, b, c, d)
         exact_width = ci_width(exact_ci)
     except Exception as e:
         exact_ci = (float('nan'), float('nan'))
@@ -278,7 +278,7 @@ When selecting a method, consider the computational resources required:
 
 | Method | Time Complexity | Memory Usage | Relative Speed |
 |--------|----------------|--------------|---------------|
-| ExactCIs (improved_ci_unconditional) | O(n × grid_size) | O(grid_size) | 1x (baseline) |
+| ExactCIs (exact_ci_unconditional) | O(n × grid_size) | O(grid_size) | 1x (baseline) |
 | ExactCIs (exact_ci_unconditional) | O(n × grid_size) | O(grid_size) | 0.8x |
 | Fisher's Exact Test | O(n) | O(1) | ~5x faster |
 | Normal Approximation | O(1) | O(1) | ~50x faster |
@@ -289,14 +289,14 @@ For ExactCIs, using caching can significantly improve performance when calculati
 
 ```python
 from exactcis.utils.optimization import CICache
-from exactcis.methods.unconditional import improved_ci_unconditional
+from exactcis.methods.unconditional import exact_ci_unconditional
 
 # Create cache instance
 cache = CICache(max_size=1000)
 
 # Use the same cache instance for multiple calculations
-ci1 = improved_ci_unconditional(7, 3, 2, 8, cache_instance=cache)
-ci2 = improved_ci_unconditional(8, 2, 3, 7, cache_instance=cache)  # Similar table, will use cache
+ci1 = exact_ci_unconditional(7, 3, 2, 8, cache_instance=cache)
+ci2 = exact_ci_unconditional(8, 2, 3, 7, cache_instance=cache)  # Similar table, will use cache
 ```
 
 ## Conclusion
