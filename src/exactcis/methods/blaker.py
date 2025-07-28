@@ -5,7 +5,7 @@ This module implements Blaker's exact confidence interval method
 for the odds ratio of a 2x2 contingency table.
 """
 
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Callable
 import logging
 import numpy as np
 from scipy.stats import nchypergeom_fisher
@@ -223,7 +223,7 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
 def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]], 
                           alpha: float = 0.05,
                           max_workers: Optional[int] = None,
-                          progress_callback: Optional[callable] = None) -> List[Tuple[float, float]]:
+                          progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
     """
     Calculate Blaker's exact confidence intervals for multiple 2x2 tables in parallel.
     
@@ -238,6 +238,12 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
         
     Returns:
         List of (lower_bound, upper_bound) tuples, one for each input table
+        
+    Note:
+        Error Handling: If computation fails for any individual table (due to
+        numerical issues, invalid data, etc.), a conservative interval (0.0, inf)
+        is returned for that table, allowing the batch processing to complete
+        successfully.
         
     Example:
         >>> tables = [(10, 20, 15, 30), (5, 10, 8, 12), (2, 3, 1, 4)]

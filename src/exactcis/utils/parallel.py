@@ -48,6 +48,12 @@ def parallel_map(func: Callable, items: List[Any],
         
     Returns:
         List of results in the same order as input items
+        
+    Note:
+        Error Handling: If parallel execution fails (timeout, worker errors, etc.),
+        the function automatically falls back to sequential processing to ensure
+        all items are processed. This fallback behavior ensures robustness but
+        may result in longer execution times.
     """
     if not items:
         return []
@@ -111,6 +117,7 @@ def parallel_map(func: Callable, items: List[Any],
 def parallel_compute_ci(method_func: Callable, 
                         tables: List[Tuple[int, int, int, int]],
                         alpha: float = 0.05,
+                        timeout: Optional[float] = None,
                         **kwargs) -> List[Tuple[float, float]]:
     """
     Compute confidence intervals for multiple tables in parallel.
@@ -119,10 +126,16 @@ def parallel_compute_ci(method_func: Callable,
         method_func: CI method function to use
         tables: List of 2x2 tables as (a,b,c,d) tuples
         alpha: Significance level
+        timeout: Maximum time to wait for completion in seconds
         **kwargs: Additional arguments to pass to the method function
         
     Returns:
         List of (lower, upper) confidence interval tuples
+        
+    Note:
+        Error Handling: If computation fails for any individual table, a
+        conservative interval (0.0, inf) is returned for that table to
+        ensure the function completes successfully.
     """
     def process_table(table):
         a, b, c, d = table
@@ -132,7 +145,7 @@ def parallel_compute_ci(method_func: Callable,
             logger.warning(f"Error computing CI for table {table}: {e}")
             return (0.0, float('inf'))  # Return a conservative interval on error
     
-    return parallel_map(process_table, tables)
+    return parallel_map(process_table, tables, timeout=timeout)
 
 
 def chunk_parameter_space(theta_range: Tuple[float, float], 
@@ -140,12 +153,22 @@ def chunk_parameter_space(theta_range: Tuple[float, float],
     """
     Split a parameter space into chunks for parallel processing.
     
+    Uses logarithmic spacing which is appropriate for odds ratio parameters
+    that typically span several orders of magnitude (e.g., 0.01 to 100).
+    
     Args:
         theta_range: (min, max) range of theta values
         n_chunks: Number of chunks to create
         
     Returns:
         List of (min, max) ranges for each chunk
+        
+    Note:
+        Logarithmic Spacing: This function uses logarithmic rather than linear
+        spacing because odds ratios are naturally distributed on a log scale.
+        This ensures more balanced computational load when searching across
+        the parameter space, as equal log-space intervals represent equal
+        multiplicative factors in odds ratio space.
     """
     min_theta, max_theta = theta_range
     if min_theta <= 0:
@@ -178,6 +201,12 @@ def parallel_find_root(func: Callable[[float], float],
         
     Returns:
         Value of theta where func(theta) ≈ target_value
+        
+    Note:
+        Edge Case Handling: If no sign changes are found in the given range,
+        the function returns the theta value that produces the function value
+        closest to the target value. This ensures the function always returns
+        a result even when a true root doesn't exist within the search range.
     """
     min_theta, max_theta = theta_range
     

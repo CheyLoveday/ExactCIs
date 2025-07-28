@@ -10,6 +10,7 @@ import argparse
 import sys
 import csv
 import json
+import traceback
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 import logging
@@ -102,6 +103,11 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
         "--workers", 
         type=int, 
         help="Number of parallel workers for batch processing (default: auto-detected)"
+    )
+    batch_group.add_argument(
+        "--timeout", 
+        type=float, 
+        help="Timeout in seconds for batch processing operations (default: no timeout)"
     )
     
     parser.add_argument(
@@ -309,7 +315,8 @@ def process_single_table(a: int, b: int, c: int, d: int, method: str, alpha: flo
 
 
 def process_batch_tables(tables: List[Dict[str, Any]], method: str, alpha: float, 
-                        grid_size: int, apply_haldane: bool, workers: Optional[int] = None) -> List[Dict[str, Any]]:
+                        grid_size: int, apply_haldane: bool, workers: Optional[int] = None,
+                        timeout: Optional[float] = None) -> List[Dict[str, Any]]:
     """
     Process multiple tables in parallel.
     
@@ -320,6 +327,7 @@ def process_batch_tables(tables: List[Dict[str, Any]], method: str, alpha: float
         grid_size: Grid size for unconditional method
         apply_haldane: Whether to apply Haldane's correction
         workers: Number of parallel workers
+        timeout: Timeout in seconds for processing operations
         
     Returns:
         List of result dictionaries
@@ -373,6 +381,7 @@ def process_batch_tables(tables: List[Dict[str, Any]], method: str, alpha: float
                 'width': None
             })
             logger.warning(f"Error processing table {table_id}: {e}")
+            logger.debug(f"Full traceback for table {table_id}:\n{traceback.format_exc()}")
             
         return result
     
@@ -388,7 +397,8 @@ def process_batch_tables(tables: List[Dict[str, Any]], method: str, alpha: float
         process_table,
         tables,
         max_workers=workers,
-        force_processes=True
+        force_processes=True,
+        timeout=timeout
     )
     
     return results
@@ -426,7 +436,8 @@ def main(args: Optional[List[str]] = None) -> None:
                 alpha=alpha,
                 grid_size=parsed_args.grid_size,
                 apply_haldane=parsed_args.apply_haldane,
-                workers=parsed_args.workers
+                workers=parsed_args.workers,
+                timeout=parsed_args.timeout
             )
             
             # Save results
