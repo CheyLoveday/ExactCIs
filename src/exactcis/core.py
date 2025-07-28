@@ -117,11 +117,7 @@ def log_binom_coeff(n: Union[int, float], k: Union[int, float]) -> float:
     if k == 0 or k == n:
         return 0.0  # log(1) = 0
     
-    # For small integer values, use direct calculation
-    if isinstance(n, int) and isinstance(k, int) and n < 20:
-        return math.log(math.comb(n, k))
-    
-    # For large or non-integer values, use lgamma for better numerical stability
+    # Always use lgamma for numerical stability with large or float inputs.
     # log(n choose k) = log(n!) - log(k!) - log((n-k)!)
     # For non-integers, we use the gamma function: Γ(n+1) = n!
     return math.lgamma(n + 1) - math.lgamma(k + 1) - math.lgamma(n - k + 1)
@@ -558,11 +554,11 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     # Attempt to bracket the root if not already bracketed
     if f_lo * f_hi > 0:
         logger.warning(f"find_root_log: Initial interval [{lo:.2e}, {hi:.2e}] (f_lo={f_lo:.2e}, f_hi={f_hi:.2e}) does not bracket root. Attempting to expand.")
-        # Try expanding the interval. Max 10 attempts each side.
+        # Try expanding the interval. Max 30 attempts each side with a larger factor.
         # Expand upper bound first
         original_log_hi = log_hi
-        for _ in range(10):
-            log_hi = original_log_hi + math.log(2) * (_ + 1) # Expand by factors of 2
+        for i in range(30):
+            log_hi = original_log_hi + math.log(10) * (i + 1) # Expand by factors of 10
             f_hi_new = f(math.exp(log_hi))
             if timeout_checker and timeout_checker(): return None
             if f_hi_new is None: return None
@@ -575,8 +571,8 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
             f_hi = f(math.exp(log_hi)) # Reset f_hi
             # Expand lower bound if upper expansion failed
             original_log_lo = log_lo
-            for _ in range(10):
-                log_lo = original_log_lo - math.log(2) * (_ + 1) # Shrink by factors of 2
+            for i in range(30):
+                log_lo = original_log_lo - math.log(10) * (i + 1) # Shrink by factors of 10
                 f_lo_new = f(math.exp(log_lo))
                 if timeout_checker and timeout_checker(): return None
                 if f_lo_new is None: return None
