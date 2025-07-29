@@ -124,7 +124,7 @@ exclude_lines = [
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.3.5",
-    "pytest-timeout>=2.1.0", 
+    "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.3.1",
     "pytest-cov>=4.1.0",
     "psutil>=7.0.0",
@@ -137,5 +137,6 @@ dev-dependencies = [
     "pre-commit>=3.0.0",
     "sphinx>=4.0.0",
     "sphinx-rtd-theme>=1.0.0",
-    "m2r2>=0.3.2"
+    "m2r2>=0.3.2",
+    "twine>=6.1.0",
 ]

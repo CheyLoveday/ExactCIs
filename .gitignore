@@ -95,6 +95,7 @@ archive/legacy_config/
 .windsurf/
 .gemini/
 .agent_guidelines/
+.claude/
 
 # Additional cache directories
 .mypy_cache/
