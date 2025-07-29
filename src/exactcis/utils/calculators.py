@@ -56,24 +56,25 @@ def calculate_log_probability_for_table(
             log_binom_pmf_cached(table.n2, table.c, p2))
 
 
-def enumerate_all_possible_tables(n1: int, n2: int) -> List[TableData]:
+def enumerate_all_possible_tables(n1: int, n2: int):
     """
-    Enumerate all possible 2x2 tables with given marginals.
+    Generator that yields all possible 2x2 tables with given marginals.
+    
+    This uses a generator pattern to avoid creating all tables in memory at once,
+    which is more memory-efficient for large values of n1 and n2.
     
     Args:
         n1: First margin total
         n2: Second margin total
         
-    Returns:
-        List of all possible tables
+    Yields:
+        TableData objects for each possible table
     """
-    tables = []
     for a in range(n1 + 1):
         for c in range(n2 + 1):
             b = n1 - a
             d = n2 - c
-            tables.append(TableData(a, b, c, d))
-    return tables
+            yield TableData(a, b, c, d)
 
 
 def calculate_unconditional_log_pvalue_for_grid_point(

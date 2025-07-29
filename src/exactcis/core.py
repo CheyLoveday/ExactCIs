@@ -309,9 +309,8 @@ def _pmf_weights_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int
         return pmf_weights_impl_functional(n1, n2, m, theta)
     except ImportError:
         logger.warning("Functional PMF implementation not available, using original")
-        # Fallback to original implementation would go here
-        # For now, raising an error to ensure we catch import issues
-        raise
+        # Fallback to original implementation
+        return _pmf_weights_original_impl(n1, n2, m, theta)
 
 def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
     """
@@ -428,9 +427,10 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
         )
     except ImportError:
         logger.warning("Functional root finding implementation not available, using original")
-        # Fallback to original implementation would go here
-        # For now, raising an error to ensure we catch import issues
-        raise
+        # Fallback to original implementation
+        return _find_root_log_original_impl(
+            f, lo, hi, tol, maxiter, progress_callback, timeout_checker, **kwargs
+        )
 
 
 def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target: float = 0, 
@@ -1003,3 +1003,107 @@ def optimize_core_cache_for_batch(enable_large_cache: bool = True) -> None:
         original_func = log_binom_coeff.__wrapped__
         log_binom_coeff = lru_cache(maxsize=2048)(original_func)
         logger.info("Reset cache sizes to default")
+
+
+def _pmf_weights_original_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
+    """Original implementation of pmf_weights calculation."""
+    # Calculate support for the distribution
+    supp = support(n1, n2, m)
+    
+    if len(supp.x) == 0:
+        return (tuple(), tuple())
+    
+    # Calculate unnormalized weights in log space
+    log_weights = []
+    for k in supp.x:
+        log_weight = (log_binom_coeff(n1, k) + 
+                     log_binom_coeff(n2, m - k) + 
+                     k * math.log(theta) if theta > 0 else float('-inf'))
+        log_weights.append(log_weight)
+    
+    # Normalize weights
+    log_norm = logsumexp(log_weights)
+    weights = [math.exp(lw - log_norm) for lw in log_weights]
+    
+    return (tuple(supp.x), tuple(weights))
+
+
+def _find_root_log_original_impl(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0,
+                                tol: float = 1e-8, maxiter: int = 60,
+                                progress_callback: Optional[Callable[[float], None]] = None,
+                                timeout_checker: Optional[Callable[[], bool]] = None,
+                                **kwargs) -> Optional[float]:
+    """Original implementation of find_root_log."""
+    # Map xtol to tol for backward compatibility
+    if 'xtol' in kwargs:
+        tol = kwargs['xtol']
+    
+    # Convert to log space
+    log_lo, log_hi = math.log(lo), math.log(hi)
+    
+    # Check if root is bracketed
+    def log_f(log_x):
+        if timeout_checker and timeout_checker():
+            return None
+        try:
+            return f(math.exp(log_x))
+        except (OverflowError, ValueError):
+            return float('nan')
+    
+    f_log_lo = log_f(log_lo)
+    f_log_hi = log_f(log_hi)
+    
+    if f_log_lo is None or f_log_hi is None:
+        return None
+    
+    if np.isnan(f_log_lo) or np.isnan(f_log_hi):
+        return None
+    
+    # Expand search if not bracketed
+    max_expansions = 10
+    expansion_count = 0
+    while f_log_lo * f_log_hi > 0 and expansion_count < max_expansions:
+        if timeout_checker and timeout_checker():
+            return None
+        
+        # Try expanding upward first
+        log_hi += 1.0
+        f_log_hi = log_f(log_hi)
+        
+        if f_log_hi is None or np.isnan(f_log_hi):
+            # Try expanding downward
+            log_hi -= 1.0
+            log_lo -= 1.0
+            f_log_lo = log_f(log_lo)
+            
+            if f_log_lo is None or np.isnan(f_log_lo):
+                return None
+        
+        expansion_count += 1
+    
+    if f_log_lo * f_log_hi > 0:
+        raise RuntimeError("Failed to bracket root in log space")
+    
+    # Bisection in log space
+    for i in range(maxiter):
+        if timeout_checker and timeout_checker():
+            return None
+        
+        if progress_callback:
+            progress_callback(100 * i / maxiter)
+        
+        log_mid = 0.5 * (log_lo + log_hi)
+        f_log_mid = log_f(log_mid)
+        
+        if f_log_mid is None or np.isnan(f_log_mid):
+            return None
+        
+        if abs(f_log_mid) < tol or (log_hi - log_lo) < tol:
+            return log_mid
+        
+        if f_log_lo * f_log_mid <= 0:
+            log_hi, f_log_hi = log_mid, f_log_mid
+        else:
+            log_lo, f_log_lo = log_mid, f_log_mid
+    
+    return 0.5 * (log_lo + log_hi)
