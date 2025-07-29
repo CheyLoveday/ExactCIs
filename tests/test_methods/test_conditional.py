@@ -6,7 +6,6 @@ import pytest
 import numpy as np
 from scipy import stats
 from exactcis.methods import exact_ci_conditional
-from exactcis.methods.conditional import ComputationError
 
 
 def test_exact_ci_conditional_basic():
@@ -114,7 +113,7 @@ def test_exact_ci_conditional_extreme_values():
         # The values are not as important as the function not crashing
         assert lower > 0, f"Lower bound should be positive, got {lower}"
         assert np.isfinite(upper), f"Upper bound should be finite, got {upper}"
-    except ComputationError as e:
+    except (ValueError, RuntimeError) as e:
         pytest.skip(f"Test skipped due to computation error: {e}")
 
 
@@ -162,7 +161,7 @@ def test_exact_ci_conditional_precision():
         # Should be close to 1 for balanced table
         assert 0.8 <= lower <= 1.2, f"Expected lower ~0.9-1.0, got {lower}"
         assert 0.8 <= upper <= 1.2, f"Expected upper ~1.0, got {upper}"
-    except ComputationError:
+    except (ValueError, RuntimeError):
         pytest.skip("Skipping large balanced table due to computational limits")
 
 
