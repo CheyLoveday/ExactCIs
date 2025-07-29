@@ -17,9 +17,12 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 
-class ComputationError(Exception):
-    """Custom exception for errors during CI computation, e.g., bracketing failure."""
-    pass
+"""
+This module previously defined a custom ComputationError exception class here.
+It has been removed in favor of a more consistent error handling approach
+that aligns with the rest of the codebase, using logging and fallback values
+instead of raising custom exceptions.
+"""
 
 
 def exact_ci_conditional(a: int, b: int, c: int, d: int,
@@ -32,11 +35,12 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
         alpha: The significance level (e.g., 0.05 for 95% confidence)
         
     Returns:
-        Tuple of lower and upper bounds of the confidence interval
+        Tuple of lower and upper bounds of the confidence interval.
+        If computation fails or produces invalid bounds, returns a conservative
+        interval (0.0, inf) with appropriate warning logs.
         
     Raises:
-        ValueError: If the inputs are invalid
-        ComputationError: If computation fails
+        ValueError: If the inputs are invalid (e.g., negative counts, empty margins)
     """
     # Log the input
     logger.info(f"Calculating CI for table: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")
@@ -124,13 +128,9 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
     logger.info(f"Raw bounds: lower={lower_bound}, upper={upper_bound}")
     
     # Final validation to ensure reasonable bounds
-    try:
-        lower_bound, upper_bound = validate_bounds(lower_bound, upper_bound)
-        logger.info(f"Validated bounds: lower={lower_bound}, upper={upper_bound}")
-        return lower_bound, upper_bound
-    except ComputationError:
-        logger.warning(f"Invalid bounds detected for table ({a},{b},{c},{d}). Returning conservative interval.")
-        return 0.0, float('inf')
+    lower_bound, upper_bound = validate_bounds(lower_bound, upper_bound)
+    logger.info(f"Validated bounds: lower={lower_bound}, upper={upper_bound}")
+    return lower_bound, upper_bound
 
 
 def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
@@ -145,10 +145,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
         alpha: Significance level
         
     Returns:
-        Lower bound value
-        
-    Raises:
-        ComputationError: If the root finding fails
+        Lower bound value. If root finding fails, returns a conservative
+        estimate with appropriate warning logs.
     """
     # For general cases, calculate numerically
     target_prob = alpha / 2.0
@@ -261,10 +259,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
         alpha: Significance level
         
     Returns:
-        Upper bound value
-    
-    Raises:
-        ComputationError: If the root finding fails
+        Upper bound value. If root finding fails, returns a conservative
+        estimate with appropriate warning logs.
     """
     # For general cases, calculate numerically
     target_prob = alpha / 2.0
@@ -379,7 +375,8 @@ def validate_bounds(lower, upper):
         upper: Upper confidence bound
         
     Returns:
-        Tuple of (lower, upper) with any necessary adjustments
+        Tuple of (lower, upper) with any necessary adjustments.
+        If bounds are crossed, returns a conservative interval (0.0, inf).
     """
     # Ensure bounds are reasonable
     if lower < 0:
@@ -388,8 +385,9 @@ def validate_bounds(lower, upper):
     # Ensure upper bound is greater than lower bound
     if upper <= lower and upper != 0:
         # If bounds are crossed, it signals a computation issue
-        # Rather than using a heuristic replacement, raise an error
-        raise ComputationError(f"Invalid bounds: lower ({lower}) >= upper ({upper})")
+        # Return a conservative interval instead of raising an exception
+        logger.warning(f"Invalid bounds detected: lower ({lower}) >= upper ({upper}). Returning conservative interval.")
+        return 0.0, float('inf')
     
     # Check for non-finite values
     if not np.isfinite(lower) and lower != 0.0:
