@@ -303,125 +303,15 @@ def _pmf_weights_cached(n1: float, n2: float, m: float, theta_rounded: float) ->
     return _pmf_weights_impl(n1, n2, m, theta_rounded)
 
 def _pmf_weights_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
-    """Implementation of pmf_weights calculation."""
-    supp = support(n1, n2, m)
-    
-    # Special cases handling for theta
-    if theta <= 0:
-        # For theta = 0, all probability mass is at the minimum value
-        w = [1.0 if k == supp.min_val else 0.0 for k in supp.x]
-        return supp.x, tuple(w)
-    elif theta >= 1e6 or np.isinf(theta):
-        # For extremely large theta, all probability mass is at the maximum value
-        # This ensures numerical stability and correct behavior for edge cases
-        max_val = supp.max_val
-        w = [1.0 if k == max_val else 0.0 for k in supp.x]
-        
-        # Debug logging for the specific problematic case
-        if n1 == 5 and n2 == 10 and m == 7:
-            logger.info(f"[DEBUG_PMF_WEIGHTS] n1=5, n2=10, m=7, theta={theta:.2e}")
-            logger.info(f"[DEBUG_PMF_WEIGHTS] Using special large theta handler, max_val={max_val}")
-            logger.info(f"[DEBUG_PMF_WEIGHTS] Resulting pmf: {w}")
-        
-        return supp.x, tuple(w)
-    
-    logt = math.log(theta)
-
-    # Check for large values that might cause numerical issues
-    # Ensure n1, n2, m are treated as numbers for comparison, int() for large value check if they are floats.
-    check_n1, check_n2, check_m = (float(val) for val in (n1, n2, m))
-
-    if check_n1 > 100 or check_n2 > 100 or check_m > 100:
-        logger.warning(f"Large values detected in pmf_weights: n1={n1}, n2={n2}, m={m}")
-
-    # DEBUG LOGGING FOR SPECIFIC CASE
-    is_debug_case_pmf = (n1 == 5 and n2 == 10 and m == 7)
-    if is_debug_case_pmf:
-        logger.info(f"[DEBUG_PMF_WEIGHTS] n1=5,n2=10,m=7,theta={theta:.2e}")
-        logger.info(f"[DEBUG_PMF_WEIGHTS] supp={supp.x}")
-
-    # Vectorized calculation of log-probabilities with safeguards against overflow
-    k = supp.x
-    logs = np.full(len(k), float('-inf'))  # Initialize with -inf
-    
+    """Implementation of pmf_weights calculation using functional approach."""
     try:
-        # Use np.errstate to ignore divide by zero warnings
-        with np.errstate(divide='ignore'):
-            # Vectorized calculation of binomial coefficients
-            log_comb_n1_k = np.vectorize(log_binom_coeff)(n1, k)
-            log_comb_n2_m_k = np.vectorize(log_binom_coeff)(n2, m - k)
-        
-        # Vectorized calculation of log terms
-        log_terms = log_comb_n1_k + log_comb_n2_m_k + k * logt
-        logs = log_terms
-        
-        if is_debug_case_pmf:
-            for i, k_val in enumerate(k):
-                logger.info(f"[DEBUG_PMF_WEIGHTS] k={k_val}: log_comb_n1_k={log_comb_n1_k[i]:.2e}, " 
-                           f"log_comb_n2_m_k={log_comb_n2_m_k[i]:.2e}, k*logt={k_val*logt:.2e}, " 
-                           f"log_term={log_terms[i]:.2e}")
-    except (OverflowError, ValueError) as e:
-        logger.warning(f"Numerical error in pmf_weights: {e}")
-        # logs already initialized with -inf
-
-    # Filter out -inf values
-    valid_logs = [l for l in logs if l != float('-inf')]
-    if not valid_logs:
-        logger.warning("No valid log probabilities, using uniform distribution")
-        return supp.x, tuple([1.0/len(supp.x)] * len(supp.x))
-
-    # Use logsumexp for numerical stability
-    M = max(valid_logs)
-    
-    if is_debug_case_pmf:
-        # Find index of max value in valid_logs using numpy
-        max_idx = np.argmax(valid_logs)
-        logger.info(f"[DEBUG_PMF_WEIGHTS] max_log={M:.2e}, index of max={max_idx}")
-    
-    # Use a numerically stable approach to sum exponentials
-    exp_terms = [math.exp(min(x - M, 700)) for x in valid_logs]
-    log_sum = M + math.log(sum(exp_terms))
-    
-    if is_debug_case_pmf:
-        logger.info(f"[DEBUG_PMF_WEIGHTS] exp_terms={exp_terms}, log_sum={log_sum:.2e}")
-
-    # Normalize in log-space with protection against underflow
-    w = []
-    for i, l in enumerate(logs):
-        if l == float('-inf'):
-            w.append(0.0)
-        else:
-            # Protect against underflow
-            exp_term = min(l - log_sum, 700)  # exp(700) is close to the maximum representable value
-            weight = math.exp(exp_term)
-            w.append(weight)
-            
-            if is_debug_case_pmf:
-                logger.info(f"[DEBUG_PMF_WEIGHTS] k={supp.x[i]}, log diff={l-log_sum:.2e}, weight={weight:.2e}")
-
-    # Safety check: Ensure maximum probability is at k_max for large theta
-    if theta > 1e3 and not np.isinf(theta):  # For large but not infinite theta
-        # Find indices using numpy methods instead of .index()
-        max_k_idx = np.where(supp.x == supp.max_val)[0][0]
-        max_prob_idx = np.argmax(w)
-        
-        if max_prob_idx != max_k_idx:
-            logger.warning(f"Unexpected probability distribution for large theta={theta:.2e}: "
-                          f"max prob at k={supp.x[max_prob_idx]} instead of k_max={supp.max_val}")
-            # Consider correcting the distribution here if needed
-
-    if is_debug_case_pmf:
-        logger.info(f"[DEBUG_PMF_WEIGHTS] Raw weights: {w}")
-        logger.info(f"[DEBUG_PMF_WEIGHTS] Total weight: {sum(w):.2e}")
-
-    # Normalize weights to sum to 1
-    total_weight = sum(w)
-    normalized_w = [wi / total_weight for wi in w] if total_weight > 0 else [0.0] * len(w)
-
-    if is_debug_case_pmf:
-        logger.info(f"[DEBUG_PMF_WEIGHTS] Normalized pmf_vals: {normalized_w}")
-
-    return supp.x, tuple(normalized_w)
+        from .utils.pmf_functions import pmf_weights_impl_functional
+        return pmf_weights_impl_functional(n1, n2, m, theta)
+    except ImportError:
+        logger.warning("Functional PMF implementation not available, using original")
+        # Fallback to original implementation would go here
+        # For now, raising an error to ensure we catch import issues
+        raise
 
 def pmf_weights(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
     """
@@ -511,8 +401,8 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     """
     Find the root of a function using bisection method in log space.
     
-    This is more stable for functions with wide ranges of inputs,
-    particularly when dealing with confidence intervals for odds ratios.
+    This refactored function uses functional programming principles with pure functions
+    for improved maintainability and testability.
     
     Args:
         f: Function to evaluate
@@ -531,99 +421,16 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     Raises:
         RuntimeError: If the root cannot be bracketed after attempts to expand search.
     """
-    # For backward compatibility: if xtol is provided, use it instead of tol
-    if 'xtol' in kwargs:
-        tol = kwargs['xtol']
-    
-    if lo <= 0 or hi <= 0:
-        logger.error(f"find_root_log: Search interval bounds must be positive. Got lo={lo}, hi={hi}")
-        # This indicates a fundamental issue, as log-space search requires positive bounds.
-        # Depending on context, might want to return 0 or raise error. Let's raise for now.
-        raise ValueError("Search interval bounds for find_root_log must be positive.")
-
-    # Convert to log space
-    log_lo = math.log(lo)
-    log_hi = math.log(hi)
-    
-    f_lo = f(math.exp(log_lo))
-    if timeout_checker and timeout_checker(): return None
-    if f_lo is None: return None # Function itself might indicate timeout
-
-    f_hi = f(math.exp(log_hi))
-    if timeout_checker and timeout_checker(): return None
-    if f_hi is None: return None
-    
-    if f_lo == 0: return log_lo
-    if f_hi == 0: return log_hi
-
-    # Attempt to bracket the root if not already bracketed
-    if f_lo * f_hi > 0:
-        logger.warning(f"find_root_log: Initial interval [{lo:.2e}, {hi:.2e}] (f_lo={f_lo:.2e}, f_hi={f_hi:.2e}) does not bracket root. Attempting to expand.")
-        # Try expanding the interval. Max 30 attempts each side with a larger factor.
-        # Expand upper bound first
-        original_log_hi = log_hi
-        for i in range(30):
-            log_hi = original_log_hi + math.log(10) * (i + 1) # Expand by factors of 10
-            f_hi_new = f(math.exp(log_hi))
-            if timeout_checker and timeout_checker(): return None
-            if f_hi_new is None: return None
-            if f_lo * f_hi_new <= 0:
-                f_hi = f_hi_new
-                logger.info(f"find_root_log: Bracketed root by expanding hi to {math.exp(log_hi):.2e}")
-                break
-        else: # if loop completed without break
-            log_hi = original_log_hi # Reset if upper expansion failed
-            f_hi = f(math.exp(log_hi)) # Reset f_hi
-            # Expand lower bound if upper expansion failed
-            original_log_lo = log_lo
-            for i in range(30):
-                log_lo = original_log_lo - math.log(10) * (i + 1) # Shrink by factors of 10
-                f_lo_new = f(math.exp(log_lo))
-                if timeout_checker and timeout_checker(): return None
-                if f_lo_new is None: return None
-                if f_lo_new * f_hi <= 0:
-                    f_lo = f_lo_new
-                    logger.info(f"find_root_log: Bracketed root by expanding lo to {math.exp(log_lo):.2e}")
-                    break
-            else:
-                logger.error(f"find_root_log: Could not bracket root for f after expanding search. Final interval [{math.exp(log_lo):.2e}, {math.exp(log_hi):.2e}], f_values [{f_lo:.2e}, {f_hi:.2e}]")
-                raise RuntimeError(f"Cannot bracket root in find_root_log: f({math.exp(log_lo):.2e}) = {f_lo:.2e}, f({math.exp(log_hi):.2e}) = {f_hi:.2e}")
-
-    # Bisection method in log space
-    iter_num = 0
-    while iter_num < maxiter:
-        if timeout_checker and timeout_checker():
-            logger.warning("Timeout occurred during find_root_log bisection")
-            return None
-            
-        log_mid = 0.5 * (log_lo + log_hi)
-        # Check for convergence based on interval width in log space
-        if (log_hi - log_lo) < tol:
-            return log_mid
-
-        mid_val = math.exp(log_mid)
-        f_mid = f(mid_val)
-        
-        if f_mid is None: # Function might indicate timeout
-             logger.warning("Timeout (f_mid is None) occurred during find_root_log bisection")
-             return None
-        
-        if progress_callback:
-            progress_callback(100 * iter_num / maxiter)
-        
-        if f_mid == 0:
-            return log_mid
-        elif f_mid * f_lo < 0:
-            log_hi = log_mid
-            # f_hi = f_mid # Not strictly necessary for bisection, but if f_mid stored, use it
-        else:
-            log_lo = log_mid
-            f_lo = f_mid # Update f_lo to the value at the new log_lo
-        
-        iter_num += 1
-    
-    logger.warning(f"find_root_log: Max iterations ({maxiter}) reached. Returning current log_mid: {(log_lo + log_hi) / 2.0:.4e}")
-    return (log_lo + log_hi) / 2.0 # Return best estimate if max_iter reached
+    try:
+        from .utils.root_finding import find_root_log_impl_functional
+        return find_root_log_impl_functional(
+            f, lo, hi, tol, maxiter, progress_callback, timeout_checker, **kwargs
+        )
+    except ImportError:
+        logger.warning("Functional root finding implementation not available, using original")
+        # Fallback to original implementation would go here
+        # For now, raising an error to ensure we catch import issues
+        raise
 
 
 def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target: float = 0, 

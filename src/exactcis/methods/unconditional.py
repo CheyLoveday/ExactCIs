@@ -448,384 +448,152 @@ def unconditional_log_pvalue(a: int, b: int, c: int, d: int,
 
 
 def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05, 
-                          grid_size: int = 15,
-                          theta_min: Optional[float] = None,
-                          theta_max: Optional[float] = None,
-                          custom_range: Optional[Tuple[float, float]] = None,
-                          theta_factor: float = 100.0,
-                          haldane: bool = False, 
-                          timeout: Optional[float] = None,
-                          optimization_params: Optional[Dict[str, Any]] = None,
-                          progress_callback: Optional[Callable[[float, str], None]] = None,
-                          adaptive_grid: bool = True,
-                          use_cache: bool = True,
-                          optimization_strategy: str = "auto") -> Tuple[float, float]:
+                          **kwargs) -> Tuple[float, float]:
     """
     Calculate Barnard's exact unconditional confidence interval.
     
-    This unified function uses a grid search over the nuisance parameter p1 and then
-    finds the confidence interval for the odds ratio. It combines the best features
-    of the previous implementations with configurable optimization strategies.
+    This refactored function uses functional programming principles with pure functions
+    and immutable data structures for improved maintainability and testability.
     
     Args:
         a, b, c, d: Cell counts in the 2x2 table
         alpha: Significance level (default: 0.05)
-        grid_size: Number of grid points for p1 (default: 50)
-        theta_min: Minimum value of theta to consider (default: None, auto-determined)
-        theta_max: Maximum value of theta to consider (default: None, auto-determined)
-        custom_range: Custom range for theta search (min, max)
-        theta_factor: Factor for determining automatic theta range (default: 100)
-        haldane: Apply Haldane's correction (default: False)
-        timeout: Optional timeout in seconds
-        optimization_params: Additional optimization parameters
-        progress_callback: Optional callback for progress reporting
-        adaptive_grid: Whether to use adaptive grid refinement (default: True)
-        use_cache: Whether to use caching for speedup (default: True)
-        optimization_strategy: Strategy for optimization ("auto", "conservative", "aggressive")
+        **kwargs: Additional configuration options including:
+            grid_size: Number of grid points for p1 (default: 15)
+            theta_min, theta_max: Theta range bounds
+            custom_range: Custom range for theta search
+            theta_factor: Factor for automatic theta range (default: 100)
+            haldane: Apply Haldane's correction (default: False)
+            timeout: Optional timeout in seconds
+            use_cache: Whether to use caching (default: True)
         
     Returns:
         Tuple of (lower, upper) confidence interval bounds
     """
-    # Initialize parameters
-    optimization_params = optimization_params or {}
+    # Import the new functional modules
+    from ..utils.data_models import TableData, UnconditionalConfig, CIResult
+    from ..utils.validators import (
+        validate_table_data, validate_alpha, has_zero_marginal_totals,
+        has_zero_in_cell_a_with_nonzero_c
+    )
+    from ..utils.transformers import (
+        apply_haldane_correction, determine_theta_range, create_adaptive_grid,
+        clamp_bound_to_valid_range
+    )
+    from ..utils.calculators import find_confidence_bound
+    
+    # Create configuration and table data
+    config = UnconditionalConfig(alpha=alpha, **kwargs)
+    table = TableData(a, b, c, d)
     
     # Set up timeout checker if timeout is provided
     timeout_checker = None
-    if timeout is not None:
+    if config.timeout is not None:
         start_time = time.time()
-        def timeout_checker():
-            return time.time() - start_time > timeout
-        logger.info(f"Using timeout of {timeout} seconds")
+        timeout_checker = lambda: time.time() - start_time > config.timeout
+        logger.info(f"Using timeout of {config.timeout} seconds")
     
-    # Check cache for exact match first
-    cache = get_global_cache()
-    cached_result = cache.get_exact(a, b, c, d, alpha, grid_size, haldane)
-    if cached_result is not None:
-        logger.info(f"Using cached CI for ({a},{b},{c},{d}) at alpha={alpha}, grid_size={grid_size}, haldane={haldane}")
-        return cached_result[0]
+    # Validation pipeline using pure functions
+    try:
+        validate_table_data(table)
+        validate_alpha(config.alpha)
+    except ValueError as e:
+        raise ValueError(f"Invalid input: {e}")
     
-    # Look for similar tables in cache to guide search
-    search_params = {}
-    similar_entries = cache.get_similar(a, b, c, d, alpha)
-    if similar_entries:
-        search_params = derive_search_params(a, b, c, d, similar_entries)
-        logger.info(f"Using search parameters derived from similar tables: {search_params}")
-        
-        # Override grid_size if suggested by similar tables
-        if "grid_size" in search_params and grid_size == 50:  # Only override default
-            grid_size = search_params["grid_size"]
-        
-        # Use predicted theta range if available and not explicitly set
-        if "predicted_theta_range" in search_params and theta_min is None and theta_max is None and custom_range is None:
-            theta_min, theta_max = search_params["predicted_theta_range"]
-            logger.info(f"Using predicted theta range from similar tables: ({theta_min}, {theta_max})")
-    
-    # Validation
-    n1 = a + b
-    n2 = c + d
-    
-    if n1 == 0 or n2 == 0:
+    # Check for early return conditions using pure functions
+    if has_zero_marginal_totals(table):
         logger.warning("One or both marginal totals are zero, returning (0, inf)")
-        result = (0, float('inf'))
-        cache.add(a, b, c, d, alpha, result, {"method": "early_return", "reason": "zero_marginal"}, grid_size, haldane)
-        return result
+        return (0, float('inf'))
     
-    if haldane:
-        a_h, b_h, c_h, d_h = a + 0.5, b + 0.5, c + 0.5, d + 0.5
-        a, b, c, d = a_h, b_h, c_h, d_h
+    # Check cache for existing result
+    if config.use_cache:
+        cache = get_global_cache()
+        cached_result = cache.get_exact(
+            table.a, table.b, table.c, table.d, 
+            config.alpha, config.grid_size, config.haldane
+        )
+        if cached_result is not None:
+            logger.info(f"Using cached result for table {table}")
+            return cached_result[0]
+    
+    # Apply transformations using pure functions
+    working_table = table
+    if config.haldane:
+        working_table = apply_haldane_correction(table)
         logger.info("Applied Haldane's correction")
     
-    # Determine search range for theta
-    if custom_range is not None:
-        min_theta, max_theta = custom_range
-        logger.info(f"Using custom theta range: ({min_theta}, {max_theta})")
-    elif theta_min is not None and theta_max is not None:
-        min_theta, max_theta = theta_min, theta_max
-        logger.info(f"Using provided theta range: ({min_theta}, {max_theta})")
-    else:
-        # Calculate odds ratio as center point
-        or_value = (a * d) / (b * c) if b * c > 0 else (a * d) if a * d > 0 else 1.0
-        
-        # Special case for zero in a cell - the odds ratio should be 0 when a=0 and c>0
-        if a == 0 and c > 0:
-            logger.info("Cell a=0, adjusting confidence interval to include 0")
-            result = (0.0, 1e-5)  
-            cache.add(a, b, c, d, alpha, result, {"method": "early_return", "reason": "zero_in_a"}, grid_size, haldane)
-            return result
-            
-        # Handle edge cases
-        if or_value == 0:
-            or_value = 1e-6
-        elif or_value == float('inf'):
-            or_value = 1e6
-        
-        # Set range centered on OR with appropriate width
-        min_theta = or_value / theta_factor
-        max_theta = or_value * theta_factor
-        
-        # Ensure reasonable bounds
-        min_theta = max(min_theta, 1e-6)
-        max_theta = min(max_theta, 1e6)
-        
-        logger.info(f"Auto-determined theta range: ({min_theta}, {max_theta}) based on OR={or_value}")
+    # Special case for zero in cell 'a' with nonzero 'c'
+    if has_zero_in_cell_a_with_nonzero_c(working_table):
+        logger.info("Cell a=0 with c>0, returning (0, 1e-5)")
+        result = (0.0, 1e-5)
+        if config.use_cache:
+            metadata = {"method": "zero_cell_a", "reason": "early_return"}
+            ci_result = CIResult(result[0], result[1], metadata)
+            cache.add(table.a, table.b, table.c, table.d, config.alpha, 
+                     result, metadata, config.grid_size, config.haldane)
+        return result
     
-    # Start timing
-    start_time = time.time()
+    # Determine search parameters using pure functions
+    theta_range = determine_theta_range(working_table, config)
+    grid_config = create_adaptive_grid(working_table, config)
     
-    # Create result tracking variables
-    calculation_metadata = {
-        "grid_size": grid_size,
-        "theta_range": (min_theta, max_theta),
-        "total_iterations": 0
-    }
-    
-    # Optimize grid size based on table dimensions
-    n = a + b + c + d
-    if n < 40 and grid_size > 20:
-        grid_size = 20
-        logger.info(f"Optimized grid size to {grid_size} based on table dimensions")
-    
-    # Initialize low and high
-    low, high = float('inf'), float('-inf')
+    logger.info(f"Theta range: ({theta_range.min_theta:.6f}, {theta_range.max_theta:.6f})")
+    logger.info(f"Grid size: {grid_config.grid_size}, p1_mle: {grid_config.p1_mle:.4f}")
     
     try:
-        # Calculate MLE p1 for adaptive grid
-        p1_mle = a / (a + b) if a + b > 0 else 0.5
+        # Calculate confidence bounds using pure functions
+        lower_search_range = (
+            theta_range.min_theta,
+            math.sqrt(theta_range.min_theta * theta_range.or_value)
+        )
+        upper_search_range = (
+            math.sqrt(theta_range.or_value * theta_range.max_theta),
+            theta_range.max_theta
+        )
         
-        # Use adaptive grid around MLE
-        p1_values = np.concatenate([
-            np.linspace(max(0.001, p1_mle - 0.4), p1_mle - 0.05, grid_size // 3),
-            np.linspace(p1_mle - 0.05, p1_mle + 0.05, grid_size // 3),
-            np.linspace(p1_mle + 0.05, min(0.999, p1_mle + 0.4), grid_size // 3)
-        ])
-        p1_values = np.unique(p1_values)
-        logger.info(f"Using {len(p1_values)} adaptive grid points around p1_mle={p1_mle:.4f}")
+        lower_result = find_confidence_bound(
+            working_table, grid_config, lower_search_range,
+            config.alpha, "lower", timeout_checker
+        )
         
-        # Function to cache log p-values
-        cached_pvalues = {}
+        upper_result = find_confidence_bound(
+            working_table, grid_config, upper_search_range,
+            config.alpha, "upper", timeout_checker
+        )
         
-        def cached_log_pvalue(theta):
-            if theta in cached_pvalues:
-                return cached_pvalues[theta]
-            result = unconditional_log_pvalue(a, b, c, d, theta, p1_values=p1_values, grid_size=grid_size, progress_callback=progress_callback, timeout_checker=timeout_checker)
-            cached_pvalues[theta] = result
-            calculation_metadata["total_iterations"] += 1
-            return result
+        # Apply final transformations
+        lower = clamp_bound_to_valid_range(lower_result.value, is_lower=True)
+        upper = clamp_bound_to_valid_range(upper_result.value, is_lower=False)
         
-        # Calculate lower bound
-        try:
-            # Use log(alpha) as our target
-            log_alpha = math.log(alpha)
-            
-            # Initialize bounds for lower CI limit
-            if min_theta < 1:
-                theta_lower = min_theta  # Use provided lower bound
-                theta_mid = math.sqrt(min_theta)  # Geometric mean as midpoint
-            else:
-                theta_lower = min_theta / 10
-                theta_mid = min_theta
-            
-            # Search for sign change in log p-value - log(alpha)
-            sign_change = find_sign_change(
-                lambda theta: cached_log_pvalue(theta) - log_alpha,
-                theta_lower,
-                theta_mid
-            )
-            
-            if sign_change:
-                low, _ = sign_change
-                logger.info(f"Found sign change for lower bound: {low:.6f}")
-            else:
-                # Fallback: try adaptive grid search
-                crossings = adaptive_grid_search(
-                    lambda theta: math.exp(cached_log_pvalue(theta)),
-                    (theta_lower, theta_mid),
-                    target_value=alpha,
-                    initial_points=15,
-                    refinement_rounds=2
-                )
-                
-                if crossings:
-                    low = min(crossings)
-                    logger.info(f"Found lower bound using adaptive search: {low:.6f}")
-                else:
-                    # Conservative fallback
-                    low = min_theta
-                    logger.warning(f"Using fallback lower bound: {low}")
-            
-            # Refine lower bound
-            plateau_result = find_plateau_edge(
-                lambda theta: math.exp(cached_log_pvalue(theta)),
-                lo=max(1e-10, low * 0.9),
-                hi=low * 1.1,
-                target=alpha,
-                timeout_checker=timeout_checker
-            )
-            
-            # Handle tuple return value correctly
-            if plateau_result is not None:
-                low = plateau_result[0]  # First element is the result value
-                logger.info(f"Lower bound calculated: {low:.6f}")
-            else:
-                logger.warning("Plateau edge detection failed for lower bound")
-            
-        except Exception as e:
-            logger.error(f"Error calculating lower bound: {e}")
-            # Fallback to a conservative estimate
-            low = min_theta
-            logger.warning(f"Using fallback lower bound: {low}")
+        # Handle crossed bounds
+        if lower > upper:
+            logger.warning(f"Crossed bounds detected: {lower} > {upper}")
+            lower, upper = theta_range.min_theta, theta_range.max_theta
         
-        # Calculate upper bound
-        try:
-            # Initialize bounds for upper CI limit
-            if max_theta > 1:
-                theta_upper = max_theta  # Use provided upper bound
-                theta_mid = math.sqrt(max_theta)  # Geometric mean as midpoint
-            else:
-                theta_upper = max_theta * 10
-                theta_mid = max_theta
-            
-            # Search for sign change in log p-value - log(alpha)
-            sign_change = find_sign_change(
-                lambda theta: cached_log_pvalue(theta) - log_alpha,
-                theta_mid,
-                theta_upper
-            )
-            
-            if sign_change:
-                high, _ = sign_change
-                logger.info(f"Found sign change for upper bound: {high:.6f}")
-            else:
-                # Fallback: try adaptive grid search
-                crossings = adaptive_grid_search(
-                    lambda theta: math.exp(cached_log_pvalue(theta)),
-                    (theta_mid, theta_upper),
-                    target_value=alpha,
-                    initial_points=15,
-                    refinement_rounds=2
-                )
-                
-                if crossings:
-                    high = max(crossings)
-                    logger.info(f"Found upper bound using adaptive search: {high:.6f}")
-                else:
-                    # Conservative fallback
-                    high = max_theta
-                    logger.warning(f"Using fallback upper bound: {high}")
-            
-            # Refine upper bound
-            plateau_result = find_plateau_edge(
-                lambda theta: math.exp(cached_log_pvalue(theta)),
-                lo=high * 0.9,
-                hi=min(high * 1.1, 1e16),
-                target=alpha,
-                timeout_checker=timeout_checker
-            )
-            
-            # Handle tuple return value correctly
-            if plateau_result is not None:
-                high = plateau_result[0]  # First element is the result value
-                logger.info(f"Upper bound calculated: {high:.6f}")
-            else:
-                logger.warning("Plateau edge detection failed for upper bound")
-            
-        except Exception as e:
-            logger.error(f"Error calculating upper bound: {e}")
-            # Fallback to a conservative estimate
-            high = max_theta
-            logger.warning(f"Using fallback upper bound: {high}")
+        # Create result with metadata
+        metadata = {
+            "lower_method": lower_result.method,
+            "upper_method": upper_result.method,
+            "theta_range": (theta_range.min_theta, theta_range.max_theta),
+            "grid_size": grid_config.grid_size,
+            "p1_mle": grid_config.p1_mle,
+            "or_value": theta_range.or_value
+        }
         
-        # Perform additional refinement if needed and if we have non-infinite bounds
-        if low != float('inf') and high != float('inf'):
-            try:
-                # Get even more precise bounds using minimal grid with parallel processing
-                refined_p1_values = np.linspace(0.001, 0.999, 20)
-                
-                # Function to compute refined p-values
-                cached_refined_pvalues = {}
-                
-                def refined_log_pvalue(theta):
-                    if theta in cached_refined_pvalues:
-                        return cached_refined_pvalues[theta]
-                    result = unconditional_log_pvalue(a, b, c, d, theta, p1_values=refined_p1_values, grid_size=20, progress_callback=progress_callback, timeout_checker=timeout_checker)
-                    cached_refined_pvalues[theta] = result
-                    calculation_metadata["total_iterations"] += 1
-                    return result
-                
-                # Refine the lower bound using plateau edge detection
-                plateau_result = find_plateau_edge(
-                    lambda theta: math.exp(refined_log_pvalue(theta)),
-                    lo=max(1e-10, low * 0.98),
-                    hi=low * 1.02,
-                    target=alpha,
-                    timeout_checker=timeout_checker
-                )
-                
-                # Handle tuple return value correctly
-                if plateau_result is not None:
-                    low = plateau_result[0]  # First element is the result value
-                else:
-                    logger.warning("Plateau edge detection failed for lower bound")
-                
-                if high < float('inf'):
-                    # Use narrow ranges for refinement
-                    if has_parallel:
-                        # For values near upper bound
-                        upper_thetas = np.linspace(high * 0.98, high * 1.02, 11)
-                        upper_pvalues = parallel_map(
-                            refined_log_pvalue,
-                            upper_thetas
-                        )
-                    else:
-                        # Sequential computation
-                        upper_thetas = np.linspace(high * 0.98, high * 1.02, 7)
-                        upper_pvalues = [refined_log_pvalue(theta) for theta in upper_thetas]
-                    
-                    # Refine the upper bound using plateau edge detection
-                    plateau_result = find_plateau_edge(
-                        lambda theta: math.exp(refined_log_pvalue(theta)),
-                        lo=high * 0.98,
-                        hi=min(high * 1.02, 1e16),
-                        target=alpha,
-                        timeout_checker=timeout_checker
-                    )
-                    
-                    # Handle tuple return value correctly
-                    if plateau_result is not None:
-                        high = plateau_result[0]  # First element is the result value
-                    else:
-                        logger.warning("Plateau edge detection failed for upper bound")
-                
-                logger.info(f"Refined bounds: ({low:.6f}, {high if high != float('inf') else 'inf'})")
-            except Exception as e:
-                logger.error(f"Error in refinement: {e}")
-                # Continue with the unrefined bounds
-                pass
+        result = (lower, upper)
+        
+        # Cache the result
+        if config.use_cache:
+            cache.add(table.a, table.b, table.c, table.d, config.alpha, 
+                     result, metadata, config.grid_size, config.haldane)
+        
+        logger.info(f"Unconditional CI calculated: ({lower:.6f}, {upper:.6f})")
+        return result
+        
     except Exception as e:
         logger.error(f"Error in unconditional CI calculation: {e}")
-        # Return conservative bounds on error
-        low, high = min_theta, max_theta
-    
-    # Finalize results
-    elapsed_time = time.time() - start_time
-    calculation_metadata["elapsed_time"] = elapsed_time
-    
-    # Handle special cases and sanity checks
-    if low == float('inf') or high == float('-inf'):
-        logger.warning("Bounds calculation failed, using fallback")
-        low, high = min_theta, max_theta
-    
-    # Ensure bounds are within valid range
-    low = max(low, 0)
-    
-    # Log the final result
-    logger.info(f"Unconditional CI calculated: ({low}, {high if high != float('inf') else 'inf'})")
-    
-    # Add to cache
-    result = (low, high)
-    cache.add(a, b, c, d, alpha, result, calculation_metadata, grid_size, haldane)
-    
-    return result
+        # Conservative fallback
+        return (theta_range.min_theta, theta_range.max_theta)
 
 
 
