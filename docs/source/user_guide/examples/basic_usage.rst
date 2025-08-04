@@ -86,6 +86,59 @@ You can compare the results from different methods:
    print(f"Normal Approximation: ({normal_ci[0]:.4f}, {normal_ci[1]:.4f})")
    print(f"Fisher's Exact p-value: {fisher_p:.6f}")
 
+Calculating Confidence Intervals for Proportions
+--------------------------------------------
+
+For estimating confidence intervals for proportions rather than odds ratios, use the Clopper-Pearson method:
+
+.. code-block:: python
+
+   from exactcis.methods import exact_ci_clopper_pearson
+   
+   # Example 2×2 table:
+   #      Success   Failure
+   # Grp1    7         3
+   # Grp2    2         8
+   
+   a, b, c, d = 7, 3, 2, 8  # Cell counts
+   
+   # Calculate 95% confidence interval for proportion in group 1
+   lower1, upper1 = exact_ci_clopper_pearson(a, b, c, d, alpha=0.05, group=1)
+   p1 = a / (a + b)  # Point estimate for group 1
+   print(f"Group 1 proportion: {p1:.4f}")
+   print(f"95% CI for group 1 proportion: ({lower1:.4f}, {upper1:.4f})")
+   
+   # Calculate 95% confidence interval for proportion in group 2
+   lower2, upper2 = exact_ci_clopper_pearson(a, b, c, d, alpha=0.05, group=2)
+   p2 = c / (c + d)  # Point estimate for group 2
+   print(f"Group 2 proportion: {p2:.4f}")
+   print(f"95% CI for group 2 proportion: ({lower2:.4f}, {upper2:.4f})")
+   
+   # Compare with other proportion estimation methods
+   from scipy.stats import binom
+   
+   # Wilson score interval (another common method for proportions)
+   def wilson_score_interval(x, n, alpha=0.05):
+       """Calculate Wilson score interval for a proportion"""
+       z = stats.norm.ppf(1 - alpha/2)
+       p_hat = x / n
+       
+       # Wilson score formula
+       denominator = 1 + z**2/n
+       center = (p_hat + z**2/(2*n)) / denominator
+       halfwidth = z * np.sqrt(p_hat*(1-p_hat)/n + z**2/(4*n**2)) / denominator
+       
+       return max(0, center - halfwidth), min(1, center + halfwidth)
+   
+   # Calculate Wilson score intervals
+   wilson_lower1, wilson_upper1 = wilson_score_interval(a, a+b)
+   wilson_lower2, wilson_upper2 = wilson_score_interval(c, c+d)
+   
+   print("\nComparison with Wilson score interval:")
+   print(f"Group 1: Clopper-Pearson ({lower1:.4f}, {upper1:.4f}), Wilson ({wilson_lower1:.4f}, {wilson_upper1:.4f})")
+   print(f"Group 2: Clopper-Pearson ({lower2:.4f}, {upper2:.4f}), Wilson ({wilson_lower2:.4f}, {wilson_upper2:.4f})")
+   print("\nNote: Clopper-Pearson intervals are typically wider (more conservative) than Wilson score intervals")
+
 Handling Multiple Tables
 ---------------------
 

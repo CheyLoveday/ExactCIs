@@ -165,11 +165,12 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
             # For lower CI (theta_L), as theta increases from 0 to theta_L, pval decreases to alpha.
             # So midp_pval_func is decreasing for the lower bound search.
             low_candidate = find_smallest_theta(
-                lambda theta: midp_pval_func(theta) - alpha, # Function whose root is sought (becomes 0)
-                0.0, # Target for g(theta) is 0
+                func=midp_pval_func, # Function that returns p-values
+                alpha=alpha, # Target p-value
                 lo=1e-8, 
                 hi=1.0,
                 two_sided=True,
+                increasing=False,  # p-value decreases as theta increases for lower bound
                 progress_callback=lambda p: progress_callback(p * 0.5) if progress_callback else None
             )
             if low_candidate is None:
@@ -243,11 +244,12 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
             else:
                 # Use the bracketed interval for root finding
                 high_candidate = find_smallest_theta(
-                    lambda theta: midp_pval_func(theta) - alpha, # Function whose root is sought
-                    0.0, # Target for g(theta) is 0
+                    func=midp_pval_func, # Function that returns p-values
+                    alpha=alpha, # Target p-value
                     lo=1.0, 
                     hi=hi_search, # Use adaptive upper bound
                     two_sided=True,
+                    increasing=False,  # p-value typically decreases as theta increases for upper bound
                     progress_callback=lambda p: progress_callback(50 + p * 0.5) if progress_callback else None
                 )
                 

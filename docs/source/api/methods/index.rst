@@ -12,6 +12,7 @@ This section provides documentation for the different confidence interval calcul
    blaker
    midp
    wald
+   clopper_pearson
 
 Unconditional Method
 -------------------
@@ -59,6 +60,16 @@ Wald Method
 The Wald method provides asymptotic confidence intervals based on the normal approximation.
 
 .. automodule:: exactcis.methods.wald
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Clopper-Pearson Method
+-------------------
+
+The Clopper-Pearson method provides exact confidence intervals for binomial proportions using the binomial cumulative distribution function.
+
+.. automodule:: exactcis.methods.clopper_pearson
    :members:
    :undoc-members:
    :show-inheritance:

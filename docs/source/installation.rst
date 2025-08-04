@@ -4,7 +4,7 @@ Installation
 Requirements
 -----------
 
-ExactCIs requires Python 3.8 or newer. The package has the following core dependencies:
+ExactCIs requires Python 3.9 or newer. The package has the following core dependencies:
 
 * numpy (>=1.20.0)
 * scipy (>=1.7.0)

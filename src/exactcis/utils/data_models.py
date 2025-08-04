@@ -49,7 +49,7 @@ class UnconditionalConfig:
     theta_min: Optional[float] = None
     theta_max: Optional[float] = None
     custom_range: Optional[Tuple[float, float]] = None
-    theta_factor: float = 100.0
+    theta_factor: float = 5.0
     haldane: bool = False
     timeout: Optional[float] = None
     adaptive_grid: bool = True

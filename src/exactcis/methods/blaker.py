@@ -284,17 +284,17 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     # Lower bound calculation (skip validation since we pre-validated above)
     blaker_p_value_lower = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, support_tuple, skip_validation=True)
     if logger.isEnabledFor(logging.INFO):
-        logger.info(f"Blaker exact_ci_blaker: Finding lower bound. Target p-value for search: {alpha/2.0:.4f}")
+        logger.info(f"Blaker exact_ci_blaker: Finding lower bound. Target p-value for search: {alpha:.4f}")
     
     if a > kmin:
         # Use 3-point pre-bracketing to improve root finding efficiency
         improved_lo, improved_hi = _find_better_bracket(
-            blaker_p_value_lower, alpha / 2.0, lo_search_lower, hi_search_lower, increasing=False
+            blaker_p_value_lower, alpha, lo_search_lower, hi_search_lower, increasing=False
         )
         
         candidate_raw_theta_low = find_smallest_theta(
             func=blaker_p_value_lower, 
-            alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
+            alpha=alpha,  # Use alpha directly for Blaker method
             lo=improved_lo, 
             hi=improved_hi, 
             increasing=False
@@ -313,7 +313,7 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     # Upper bound calculation (skip validation since we pre-validated above)
     blaker_p_value_upper = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, support_tuple, skip_validation=True)
     if logger.isEnabledFor(logging.INFO):
-        logger.info(f"Blaker exact_ci_blaker: Finding upper bound. Target p-value for search: {alpha/2.0:.4f}")
+        logger.info(f"Blaker exact_ci_blaker: Finding upper bound. Target p-value for search: {alpha:.4f}")
 
     # Determine search range for upper bound based on OR estimate
     hi_search_upper = 1e7
@@ -324,12 +324,12 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     if a < kmax:
         # Use 3-point pre-bracketing to improve root finding efficiency
         improved_lo, improved_hi = _find_better_bracket(
-            blaker_p_value_upper, alpha / 2.0, lo_search_upper, hi_search_upper, increasing=True
+            blaker_p_value_upper, alpha, lo_search_upper, hi_search_upper, increasing=True
         )
         
         candidate_raw_theta_high = find_smallest_theta(
             func=blaker_p_value_upper, 
-            alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
+            alpha=alpha,  # Use alpha directly for Blaker method
             lo=improved_lo, 
             hi=improved_hi, 
             increasing=True

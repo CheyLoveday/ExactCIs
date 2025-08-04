@@ -87,5 +87,5 @@ dist: clean ## builds source and wheel package
 install: clean ## install the package to the active Python's site-packages
 	pip install .
 
-dev-install: clean ## install the package in development mode
-	pip install -e ".[dev]"
+dev-install: clean ## install the package in development mode with dev and docs dependencies
+	pip install -e ".[dev,docs]"

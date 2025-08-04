@@ -8,10 +8,12 @@ as well as the enhanced CLI batch processing capabilities.
 import pytest
 import tempfile
 import csv
+import numpy as np
 from unittest.mock import patch, MagicMock
 from exactcis.methods.blaker import exact_ci_blaker_batch, exact_ci_blaker
 from exactcis.methods.midp import exact_ci_midp_batch, exact_ci_midp
 from exactcis.methods.conditional import exact_ci_conditional_batch, exact_ci_conditional
+from exactcis.methods.clopper_pearson import exact_ci_clopper_pearson_batch, exact_ci_clopper_pearson
 from exactcis.core import batch_validate_counts, batch_calculate_odds_ratios, optimize_core_cache_for_batch
 
 
@@ -277,14 +279,150 @@ def test_optimize_core_cache_for_batch():
     
     # Test disabling large cache (reset to default)
     optimize_core_cache_for_batch(enable_large_cache=False)
-    
+
     # Should not raise errors
     assert True
 
 
-# ============================================================================
-# INTEGRATION TESTS
-# ============================================================================
+    # ============================================================================
+    # CLOPPER-PEARSON BATCH PROCESSING TESTS
+    # ============================================================================
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_basic():
+        """Test basic Clopper-Pearson batch processing functionality."""
+        tables = [
+            (1, 2, 3, 4),
+            (2, 3, 4, 5),
+            (3, 4, 5, 6)
+        ]
+    
+        # Get individual results for comparison
+        individual_results = [exact_ci_clopper_pearson(a, b, c, d) for a, b, c, d in tables]
+    
+        # Get batch results
+        batch_results = exact_ci_clopper_pearson_batch(tables)
+    
+        assert len(batch_results) == len(tables)
+    
+        # Results should be the same (within numerical precision)
+        for i, (individual, batch) in enumerate(zip(individual_results, batch_results)):
+            assert abs(individual[0] - batch[0]) < 1e-6, f"Lower bound mismatch for table {i}"
+            assert abs(individual[1] - batch[1]) < 1e-6, f"Upper bound mismatch for table {i}"
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_empty_list():
+        """Test Clopper-Pearson batch processing with empty table list."""
+        results = exact_ci_clopper_pearson_batch([])
+        assert results == []
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_single_table():
+        """Test Clopper-Pearson batch processing with single table."""
+        table = (5, 6, 7, 8)
+    
+        individual_result = exact_ci_clopper_pearson(*table)
+        batch_results = exact_ci_clopper_pearson_batch([table])
+    
+        assert len(batch_results) == 1
+        assert abs(batch_results[0][0] - individual_result[0]) < 1e-6
+        assert abs(batch_results[0][1] - individual_result[1]) < 1e-6
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_with_workers():
+        """Test Clopper-Pearson batch processing with different worker counts."""
+        tables = [(i, i+1, i+2, i+3) for i in range(1, 6)]
+    
+        # Test with different worker counts
+        results_1 = exact_ci_clopper_pearson_batch(tables, max_workers=1)
+        results_2 = exact_ci_clopper_pearson_batch(tables, max_workers=2)
+        results_auto = exact_ci_clopper_pearson_batch(tables, max_workers=None)
+    
+        # All should give the same results
+        assert len(results_1) == len(results_2) == len(results_auto) == len(tables)
+    
+        for i in range(len(tables)):
+            assert abs(results_1[i][0] - results_2[i][0]) < 1e-6
+            assert abs(results_1[i][1] - results_2[i][1]) < 1e-6
+            assert abs(results_auto[i][0] - results_2[i][0]) < 1e-6
+            assert abs(results_auto[i][1] - results_2[i][1]) < 1e-6
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_error_handling():
+        """Test Clopper-Pearson batch processing error handling."""
+        # Include some problematic tables
+        tables = [
+            (1, 2, 3, 4),  # Good table
+            (0, 0, 0, 0),  # Invalid table (should error)
+            (2, 3, 4, 5),  # Good table
+        ]
+    
+        # Should handle errors gracefully
+        results = exact_ci_clopper_pearson_batch(tables)
+    
+        assert len(results) == len(tables)
+        # Failed computation should return conservative interval
+        assert results[1] == (0.0, 1.0)  # Conservative interval for proportions
+        # Other computations should succeed
+        assert 0.0 <= results[0][0] < results[0][1] <= 1.0
+        assert 0.0 <= results[2][0] < results[2][1] <= 1.0
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_no_parallel_support():
+        """Test Clopper-Pearson batch processing fallback when parallel support unavailable."""
+        tables = [(1, 2, 3, 4), (2, 3, 4, 5)]
+    
+        # Mock has_parallel to False
+        with patch('exactcis.methods.clopper_pearson.has_parallel', False):
+            results = exact_ci_clopper_pearson_batch(tables)
+    
+        assert len(results) == len(tables)
+        # Should still work with sequential processing
+        assert all(isinstance(r, tuple) and len(r) == 2 for r in results)
+
+
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_clopper_pearson_batch_with_group():
+        """Test Clopper-Pearson batch processing with different group values."""
+        tables = [(8, 2, 3, 7), (6, 4, 2, 8)]  # p1 = 0.8, 0.6; p2 = 0.3, 0.2
+    
+        # Test with different group values
+        results_group1 = exact_ci_clopper_pearson_batch(tables, group=1)
+        results_group2 = exact_ci_clopper_pearson_batch(tables, group=2)
+    
+        assert len(results_group1) == len(results_group2) == len(tables)
+    
+        # Results should be different for different groups
+        for i in range(len(tables)):
+            assert not np.isclose(results_group1[i][0], results_group2[i][0])
+            assert not np.isclose(results_group1[i][1], results_group2[i][1])
+    
+        # Check that results match individual calls
+        for i, (a, b, c, d) in enumerate(tables):
+            individual_group1 = exact_ci_clopper_pearson(a, b, c, d, group=1)
+            individual_group2 = exact_ci_clopper_pearson(a, b, c, d, group=2)
+        
+            assert abs(individual_group1[0] - results_group1[i][0]) < 1e-6
+            assert abs(individual_group1[1] - results_group1[i][1]) < 1e-6
+            assert abs(individual_group2[0] - results_group2[i][0]) < 1e-6
+            assert abs(individual_group2[1] - results_group2[i][1]) < 1e-6
+
+
+    # ============================================================================
+    # INTEGRATION TESTS
+    # ============================================================================
 
 @pytest.mark.methods
 @pytest.mark.fast

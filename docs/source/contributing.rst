@@ -46,8 +46,8 @@ ExactCIs uses ``uv`` for dependency management. To set up your development envir
    # or
    .venv\Scripts\activate  # Windows
 
-   # Install development dependencies
-   uv pip install -e ".[dev]"
+   # Install development and documentation dependencies
+   uv pip install -e ".[dev,docs]"
 
 Making Changes
 ------------

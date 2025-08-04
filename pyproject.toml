@@ -45,6 +45,13 @@ full = [
     "matplotlib>=3.4.0"
 ]
 
+# Documentation dependencies
+docs = [
+    "sphinx>=4.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "m2r2>=0.3.2"
+]
+
 # Development dependencies
 dev = [
     "pytest>=8.3.5",
@@ -58,7 +65,8 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.0.270",
     "mypy>=1.0.0",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "twine>=6.1.0"
 ]
 
 [project.urls]
@@ -83,7 +91,7 @@ line_length = 88
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py39"
 select = ["E", "F", "I"]
 
 [tool.mypy]
@@ -121,22 +129,3 @@ exclude_lines = [
     "raise ImportError"
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.5",
-    "pytest-timeout>=2.1.0",
-    "pytest-xdist>=3.3.1",
-    "pytest-cov>=4.1.0",
-    "psutil>=7.0.0",
-    "line-profiler>=5.0.0",
-    "memory-profiler>=0.61.0",
-    "tqdm>=4.65.0",
-    "black>=23.0.0",
-    "ruff>=0.0.270",
-    "mypy>=1.0.0",
-    "pre-commit>=3.0.0",
-    "sphinx>=4.0.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "m2r2>=0.3.2",
-    "twine>=6.1.0",
-]

@@ -12,35 +12,39 @@ Use the following decision flowchart to guide your method selection:
 
    Start
      │
-     ├─ Is sample size very large (all cells > 10)?
+     ├─ Are you estimating a single proportion rather than odds ratio?
      │   │
-     │   ├─ Yes → Is computational speed critical?
-     │   │         │
-     │   │         ├─ Yes → Use Normal Approximation
-     │   │         │
-     │   │         └─ No  → Do you need exact methods for protocol adherence?
-     │   │                   │
-     │   │                   ├─ Yes → Use Barnard's Unconditional (ExactCIs)
-     │   │                   │
-     │   │                   └─ No  → Use Normal Approximation
+     │   ├─ Yes → Use Clopper-Pearson Method
      │   │
-     │   └─ No  → Are any cells less than 5?
+     │   └─ No  → Is sample size very large (all cells > 10)?
      │             │
-     │             ├─ Yes → Are margins fixed by design?
+     │             ├─ Yes → Is computational speed critical?
      │             │         │
-     │             │         ├─ Yes → Use Fisher's Exact Test
+     │             │         ├─ Yes → Use Normal Approximation
      │             │         │
-     │             │         └─ No  → Use Barnard's Unconditional (ExactCIs)
+     │             │         └─ No  → Do you need exact methods for protocol adherence?
+     │             │                   │
+     │             │                   ├─ Yes → Use Barnard's Unconditional (ExactCIs)
+     │             │                   │
+     │             │                   └─ No  → Use Normal Approximation
      │             │
-     │             └─ No  → Are you dealing with rare events (rate < 1%)?
+     │             └─ No  → Are any cells less than 5?
      │                       │
-     │                       ├─ Yes → Use Barnard's Unconditional (ExactCIs)
+     │                       ├─ Yes → Are margins fixed by design?
+     │                       │         │
+     │                       │         ├─ Yes → Use Fisher's Exact Test
+     │                       │         │
+     │                       │         └─ No  → Use Barnard's Unconditional (ExactCIs)
      │                       │
-     │                       └─ No  → Are margins fixed by design?
+     │                       └─ No  → Are you dealing with rare events (rate < 1%)?
      │                                 │
-     │                                 ├─ Yes → Use Fisher's Exact Test
+     │                                 ├─ Yes → Use Barnard's Unconditional (ExactCIs)
      │                                 │
-     │                                 └─ No  → Use Barnard's Unconditional (ExactCIs)
+     │                                 └─ No  → Are margins fixed by design?
+     │                                           │
+     │                                           ├─ Yes → Use Fisher's Exact Test
+     │                                           │
+     │                                           └─ No  → Use Barnard's Unconditional (ExactCIs)
 
 Interactive Method Selector
 ------------------------
@@ -49,7 +53,7 @@ The following Python function can help you select the appropriate method based o
 
 .. code-block:: python
 
-   def recommend_ci_method(a, b, c, d, fixed_margins=False, need_exact=False, speed_critical=False):
+   def recommend_ci_method(a, b, c, d, fixed_margins=False, need_exact=False, speed_critical=False, estimate_proportion=False, group=1):
        """
        Recommends the most appropriate confidence interval method.
        
@@ -58,6 +62,8 @@ The following Python function can help you select the appropriate method based o
        - fixed_margins: Whether margins are fixed by design
        - need_exact: Whether exact methods are required by protocol
        - speed_critical: Whether computational speed is critical
+       - estimate_proportion: Whether to estimate a proportion rather than odds ratio
+       - group: Which group to estimate proportion for (1 or 2), only used if estimate_proportion=True
        
        Returns:
        - Recommended method(s) and reasoning
@@ -82,6 +88,28 @@ The following Python function can help you select the appropriate method based o
        methods = []
        reasons = []
        
+       # If estimating a proportion rather than odds ratio
+       if estimate_proportion:
+           methods.append("Clopper-Pearson Method")
+           if group == 1:
+               reasons.append(f"Estimating proportion for group 1 (p1 = {rate1:.4f})")
+           else:
+               reasons.append(f"Estimating proportion for group 2 (p2 = {rate2:.4f})")
+           return {
+               "recommended_methods": methods,
+               "reasons": reasons,
+               "table_properties": {
+                   "min_count": min_count,
+                   "total_count": total_count,
+                   "has_zero": has_zero,
+                   "rare_events": rare_events,
+                   "all_large": all_large,
+                   "group1_rate": rate1,
+                   "group2_rate": rate2
+               }
+           }
+       
+       # For odds ratio estimation
        if all_large and speed_critical and not need_exact:
            methods.append("Normal Approximation")
            reasons.append("All cells are large (≥10) and computation speed is prioritized")
@@ -123,7 +151,9 @@ The following Python function can help you select the appropriate method based o
                "total_count": total_count,
                "has_zero": has_zero,
                "rare_events": rare_events,
-               "all_large": all_large
+               "all_large": all_large,
+               "group1_rate": rate1,
+               "group2_rate": rate2
            }
        }
 
@@ -164,43 +194,56 @@ The following table compares the key characteristics of different confidence int
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20
+   :widths: 18 18 16 16 16 16
 
    * - Characteristic
      - Barnard's Unconditional
      - Fisher's Exact
      - Mid-P
      - Normal Approximation
+     - Clopper-Pearson
    * - Statistical Validity
      - Excellent
      - Very Good
      - Good
      - Fair
+     - Excellent
    * - Small Sample Performance
      - Excellent
      - Good
      - Good
      - Poor
+     - Excellent
    * - Rare Event Handling
      - Excellent
      - Good
      - Good
      - Poor
+     - Excellent
    * - Computational Speed
      - Slow
      - Moderate
      - Fast
      - Very Fast
+     - Fast
    * - Handles Zero Cells
      - Yes
      - Yes
      - Yes
      - No (requires correction)
+     - Yes
    * - Recommended Sample Size
      - Any
      - Any
      - n > 20
      - n > 50
+     - Any
+   * - Primary Use Case
+     - Odds Ratio
+     - Odds Ratio
+     - Odds Ratio
+     - Odds Ratio
+     - Single Proportion
 
 Implementation in ExactCIs
 -----------------------
@@ -284,6 +327,30 @@ Normal Approximation
    # Calculate 95% confidence interval
    lower, upper = normal_approx_ci(a, b, c, d)
    print(f"Normal Approximation: 95% CI ({lower:.4f}, {upper:.4f})")
+
+Clopper-Pearson Method
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from exactcis.methods import exact_ci_clopper_pearson
+   
+   # Example table
+   a, b, c, d = 7, 3, 2, 8
+   
+   # Calculate 95% confidence interval for proportion in group 1
+   lower1, upper1 = exact_ci_clopper_pearson(a, b, c, d, alpha=0.05, group=1)
+   print(f"Clopper-Pearson (Group 1): 95% CI ({lower1:.4f}, {upper1:.4f})")
+   
+   # Calculate 95% confidence interval for proportion in group 2
+   lower2, upper2 = exact_ci_clopper_pearson(a, b, c, d, alpha=0.05, group=2)
+   print(f"Clopper-Pearson (Group 2): 95% CI ({lower2:.4f}, {upper2:.4f})")
+   
+   # Interpretation
+   p1 = a / (a + b)  # Proportion in group 1
+   p2 = c / (c + d)  # Proportion in group 2
+   print(f"Group 1 proportion: {p1:.4f}, CI: ({lower1:.4f}, {upper1:.4f})")
+   print(f"Group 2 proportion: {p2:.4f}, CI: ({lower2:.4f}, {upper2:.4f})")
 
 Special Considerations
 -------------------

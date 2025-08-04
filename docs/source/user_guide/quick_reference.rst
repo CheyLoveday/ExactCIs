@@ -17,16 +17,19 @@ Visual Method Comparison
    │       │     Barnard's Unconditional (ExactCIs)    │            │
    │       │     ******************************        │            │
    │       │    *                              *       │            │
-   │  CI   │   *                                *      │            │
-   │ Width │  *                                  *     │            │
-   │       │ *                                    *    │            │
-   │       │*           Fisher's Exact             ****│            │
-   │       │--------------------------------------     │            │
-   │       │                                           │            │
-   │       │................Normal Approximation.......│            │
+   │  CI   │   *      Clopper-Pearson           *      │            │
+   │ Width │  *      ++++++++++++++++++          *     │            │
+   │       │ *      +                  +          *    │            │
+   │       │*      +    Fisher's Exact  +          ****│            │
+   │       │------+----------------------+----------   │            │
+   │       │     +                        +           │            │
+   │       │....+...........Normal Approximation.......│            │
    │ Narrow└───────────────────────────────────────────┘            │
    │          Small                              Large              │
    │                         Sample Size                            │
+   │                                                                │
+   │ Legend: *** Barnard's   +++ Clopper-Pearson   --- Fisher's    │
+   │         ... Normal Approximation                               │
    │                                                                │
    └─────────────────────────────────────────────────────────────────┘
 
@@ -44,6 +47,16 @@ Decision Tree
    │             └────┬─────┘                                       │
    │                  │                                             │
    │                  ▼                                             │
+   │         ┌─────────────────┐     Yes                           │
+   │         │ Estimating a    ├─────────────┐                     │
+   │         │ proportion?     │             │                     │
+   │         └────────┬────────┘             │                     │
+   │                  │ No                   ▼                     │
+   │                  │              ┌────────────────────┐        │
+   │                  │              │  Use Clopper-      │        │
+   │                  │              │  Pearson Method    │        │
+   │                  │              └────────────────────┘        │
+   │                  ▼                                            │
    │         ┌─────────────────┐     Yes                           │
    │         │ Any cell count  ├─────────────┐                     │
    │         │     < 5?        │             │                     │
@@ -82,36 +95,39 @@ Method Comparison Table
 
 .. code-block:: text
 
-   ┌────────────────────────────────────────────────────────────────┐
-   │                                                                │
-   │ METHOD CHARACTERISTICS COMPARISON                              │
-   │                                                                │
-   │ ┌───────────────────┬───────────┬───────────┬─────────────┐   │
-   │ │                   │ Barnard's │ Fisher's  │   Normal    │   │
-   │ │  Characteristic   │ (ExactCIs)│  Exact    │Approximation│   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Statistical       │    ●●●    │    ●●     │      ●      │   │
-   │ │ Validity          │           │           │             │   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Small Sample      │    ●●●    │    ●●     │      ✗      │   │
-   │ │ Performance       │           │           │             │   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Rare Event        │    ●●●    │    ●●     │      ✗      │   │
-   │ │ Handling          │           │           │             │   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Computational     │     ●     │    ●●     │     ●●●     │   │
-   │ │ Speed             │           │           │             │   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Ease of           │    ●●     │    ●●●    │     ●●●     │   │
-   │ │ Implementation    │           │           │             │   │
-   │ ├───────────────────┼───────────┼───────────┼─────────────┤   │
-   │ │ Large Sample      │    ●●     │    ●●     │     ●●●     │   │
-   │ │ Performance       │           │           │             │   │
-   │ └───────────────────┴───────────┴───────────┴─────────────┘   │
-   │                                                                │
-   │  Legend: ●●● Excellent   ●● Good   ● Fair   ✗ Poor            │
-   │                                                                │
-   └────────────────────────────────────────────────────────────────┘
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │                                                                        │
+   │ METHOD CHARACTERISTICS COMPARISON                                      │
+   │                                                                        │
+   │ ┌───────────────────┬───────────┬───────────┬─────────────┬──────────┐│
+   │ │                   │ Barnard's │ Fisher's  │   Normal    │ Clopper- ││
+   │ │  Characteristic   │ (ExactCIs)│  Exact    │Approximation│ Pearson  ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Statistical       │    ●●●    │    ●●     │      ●      │   ●●●    ││
+   │ │ Validity          │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Small Sample      │    ●●●    │    ●●     │      ✗      │   ●●●    ││
+   │ │ Performance       │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Rare Event        │    ●●●    │    ●●     │      ✗      │   ●●●    ││
+   │ │ Handling          │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Computational     │     ●     │    ●●     │     ●●●     │    ●●    ││
+   │ │ Speed             │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Ease of           │    ●●     │    ●●●    │     ●●●     │   ●●●    ││
+   │ │ Implementation    │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Large Sample      │    ●●     │    ●●     │     ●●●     │    ●●    ││
+   │ │ Performance       │           │           │             │          ││
+   │ ├───────────────────┼───────────┼───────────┼─────────────┼──────────┤│
+   │ │ Primary Use       │  Odds     │  Odds     │   Odds      │ Single   ││
+   │ │ Case              │  Ratio    │  Ratio    │   Ratio     │Proportion││
+   │ └───────────────────┴───────────┴───────────┴─────────────┴──────────┘│
+   │                                                                        │
+   │  Legend: ●●● Excellent   ●● Good   ● Fair   ✗ Poor                    │
+   │                                                                        │
+   └────────────────────────────────────────────────────────────────────────┘
 
 Common Use Cases
 --------------
@@ -165,6 +181,25 @@ Common Use Cases
       lower, upper = exact_ci_barnard(a, b, c, d)
       print(f"95% CI: ({lower:.4f}, {upper:.4f})")
 
+5. **Proportion Estimation**
+   
+   When you need to estimate a single proportion rather than an odds ratio,
+   use the Clopper-Pearson method for exact confidence intervals.
+
+   .. code-block:: python
+
+      from exactcis.methods import exact_ci_clopper_pearson
+      
+      # Example for estimating success rate in a clinical trial
+      a, b, c, d = 15, 35, 0, 0  # 15 successes out of 50 patients in group 1
+      
+      # Calculate 95% confidence interval for proportion in group 1
+      lower, upper = exact_ci_clopper_pearson(a, b, c, d, alpha=0.05, group=1)
+      p = a / (a + b)  # Point estimate
+      
+      print(f"Success rate: {p:.2f} or {p*100:.1f}%")
+      print(f"95% CI: ({lower:.4f}, {upper:.4f}) or ({lower*100:.1f}%, {upper*100:.1f}%)")
+
 Method Selection Guide
 --------------------
 
@@ -174,6 +209,8 @@ Method Selection Guide
 
    * - Scenario
      - Recommended Method
+   * - Estimating a single proportion
+     - ``exact_ci_clopper_pearson`` (Clopper-Pearson)
    * - Small sample (n < 50)
      - ``exact_ci_barnard`` (Unconditional)
    * - Zero cells present

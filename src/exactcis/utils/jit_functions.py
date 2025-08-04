@@ -24,9 +24,14 @@ except ImportError:
     logger.warning("Numba is not available, using slower Python implementations")
     # Create dummy decorator that does nothing
     def njit(*args, **kwargs):
-        def decorator(func):
-            return func
-        return decorator if args and callable(args[0]) else decorator
+        if len(args) == 1 and callable(args[0]):
+            # Direct decoration: @njit
+            return args[0]
+        else:
+            # Parameterized decoration: @njit(...)
+            def decorator(func):
+                return func
+            return decorator
 
 
 # JIT-compiled version of nchg_pdf
