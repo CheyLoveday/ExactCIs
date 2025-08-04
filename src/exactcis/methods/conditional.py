@@ -8,13 +8,25 @@ for the odds ratio of a 2x2 contingency table.
 import numpy as np
 import logging
 from scipy.stats import nchypergeom_fisher, norm
-from scipy.optimize import brentq
+from scipy.optimize import brentq, bisect
 from typing import Tuple, Callable, Optional
+from functools import lru_cache
 from exactcis.core import validate_counts, find_sign_change
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Memoized CDF/SF functions for performance optimization
+@lru_cache(maxsize=512)
+def _cdf_cached(a, N, c1, r1, psi):
+    """Cached version of nchypergeom_fisher.cdf for repeated calls."""
+    return nchypergeom_fisher.cdf(a, N, c1, r1, psi)
+
+@lru_cache(maxsize=512) 
+def _sf_cached(a, N, c1, r1, psi):
+    """Cached version of nchypergeom_fisher.sf for repeated calls."""
+    return nchypergeom_fisher.sf(a, N, c1, r1, psi)
 
 
 """
@@ -23,6 +35,38 @@ It has been removed in favor of a more consistent error handling approach
 that aligns with the rest of the codebase, using logging and fallback values
 instead of raising custom exceptions.
 """
+
+
+def _find_better_bracket(p_value_func, lo, hi):
+    """
+    Use 3-point evaluation to narrow bracket before brentq.
+    
+    Args:
+        p_value_func: Function that returns p-value given psi
+        lo: Lower bound of search range
+        hi: Upper bound of search range
+        
+    Returns:
+        Tuple of (improved_lo, improved_hi) bounds
+    """
+    try:
+        # Use geometric mean for log-scale spacing
+        mid = np.sqrt(lo * hi)
+        
+        # Evaluate at 3 strategic points
+        lo_val = p_value_func(lo)
+        mid_val = p_value_func(mid)
+        hi_val = p_value_func(hi)
+        
+        # Find subinterval where sign change occurs
+        if lo_val * mid_val < 0:
+            return lo, mid
+        elif mid_val * hi_val < 0:
+            return mid, hi
+        else:
+            return lo, hi  # Fallback to original bracket
+    except:
+        return lo, hi  # Fallback on any error
 
 
 def exact_ci_conditional(a: int, b: int, c: int, d: int,
@@ -148,8 +192,9 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
         Lower bound value. If root finding fails, returns a conservative
         estimate with appropriate warning logs.
     """
-    # For general cases, calculate numerically
+    # Hoist fixed computations outside closure
     target_prob = alpha / 2.0
+    sf_a_arg = a - 1  # Precompute argument for sf function
     
     # Calculate odds ratio point estimate (for initial bracketing)
     if b * c == 0:
@@ -162,7 +207,7 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # As psi DECREASES, this probability INCREASES
     def p_value_func(psi):
         # For lower bound, use sf(a-1) = P(X ≥ a)
-        return nchypergeom_fisher.sf(a-1, N, c1, r1, psi) - target_prob
+        return _sf_cached(sf_a_arg, N, c1, r1, psi) - target_prob
     
     # Try to find the root directly using brentq with an adaptive bracket search
     
@@ -179,7 +224,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     hi_val = p_value_func(hi)
     
     # Log initial bracket values
-    logger.debug(f"Lower bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"Lower bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
     
     # Expand brackets if needed - use more attempts for better bracketing
     max_attempts = 40
@@ -193,7 +239,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             lo /= 5.0  # More aggressive expansion
             lo_val = p_value_func(lo)
             attempt += 1
-            logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
             
         # If we can't find a negative value at extremely small psi,
         # use a very conservative lower bound
@@ -210,7 +257,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             hi *= 5.0  # More aggressive expansion
             hi_val = p_value_func(hi)
             attempt += 1
-            logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
             
         # If we can't find a positive value at extremely large psi,
         # check the point estimate as fallback
@@ -222,8 +270,11 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # Now that we have proper bracket with lo_val < 0 and hi_val > 0, use brentq
     if lo_val < 0 and hi_val > 0:
         try:
+            # Use 3-point pre-bracketing to improve convergence
+            improved_lo, improved_hi = _find_better_bracket(p_value_func, lo, hi)
+            
             # Use brentq to find the root with higher precision for better results
-            result = max(0.0, brentq(p_value_func, lo, hi, rtol=1e-12, maxiter=200, full_output=False))
+            result = max(0.0, brentq(p_value_func, improved_lo, improved_hi, rtol=1e-12, maxiter=200, full_output=False))
             logger.debug(f"Found lower bound using brentq: {result}")
             return result
         except (ValueError, RuntimeError) as e:
@@ -262,8 +313,9 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
         Upper bound value. If root finding fails, returns a conservative
         estimate with appropriate warning logs.
     """
-    # For general cases, calculate numerically
+    # Hoist fixed computations outside closure
     target_prob = alpha / 2.0
+    cdf_a_arg = a - 1  # Precompute argument for cdf function
     
     # Calculate odds ratio point estimate (for initial bracketing)
     if b * c == 0:
@@ -276,7 +328,7 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # As psi INCREASES, this probability DECREASES
     def p_value_func(psi):
         # For upper bound, use cdf(a-1) = P(X <= a-1)
-        return nchypergeom_fisher.cdf(a-1, N, c1, r1, psi) - target_prob
+        return _cdf_cached(cdf_a_arg, N, c1, r1, psi) - target_prob
     
     # Initial bracket - go much higher than or_point for a good upper bound
     # Use wider bracket ranges for better search
@@ -292,7 +344,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     hi_val = p_value_func(hi)
     
     # Log initial bracket values
-    logger.debug(f"Upper bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"Upper bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
     
     # Expand brackets if needed
     max_attempts = 40  # More attempts
@@ -306,7 +359,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             lo /= 5.0  # More aggressive expansion
             lo_val = p_value_func(lo)
             attempt += 1
-            logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
             
         # If we can't find a positive value at extremely small psi,
         # use a conservative upper bound
@@ -323,7 +377,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             hi *= 5.0  # More aggressive expansion
             hi_val = p_value_func(hi)
             attempt += 1
-            logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
             
         # If we can't find a negative value at extremely large psi,
         # return infinity as the upper bound
@@ -338,8 +393,11 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # Now that we have proper bracket with lo_val > 0 and hi_val < 0, use brentq
     if lo_val > 0 and hi_val < 0:
         try:
+            # Use 3-point pre-bracketing to improve convergence
+            improved_lo, improved_hi = _find_better_bracket(p_value_func, lo, hi)
+            
             # Use brentq to find the root with higher precision
-            result = brentq(p_value_func, lo, hi, rtol=1e-12, maxiter=200, full_output=False)
+            result = brentq(p_value_func, improved_lo, improved_hi, rtol=1e-12, maxiter=200, full_output=False)
             logger.debug(f"Found upper bound using brentq: {result}")
             return result
         except (ValueError, RuntimeError) as e:
@@ -378,6 +436,15 @@ def validate_bounds(lower, upper):
         Tuple of (lower, upper) with any necessary adjustments.
         If bounds are crossed, returns a conservative interval (0.0, inf).
     """
+    # Check for non-finite values first
+    if not np.isfinite(lower) and lower != 0.0:
+        lower = 0.0
+        # For infinite lower bound, keep the original upper bound
+        return lower, upper
+        
+    if not np.isfinite(upper):
+        upper = float('inf')
+    
     # Ensure bounds are reasonable
     if lower < 0:
         lower = 0.0
@@ -388,12 +455,6 @@ def validate_bounds(lower, upper):
         # Return a conservative interval instead of raising an exception
         logger.warning(f"Invalid bounds detected: lower ({lower}) >= upper ({upper}). Returning conservative interval.")
         return 0.0, float('inf')
-    
-    # Check for non-finite values
-    if not np.isfinite(lower) and lower != 0.0:
-        lower = 0.0
-    if not np.isfinite(upper):
-        upper = float('inf')
     
     return lower, upper
 
@@ -416,12 +477,12 @@ def zero_cell_upper_bound(a, b, c, d, alpha):
         # Find where P(X ≤ 0 | psi) = alpha/2
         def func(psi):
             # Use original integer marginals
-            return nchypergeom_fisher.cdf(0, N_calc, c1_calc, r1_calc, psi) - alpha/2
+            return _cdf_cached(0, N_calc, c1_calc, r1_calc, psi) - alpha/2
     elif d == 0:  # Cell (2,2) is zero
         # Find where P(X ≤ a | psi) = alpha/2
         def func(psi):
             # Use original integer marginals
-            return nchypergeom_fisher.cdf(a, N_calc, c1_calc, r1_calc, psi) - alpha/2
+            return _cdf_cached(a, N_calc, c1_calc, r1_calc, psi) - alpha/2
     else:
         # Default fallback if not a specific zero cell case
         return fisher_tippett_zero_cell_upper(a, b, c, d, alpha)
@@ -487,12 +548,12 @@ def zero_cell_lower_bound(a, b, c, d, alpha):
         # Find where P(X ≤ a-1 | psi) = alpha/2
         def func(psi):
             # Use original integer marginals
-            return nchypergeom_fisher.cdf(a-1, N_calc, c1_calc, r1_calc, psi) - alpha/2
+            return _cdf_cached(a-1, N_calc, c1_calc, r1_calc, psi) - alpha/2
     elif b == 0:  # Cell (1,2) is zero
         # Find where P(X ≤ a-1 | psi) = alpha/2
         def func(psi):
             # Use original integer marginals
-            return nchypergeom_fisher.cdf(a-1, N_calc, c1_calc, r1_calc, psi) - alpha/2
+            return _cdf_cached(a-1, N_calc, c1_calc, r1_calc, psi) - alpha/2
     else:
         # Default fallback if not a specific zero cell case
         return fisher_tippett_zero_cell_lower(a, b, c, d, alpha)

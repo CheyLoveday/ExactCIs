@@ -1,0 +1,246 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0 -- /Users/chey/.pyenv/versions/3.12.3/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/chey/Coding_Projects/Archive/ExactCIs
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, cov-6.2.1
+timeout: 300.0s
+timeout method: signal
+timeout func_only: False
+collected 18 items
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_invalid_alpha PASSED [  5%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_zero_cases PASSED [ 11%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_single_zero_cases PASSED [ 16%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_boundary_support PASSED [ 22%]
+tests/test_methods/test_conditional_extended.py::test_validate_bounds FAILED [ 27%]
+tests/test_methods/test_conditional_extended.py::test_fisher_tippett_zero_cell_methods PASSED [ 33%]
+tests/test_methods/test_conditional_extended.py::test_zero_cell_bound_functions PASSED [ 38%]
+tests/test_methods/test_conditional_extended.py::test_fisher_bounds_with_mocked_failures FAILED [ 44%]
+tests/test_methods/test_conditional_extended.py::test_fisher_bounds_with_double_failure FAILED [ 50%]
+tests/test_methods/test_conditional_extended.py::test_zero_cell_bounds_with_failures PASSED [ 55%]
+tests/test_methods/test_conditional_extended.py::test_fisher_bounds_bracket_expansion PASSED [ 61%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_logging PASSED [ 66%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_edge_case_or_point FAILED [ 72%]
+tests/test_methods/test_conditional_extended.py::test_fisher_bounds_extreme_bracket_cases PASSED [ 77%]
+tests/test_methods/test_conditional_extended.py::test_zero_cell_bounds_bracket_expansion PASSED [ 83%]
+tests/test_methods/test_conditional_extended.py::test_fisher_bounds_conservative_estimates FAILED [ 88%]
+tests/test_methods/test_conditional_extended.py::test_zero_cell_bounds_fallback_cases PASSED [ 94%]
+tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_stress_test SKIPPED [100%]
+=================================== FAILURES ===================================
+_____________________________ test_validate_bounds _____________________________
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_validate_bounds():
+        """Test the validate_bounds function."""
+        # Test normal bounds
+        lower, upper = validate_bounds(1.0, 5.0)
+        assert lower == 1.0
+        assert upper == 5.0
+
+        # Test negative lower bound
+        lower, upper = validate_bounds(-1.0, 5.0)
+        assert lower == 0.0
+        assert upper == 5.0
+
+        # Test crossed bounds
+        lower, upper = validate_bounds(5.0, 3.0)
+        assert lower == 0.0
+        assert upper == float('inf')
+
+        # Test equal bounds (non-zero)
+        lower, upper = validate_bounds(3.0, 3.0)
+        assert lower == 0.0
+        assert upper == float('inf')
+
+        # Test equal bounds (zero upper)
+        lower, upper = validate_bounds(0.0, 0.0)
+        assert lower == 0.0
+        assert upper == 0.0
+
+        # Test non-finite lower bound
+        lower, upper = validate_bounds(float('nan'), 5.0)
+        assert lower == 0.0
+        assert upper == 5.0
+
+        # Test non-finite upper bound
+        lower, upper = validate_bounds(1.0, float('nan'))
+        assert lower == 1.0
+        assert upper == float('inf')
+
+        # Test infinite lower bound
+        lower, upper = validate_bounds(float('inf'), 5.0)
+        assert lower == 0.0
+>       assert upper == 5.0
+E       assert inf == 5.0
+tests/test_methods/test_conditional_extended.py:148: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2025-08-04 16:12:41,815 - exactcis.methods.conditional - WARNING - Invalid bounds detected: lower (5.0) >= upper (3.0). Returning conservative interval.
+2025-08-04 16:12:41,815 - exactcis.methods.conditional - WARNING - Invalid bounds detected: lower (3.0) >= upper (3.0). Returning conservative interval.
+2025-08-04 16:12:41,815 - exactcis.methods.conditional - WARNING - Invalid bounds detected: lower (inf) >= upper (5.0). Returning conservative interval.
+------------------------------ Captured log call -------------------------------
+WARNING  exactcis.methods.conditional:conditional.py:447 Invalid bounds detected: lower (5.0) >= upper (3.0). Returning conservative interval.
+WARNING  exactcis.methods.conditional:conditional.py:447 Invalid bounds detected: lower (3.0) >= upper (3.0). Returning conservative interval.
+WARNING  exactcis.methods.conditional:conditional.py:447 Invalid bounds detected: lower (inf) >= upper (5.0). Returning conservative interval.
+___________________ test_fisher_bounds_with_mocked_failures ____________________
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_fisher_bounds_with_mocked_failures():
+        """Test fisher bound functions with mocked root finding failures."""
+        # Test fisher_lower_bound with brentq failure
+        with patch('exactcis.methods.conditional.brentq') as mock_brentq:
+            mock_brentq.side_effect = ValueError("Root finding failed")
+
+            # Should fall back to bisect
+>           with patch('exactcis.methods.conditional.bisect') as mock_bisect:
+tests/test_methods/test_conditional_extended.py:208:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../../../.pyenv/versions/3.12.3/lib/python3.12/unittest/mock.py:1458: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+self = <unittest.mock._patch object at 0x119d09ca0>
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+
+        original = DEFAULT
+        local = False
+
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'exactcis.methods.conditional' from '/Users/chey/Coding_Projects/Archive/ExactCIs/src/exactcis/methods/conditional.py'> does not have the attribute 'bisect'
+../../../.pyenv/versions/3.12.3/lib/python3.12/unittest/mock.py:1431: AttributeError
+____________________ test_fisher_bounds_with_double_failure ____________________
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_fisher_bounds_with_double_failure():
+        """Test fisher bound functions when both brentq and bisect fail."""
+        # Test fisher_lower_bound with both methods failing
+        with patch('exactcis.methods.conditional.brentq') as mock_brentq:
+            mock_brentq.side_effect = ValueError("Root finding failed")
+
+>           with patch('exactcis.methods.conditional.bisect') as mock_bisect:
+tests/test_methods/test_conditional_extended.py:232:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../../../.pyenv/versions/3.12.3/lib/python3.12/unittest/mock.py:1458: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+self = <unittest.mock._patch object at 0x119d0b2c0>
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+
+        original = DEFAULT
+        local = False
+
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'exactcis.methods.conditional' from '/Users/chey/Coding_Projects/Archive/ExactCIs/src/exactcis/methods/conditional.py'> does not have the attribute 'bisect'
+../../../.pyenv/versions/3.12.3/lib/python3.12/unittest/mock.py:1431: AttributeError
+_________________ test_exact_ci_conditional_edge_case_or_point _________________
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_exact_ci_conditional_edge_case_or_point():
+        """Test exact_ci_conditional with edge cases for odds ratio calculation."""
+        # Test when b*c = 0 but a*d > 0
+        lower, upper = exact_ci_conditional(5, 0, 5, 5, alpha=0.05)
+        assert lower > 0
+        assert upper == float('inf')
+
+        # Test when b*c = 0 and a*d = 0
+>       lower, upper = exact_ci_conditional(0, 0, 5, 5, alpha=0.05)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_methods/test_conditional_extended.py:312:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/exactcis/methods/conditional.py:102: in exact_ci_conditional
+    validate_counts(a, b, c, d)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+a = 0, b = 0, c = 5, d = 5
+    def validate_counts(a: Union[int, float], b: Union[int, float],
+                       c: Union[int, float], d: Union[int, float]) -> None:
+        """
+        Validate the counts in a 2x2 contingency table.
+
+        Args:
+            a: Count in cell (1,1)
+            b: Count in cell (1,2)
+            c: Count in cell (2,1)
+            d: Count in cell (2,2)
+
+        Raises:
+            ValueError: If any count is negative, or if any margin is zero
+        """
+        if not all(isinstance(x, (int, float)) and x >= 0 for x in (a, b, c, d)):
+            raise ValueError("All counts must be non‑negative numbers")
+        if (a + b) == 0 or (c + d) == 0 or (a + c) == 0 or (b + d) == 0:
+>           raise ValueError("Cannot compute odds ratio with empty margins")
+E           ValueError: Cannot compute odds ratio with empty margins
+src/exactcis/core.py:37: ValueError
+----------------------------- Captured stderr call -----------------------------
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Calculating CI for table: a=5, b=0, c=5, d=5, alpha=0.05
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Point estimate of odds ratio: inf
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Calculating CI for table: a=5, b=0, c=5, d=5, alpha=0.05
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Point estimate of odds ratio: inf
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Zero in cell (1,2): lower=163.63751513835194, upper=inf
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Calculating CI for table: a=0, b=0, c=5, d=5, alpha=0.05
+2025-08-04 16:12:41,925 - exactcis.methods.conditional - INFO - Point estimate of odds ratio: 0.0
+------------------------------ Captured log call -------------------------------
+INFO     exactcis.methods.conditional:conditional.py:90 Calculating CI for table: a=5, b=0, c=5, d=5, alpha=0.05
+INFO     exactcis.methods.conditional:conditional.py:98 Point estimate of odds ratio: inf
+INFO     exactcis.methods.conditional:conditional.py:105 Calculating CI for table: a=5, b=0, c=5, d=5, alpha=0.05
+INFO     exactcis.methods.conditional:conditional.py:109 Point estimate of odds ratio: inf
+INFO     exactcis.methods.conditional:conditional.py:146 Zero in cell (1,2): lower=163.63751513835194, upper=inf
+INFO     exactcis.methods.conditional:conditional.py:90 Calculating CI for table: a=0, b=0, c=5, d=5, alpha=0.05
+INFO     exactcis.methods.conditional:conditional.py:98 Point estimate of odds ratio: 0.0
+__________________ test_fisher_bounds_conservative_estimates ___________________
+    @pytest.mark.methods
+    @pytest.mark.fast
+    def test_fisher_bounds_conservative_estimates():
+        """Test that fisher bound functions return conservative estimates when needed."""
+        # Test fisher_lower_bound with zero odds ratio case
+        result = fisher_lower_bound(0, 5, 5, 5, 0, 10, 15, 5, 5, 0.05)
+        assert result == 0.0  # Should be conservative for zero case
+
+        # Test fisher_upper_bound with different OR ranges
+        # Small OR case
+        result = fisher_upper_bound(1, 10, 10, 1, 0, 11, 22, 11, 11, 0.05)
+>       assert result >= 1.0  # Should be reasonable for small OR
+        ^^^^^^^^^^^^^^^^^^^^
+E       assert 0.07290594134908793 >= 1.0
+tests/test_methods/test_conditional_extended.py:369: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2025-08-04 16:12:41,956 - exactcis.methods.conditional - WARNING - Could not find proper bracket for lower bound, table (0,5,5,5)
+------------------------------ Captured log call -------------------------------
+WARNING  exactcis.methods.conditional:conditional.py:248 Could not find proper bracket for lower bound, table (0,5,5,5)
+=========================== short test summary info ============================
+FAILED tests/test_methods/test_conditional_extended.py::test_validate_bounds - assert inf == 5.0
+FAILED tests/test_methods/test_conditional_extended.py::test_fisher_bounds_with_mocked_failures - AttributeError: <module 'exactcis.methods.conditional' from '/Users/chey/Co...
+FAILED tests/test_methods/test_conditional_extended.py::test_fisher_bounds_with_double_failure - AttributeError: <module 'exactcis.methods.conditional' from '/Users/chey/Co...
+FAILED tests/test_methods/test_conditional_extended.py::test_exact_ci_conditional_edge_case_or_point - ValueError: Cannot compute odds ratio with empty margins
+FAILED tests/test_methods/test_conditional_extended.py::test_fisher_bounds_conservative_estimates - assert 0.07290594134908793 >= 1.0
+=================== 5 failed, 12 passed, 1 skipped in 0.23s ====================
