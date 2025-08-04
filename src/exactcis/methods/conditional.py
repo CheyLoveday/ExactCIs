@@ -9,7 +9,7 @@ import numpy as np
 import logging
 from scipy.stats import nchypergeom_fisher, norm
 from scipy.optimize import brentq, bisect
-from typing import Tuple, Callable, Optional, List
+from typing import Tuple, Callable, Optional, List, Union
 from functools import lru_cache
 from exactcis.core import validate_counts, find_sign_change
 from exactcis.utils.shared_cache import cached_cdf_function, cached_sf_function
@@ -76,6 +76,68 @@ def _find_better_bracket(p_value_func, lo, hi):
             return lo, hi  # Fallback to original bracket
     except:
         return lo, hi  # Fallback on any error
+
+
+def _expand_bracket_vectorized(p_value_func, initial_lo, initial_hi, target_sign_lo, target_sign_hi, max_attempts=20):
+    """
+    Vectorized bracket expansion instead of sequential loops.
+    
+    Args:
+        p_value_func: Function that returns p-value given psi
+        initial_lo: Initial lower bound
+        initial_hi: Initial upper bound
+        target_sign_lo: Target sign for lower bound (True if positive, False if negative)
+        target_sign_hi: Target sign for upper bound (True if positive, False if negative)
+        max_attempts: Maximum number of expansion attempts
+        
+    Returns:
+        Tuple of (expanded_lo, expanded_hi) bounds
+    """
+    try:
+        # Generate candidate values using vectorized operations
+        # Create expansion factors: 5^1, 5^2, 5^3, ..., 5^max_attempts
+        expansion_factors = 5.0 ** np.arange(1, max_attempts + 1)
+        
+        # Generate candidate values for lo (divide by expansion factors)
+        lo_candidates = initial_lo / expansion_factors
+        
+        # Generate candidate values for hi (multiply by expansion factors)
+        hi_candidates = initial_hi * expansion_factors
+        
+        # Evaluate p_value_func at all candidate points
+        # We can't fully vectorize this due to the function call,
+        # but we can use a list comprehension which is more efficient than a loop
+        lo_vals = np.array([p_value_func(x) for x in lo_candidates])
+        hi_vals = np.array([p_value_func(x) for x in hi_candidates])
+        
+        # Find first suitable bracket for lower bound
+        # We want lo_val < 0 if target_sign_lo is False, or lo_val > 0 if target_sign_lo is True
+        lo_matches = (lo_vals > 0) == target_sign_lo
+        if np.any(lo_matches):
+            # Find the first match (smallest expansion that works)
+            lo_idx = np.where(lo_matches)[0][0]
+            expanded_lo = lo_candidates[lo_idx]
+        else:
+            # If no match found, use the smallest value (maximum expansion)
+            expanded_lo = lo_candidates[-1]
+        
+        # Find first suitable bracket for upper bound
+        # We want hi_val > 0 if target_sign_hi is True, or hi_val < 0 if target_sign_hi is False
+        hi_matches = (hi_vals > 0) == target_sign_hi
+        if np.any(hi_matches):
+            # Find the first match (smallest expansion that works)
+            hi_idx = np.where(hi_matches)[0][0]
+            expanded_hi = hi_candidates[hi_idx]
+        else:
+            # If no match found, use the largest value (maximum expansion)
+            expanded_hi = hi_candidates[-1]
+        
+        return expanded_lo, expanded_hi
+    
+    except Exception as e:
+        # On any error, fall back to the original bounds
+        logger.debug(f"Vectorized bracket expansion failed: {str(e)}")
+        return initial_lo, initial_hi
 
 
 def exact_ci_conditional(a: int, b: int, c: int, d: int,
@@ -243,41 +305,31 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug(f"Lower bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
     
-    # Expand brackets if needed - use more attempts for better bracketing
-    max_attempts = 40
-    attempt = 0
-    
     # For lower bound, we need lo_val < 0 and hi_val > 0
-    
-    # If function at lo is not negative, decrease lo until it is or we hit a minimum
-    if lo_val >= 0:
-        while lo_val >= 0 and attempt < max_attempts and lo > 1e-15:
-            lo /= 5.0  # More aggressive expansion
-            lo_val = p_value_func(lo)
-            attempt += 1
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
-            
-        # If we can't find a negative value at extremely small psi,
-        # use a very conservative lower bound
+    # Use vectorized bracket expansion for better performance
+    if lo_val >= 0 or hi_val <= 0:
+        # For lower bound:
+        # - target_sign_lo = False (we want lo_val < 0)
+        # - target_sign_hi = True (we want hi_val > 0)
+        lo, hi = _expand_bracket_vectorized(
+            p_value_func, lo, hi, 
+            target_sign_lo=False, 
+            target_sign_hi=True,
+            max_attempts=40
+        )
+        
+        # Re-evaluate at new bounds
+        lo_val = p_value_func(lo)
+        hi_val = p_value_func(hi)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"After vectorized expansion: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
+        
+        # If we still don't have proper bracket, use conservative fallbacks
         if lo_val >= 0:
             logger.warning(f"Could not find proper bracket for lower bound, table ({a},{b},{c},{d})")
             return 0.0  # Most conservative estimate
-    
-    # Reset attempt counter for hi expansion
-    attempt = 0
-    
-    # If function at hi is not positive, increase hi until it is or we hit a maximum
-    if hi_val <= 0:
-        while hi_val <= 0 and attempt < max_attempts and hi < 1e15:
-            hi *= 5.0  # More aggressive expansion
-            hi_val = p_value_func(hi)
-            attempt += 1
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
             
-        # If we can't find a positive value at extremely large psi,
-        # check the point estimate as fallback
         if hi_val <= 0:
             logger.warning(f"Could not find proper bracket for lower bound, table ({a},{b},{c},{d})")
             # Conservative fallback
@@ -363,41 +415,31 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug(f"Upper bound initial bracket: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
     
-    # Expand brackets if needed
-    max_attempts = 40  # More attempts
-    attempt = 0
-    
     # For upper bound, we need lo_val > 0 and hi_val < 0
-    
-    # If function at lo is not positive, decrease lo until it is or we hit a minimum
-    if lo_val <= 0:
-        while lo_val <= 0 and attempt < max_attempts and lo > 1e-15:
-            lo /= 5.0  # More aggressive expansion
-            lo_val = p_value_func(lo)
-            attempt += 1
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Expanding lower bracket down: lo={lo} (val={lo_val}), attempt={attempt}")
-            
-        # If we can't find a positive value at extremely small psi,
-        # use a conservative upper bound
+    # Use vectorized bracket expansion for better performance
+    if lo_val <= 0 or hi_val >= 0:
+        # For upper bound:
+        # - target_sign_lo = True (we want lo_val > 0)
+        # - target_sign_hi = False (we want hi_val < 0)
+        lo, hi = _expand_bracket_vectorized(
+            p_value_func, lo, hi, 
+            target_sign_lo=True, 
+            target_sign_hi=False,
+            max_attempts=40
+        )
+        
+        # Re-evaluate at new bounds
+        lo_val = p_value_func(lo)
+        hi_val = p_value_func(hi)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"After vectorized expansion: lo={lo} (val={lo_val}), hi={hi} (val={hi_val})")
+        
+        # If we still don't have proper bracket, use conservative fallbacks
         if lo_val <= 0:
             logger.debug(f"Upper bound extremely small for table ({a},{b},{c},{d})")
             return or_point * 3.0  # More conservative estimate
-    
-    # Reset attempt counter for hi expansion
-    attempt = 0
-    
-    # If function at hi is not negative, increase hi until it is or we hit a maximum
-    if hi_val >= 0:
-        while hi_val >= 0 and attempt < max_attempts and hi < 1e15:
-            hi *= 5.0  # More aggressive expansion
-            hi_val = p_value_func(hi)
-            attempt += 1
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Expanding upper bracket up: hi={hi} (val={hi_val}), attempt={attempt}")
             
-        # If we can't find a negative value at extremely large psi,
-        # return infinity as the upper bound
         if hi_val >= 0:
             logger.warning(f"Could not find proper bracket for upper bound, table ({a},{b},{c},{d})")
             # For tables with zeros in certain cells, it's reasonable to have infinite upper bound

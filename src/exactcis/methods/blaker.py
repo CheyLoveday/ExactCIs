@@ -25,7 +25,17 @@ from exactcis.core import (
 # Logger setup
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
+# Import JIT-compiled functions if available
+try:
+    from exactcis.utils.jit_functions import (
+        nchg_pdf_cached,
+        sum_probs_less_than_threshold,
+        HAS_NUMBA
+    )
+    logger.info("Using JIT-compiled functions for Blaker method")
+except ImportError:
+    HAS_NUMBA = False
+    logger.warning("JIT-compiled functions not available, using standard Python")
 
 # Try to import parallel utilities
 try:
@@ -36,95 +46,77 @@ except ImportError:
     logger.info("Parallel processing not available for Blaker method")
 
 
-class BlakerPMFCache:
-    """High-performance cache for Blaker PMF calculations with LRU eviction."""
-    
-    def __init__(self, max_size: int = 1024):
-        self.cache: Dict[tuple, np.ndarray] = {}
-        self.max_size = max_size
-        self.access_count: Dict[tuple, int] = {}
-        
-    def _generate_cache_key(self, n1: int, n2: int, m1: int, 
-                          theta: float, support_tuple: tuple) -> tuple:
-        """Generate stable cache key for PMF parameters."""
-        theta_rounded = round(theta, 12)  # Avoid floating point precision issues
-        return (n1, n2, m1, theta_rounded, support_tuple)
-    
-    def get_pmf_values(self, n1: int, n2: int, m1: int, 
-                      theta: float, support_x: np.ndarray) -> np.ndarray:
-        """Get cached PMF values or calculate if not cached."""
-        support_tuple = tuple(support_x)
-        cache_key = self._generate_cache_key(n1, n2, m1, theta, support_tuple)
-        
-        if cache_key in self.cache:
-            self.access_count[cache_key] += 1
-            return self.cache[cache_key]
-        
-        # Calculate PMF values using standard implementation
-        pmf_values = nchg_pdf(support_x, n1, n2, m1, theta)
-        
-        # Store in cache with LRU eviction if needed
-        if len(self.cache) >= self.max_size:
-            self._evict_lru()
-        
-        self.cache[cache_key] = pmf_values
-        self.access_count[cache_key] = 1
-        
-        return pmf_values
-    
-    def _evict_lru(self):
-        """Evict least recently used cache entry."""
-        if not self.access_count:
-            return
-            
-        lru_key = min(self.access_count.keys(), key=lambda k: self.access_count[k])
-        del self.cache[lru_key]
-        del self.access_count[lru_key]
-    
-    def clear(self):
-        """Clear all cached values."""
-        self.cache.clear()
-        self.access_count.clear()
-
-# Global cache instance
-_blaker_cache = BlakerPMFCache(max_size=2048)  # Increased cache size for better performance
-
-def _clear_blaker_cache():
-    """Clear the PMF cache. Should be called at the start of each CI calculation."""
-    global _blaker_cache
-    _blaker_cache.clear()
+# No need for a custom cache class - using lru_cache from functools instead
 
 def blaker_acceptability(n1: int, n2: int, m1: int, theta: float, support_x: np.ndarray) -> np.ndarray:
     """
     Calculate PMF values for Blaker's method with optimized caching to avoid redundant calculations.
     
-    This function uses a high-performance cache with LRU eviction to dramatically improve performance,
-    as the same PMF calculations are repeated many times during root-finding.
+    This function uses both process-local lru_cache and inter-process shared cache to dramatically 
+    improve performance, as the same PMF calculations are repeated many times during root-finding.
     """
     # DEBUG LOGGING FOR SPECIFIC CASE
-    if n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6:
-        if logger.isEnabledFor(logging.INFO):
-            logger.info(f"[DEBUG_ACCEPTABILITY] n1=5,n2=10,m1=7,theta={theta:.2e}, support_x={support_x}")
+    is_debug_case = (n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6)
+    if is_debug_case and logger.isEnabledFor(logging.INFO):
+        logger.info(f"[DEBUG_ACCEPTABILITY] n1=5,n2=10,m1=7,theta={theta:.2e}, support_x={support_x}")
     
-    # Get PMF values from cache or calculate
-    probs = _blaker_cache.get_pmf_values(n1, n2, m1, theta, support_x)
+    # Round theta for cache stability
+    theta_rounded = round(theta, 12)  # Avoid floating point precision issues
+    
+    # Convert support_x to tuple for caching
+    support_tuple = tuple(support_x)
+    
+    # Try to get PMF values from shared cache first (for batch mode)
+    try:
+        from ..utils.shared_cache import get_shared_cache
+        shared_cache = get_shared_cache()
+        cached_probs = shared_cache.get_pmf(n1, n2, m1, theta_rounded, support_tuple)
+        if cached_probs is not None:
+            if is_debug_case and logger.isEnabledFor(logging.INFO):
+                logger.info(f"[DEBUG_ACCEPTABILITY] Using PMF values from shared cache")
+            return cached_probs
+    except (ImportError, AttributeError):
+        # Shared cache not available or not initialized
+        pass
+    
+    # If not in shared cache, use process-local cache or calculate
+    if HAS_NUMBA:
+        probs = np.array(nchg_pdf_cached(n1, n2, m1, theta_rounded, support_tuple))
+    else:
+        # Fallback to standard implementation
+        probs = nchg_pdf(support_x, n1, n2, m1, theta)
+    
+    # Store in shared cache for other processes to use (for batch mode)
+    try:
+        shared_cache.set_pmf(n1, n2, m1, theta_rounded, support_tuple, probs)
+        if is_debug_case and logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_ACCEPTABILITY] Stored PMF values in shared cache")
+    except (NameError, AttributeError):
+        # Shared cache not available or not initialized
+        pass
 
-    if n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6:
-        if logger.isEnabledFor(logging.INFO):
-            logger.info(f"[DEBUG_ACCEPTABILITY] Probs from nchg_pdf: {probs}")
+    if is_debug_case and logger.isEnabledFor(logging.INFO):
+        logger.info(f"[DEBUG_ACCEPTABILITY] Probs from nchg_pdf: {probs}")
     
     return probs
 
 
-def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportData, skip_validation: bool = False) -> float:
+def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportData, 
+                support_tuple: Optional[tuple] = None, skip_validation: bool = False) -> float:
     """
     Calculates Blaker's p-value for a given theta, for observed count 'a'.
     s: SupportData object containing s.x (support array), s.min_val, s.max_val, and s.offset.
+    support_tuple: Optional pre-converted tuple of s.x for improved performance.
     
-    This optimized version uses vectorized operations for better performance.
+    This optimized version uses JIT compilation for better performance.
     """
     # 1. Calculate acceptability P(X=k|theta) for all k in the support s.x
-    accept_probs_all_k = blaker_acceptability(n1, n2, m1, theta, s.x)
+    if support_tuple is None:
+        # Convert support to tuple if not provided
+        support_tuple = tuple(s.x)
+    
+    # Use the support_tuple instead of s.x directly
+    accept_probs_all_k = blaker_acceptability(n1, n2, m1, theta, s.x if support_tuple is None else np.array(support_tuple))
     
     # DEBUG LOGGING FOR SPECIFIC CASE
     is_debug_case = (a == 5 and n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6)
@@ -153,15 +145,16 @@ def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportDa
     # Epsilon is a small tolerance factor for floating point comparisons, as per Blaker (2000) and R's exact2x2.
     epsilon = 1e-7 
     
-    # Vectorized comparison - much faster than loop
-    mask = accept_probs_all_k <= current_accept_prob_at_a * (1 + epsilon)
-    
-    # Vectorized comparison - much faster than loop
-    p_val = np.sum(accept_probs_all_k[mask])
+    # Use JIT-compiled function for summation if available
+    if HAS_NUMBA:
+        p_val = sum_probs_less_than_threshold(accept_probs_all_k, idx_a, epsilon)
+    else:
+        # Fallback to vectorized NumPy operations
+        mask = accept_probs_all_k <= current_accept_prob_at_a * (1 + epsilon)
+        p_val = np.sum(accept_probs_all_k[mask])
     
     if is_debug_case:
         if logger.isEnabledFor(logging.INFO):
-            logger.info(f"[DEBUG_PVAL] p_val_terms = {accept_probs_all_k[mask]}")
             logger.info(f"[DEBUG_PVAL] Final p_val = {p_val}")
 
     return p_val
@@ -249,117 +242,124 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
         ValueError: If inputs are invalid (negative counts, empty margins, invalid alpha, or 'a' outside support).
         RuntimeError: If the root-finding algorithm fails to converge.
     """
-    # Clear cache at the beginning of each CI calculation
-    _clear_blaker_cache()
+    # No need to clear cache - using lru_cache which handles this automatically
     
-    try:
-        validate_counts(a, b, c, d)
-        if not (0 < alpha < 1):
-            raise ValueError("alpha must be between 0 and 1")
-        
-        n1, n2 = a + b, c + d
-        m1, _ = a + c, b + d # m2 is not directly needed for nchg_pdf with m1
+    validate_counts(a, b, c, d)
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1")
+    
+    n1, n2 = a + b, c + d
+    m1, _ = a + c, b + d # m2 is not directly needed for nchg_pdf with m1
 
-        # Add point estimate for logging, using Haldane correction
-        or_point_est = estimate_point_or(a,b,c,d, correction_type='haldane')
+    # Add point estimate for logging, using Haldane correction
+    or_point_est = estimate_point_or(a,b,c,d, correction_type='haldane')
+    if logger.isEnabledFor(logging.INFO):
         logger.info(f"Blaker exact_ci_blaker: Input ({a},{b},{c},{d}), alpha={alpha}. Point OR estimate (Haldane corrected): {or_point_est:.4f}")
 
-        s = support(n1, n2, m1) # SupportData object
-        kmin, kmax = s.min_val, s.max_val
+    s = support(n1, n2, m1) # SupportData object
+    kmin, kmax = s.min_val, s.max_val
 
-        # Guard against impossible 'a' for the given marginals
-        if not (kmin <= a <= kmax):
-            raise ValueError(f"Count 'a' ({a}) is outside the valid support range [{kmin}, {kmax}] for the given marginals.")
-        
-        # Pre-validate 'a' range for p-value calculations to skip repeated boundary checks
-        idx_a = s.offset + a
-        if not (0 <= idx_a < len(s.x)):
-            raise ValueError(f"Calculated index for 'a' ({idx_a}) is out of support bounds. a={a}, s.min_val={s.min_val}, s.max_val={s.max_val}")
+    # Guard against impossible 'a' for the given marginals
+    if not (kmin <= a <= kmax):
+        raise ValueError(f"Count 'a' ({a}) is outside the valid support range [{kmin}, {kmax}] for the given marginals.")
+    
+    # Pre-validate 'a' range for p-value calculations to skip repeated boundary checks
+    idx_a = s.offset + a
+    if not (0 <= idx_a < len(s.x)):
+        raise ValueError(f"Calculated index for 'a' ({idx_a}) is out of support bounds. a={a}, s.min_val={s.min_val}, s.max_val={s.max_val}")
 
-        # Initialize raw_theta_low and raw_theta_high for cases where search might fail
-        raw_theta_low = 0.0 
-        raw_theta_high = float('inf')
-        
-        # Determine search range for lower bound based on OR estimate
-        lo_search_lower = 1e-9
-        hi_search_lower = or_point_est if (np.isfinite(or_point_est) and or_point_est > lo_search_lower) else 1e7
-        # Ensure hi > lo for the search
-        if hi_search_lower <= lo_search_lower: hi_search_lower = 1e7
+    # Pre-convert support data to tuple to avoid redundant conversions
+    support_tuple = tuple(s.x)
 
-        # Lower bound calculation (skip validation since we pre-validated above)
-        blaker_p_value_lower = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, skip_validation=True)
+    # Initialize raw_theta_low and raw_theta_high for cases where search might fail
+    raw_theta_low = 0.0 
+    raw_theta_high = float('inf')
+    
+    # Determine search range for lower bound based on OR estimate
+    lo_search_lower = 1e-9
+    hi_search_lower = or_point_est if (np.isfinite(or_point_est) and or_point_est > lo_search_lower) else 1e7
+    # Ensure hi > lo for the search
+    if hi_search_lower <= lo_search_lower: hi_search_lower = 1e7
+
+    # Lower bound calculation (skip validation since we pre-validated above)
+    blaker_p_value_lower = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, support_tuple, skip_validation=True)
+    if logger.isEnabledFor(logging.INFO):
         logger.info(f"Blaker exact_ci_blaker: Finding lower bound. Target p-value for search: {alpha/2.0:.4f}")
+    
+    if a > kmin:
+        # Use 3-point pre-bracketing to improve root finding efficiency
+        improved_lo, improved_hi = _find_better_bracket(
+            blaker_p_value_lower, alpha / 2.0, lo_search_lower, hi_search_lower, increasing=False
+        )
         
-        if a > kmin:
-            # Use 3-point pre-bracketing to improve root finding efficiency
-            improved_lo, improved_hi = _find_better_bracket(
-                blaker_p_value_lower, alpha / 2.0, lo_search_lower, hi_search_lower, increasing=False
-            )
-            
-            candidate_raw_theta_low = find_smallest_theta(
-                func=blaker_p_value_lower, 
-                alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
-                lo=improved_lo, 
-                hi=improved_hi, 
-                increasing=False
-            )
-            if candidate_raw_theta_low is not None:
-                raw_theta_low = candidate_raw_theta_low
-            else:
+        candidate_raw_theta_low = find_smallest_theta(
+            func=blaker_p_value_lower, 
+            alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
+            lo=improved_lo, 
+            hi=improved_hi, 
+            increasing=False
+        )
+        if candidate_raw_theta_low is not None:
+            raw_theta_low = candidate_raw_theta_low
+        else:
+            if logger.isEnabledFor(logging.WARNING):
                 logger.warning(f"Blaker exact_ci_blaker: Lower bound search failed for ({a},{b},{c},{d}). Defaulting raw_theta_low to 0.0.")
-                raw_theta_low = 0.0
-        else: # a == kmin, lower bound is 0
-            logger.info(f"Blaker exact_ci_blaker: a ({a}) == kmin ({kmin}). Lower bound is 0.")
             raw_theta_low = 0.0
+    else: # a == kmin, lower bound is 0
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"Blaker exact_ci_blaker: a ({a}) == kmin ({kmin}). Lower bound is 0.")
+        raw_theta_low = 0.0
 
-        # Upper bound calculation (skip validation since we pre-validated above)
-        blaker_p_value_upper = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, skip_validation=True)
+    # Upper bound calculation (skip validation since we pre-validated above)
+    blaker_p_value_upper = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, support_tuple, skip_validation=True)
+    if logger.isEnabledFor(logging.INFO):
         logger.info(f"Blaker exact_ci_blaker: Finding upper bound. Target p-value for search: {alpha/2.0:.4f}")
 
-        # Determine search range for upper bound based on OR estimate
-        hi_search_upper = 1e7
-        lo_search_upper = or_point_est if (np.isfinite(or_point_est) and or_point_est > 1e-9) else 1e-9
-        # Ensure lo < hi for the search
-        if lo_search_upper >= hi_search_upper: lo_search_upper = 1e-9
+    # Determine search range for upper bound based on OR estimate
+    hi_search_upper = 1e7
+    lo_search_upper = or_point_est if (np.isfinite(or_point_est) and or_point_est > 1e-9) else 1e-9
+    # Ensure lo < hi for the search
+    if lo_search_upper >= hi_search_upper: lo_search_upper = 1e-9
 
-        if a < kmax:
-            # Use 3-point pre-bracketing to improve root finding efficiency
-            improved_lo, improved_hi = _find_better_bracket(
-                blaker_p_value_upper, alpha / 2.0, lo_search_upper, hi_search_upper, increasing=True
-            )
-            
-            candidate_raw_theta_high = find_smallest_theta(
-                func=blaker_p_value_upper, 
-                alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
-                lo=improved_lo, 
-                hi=improved_hi, 
-                increasing=True
-            )
-            if candidate_raw_theta_high is not None:
-                raw_theta_high = candidate_raw_theta_high
-            else:
+    if a < kmax:
+        # Use 3-point pre-bracketing to improve root finding efficiency
+        improved_lo, improved_hi = _find_better_bracket(
+            blaker_p_value_upper, alpha / 2.0, lo_search_upper, hi_search_upper, increasing=True
+        )
+        
+        candidate_raw_theta_high = find_smallest_theta(
+            func=blaker_p_value_upper, 
+            alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
+            lo=improved_lo, 
+            hi=improved_hi, 
+            increasing=True
+        )
+        if candidate_raw_theta_high is not None:
+            raw_theta_high = candidate_raw_theta_high
+        else:
+            if logger.isEnabledFor(logging.WARNING):
                 logger.warning(f"Blaker exact_ci_blaker: Upper bound search failed for ({a},{b},{c},{d}). Defaulting raw_theta_high to inf.")
-                raw_theta_high = float('inf')
-        else: # a == kmax, upper bound is infinity
-            logger.info(f"Blaker exact_ci_blaker: a ({a}) == kmax ({kmax}). Upper bound is infinity.")
             raw_theta_high = float('inf')
+    else: # a == kmax, upper bound is infinity
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"Blaker exact_ci_blaker: a ({a}) == kmax ({kmax}). Upper bound is infinity.")
+        raw_theta_high = float('inf')
 
-        theta_low = float(raw_theta_low)
-        theta_high = float(raw_theta_high)
+    theta_low = float(raw_theta_low)
+    theta_high = float(raw_theta_high)
 
-        if not (np.isfinite(theta_low) and np.isfinite(theta_high)):
+    if not (np.isfinite(theta_low) and np.isfinite(theta_high)):
+        if logger.isEnabledFor(logging.WARNING):
             logger.warning(f"Blaker CI calculation resulted in non-finite bounds for ({a},{b},{c},{d}): low={theta_low}, high={theta_high}. This may be expected if a is at support boundary.")
 
-        # Check for crossed bounds AFTER ensuring they are finite numbers
-        tolerance = 1e-6
-        if np.isfinite(theta_low) and np.isfinite(theta_high) and theta_low > theta_high + tolerance:
+    # Check for crossed bounds AFTER ensuring they are finite numbers
+    tolerance = 1e-6
+    if np.isfinite(theta_low) and np.isfinite(theta_high) and theta_low > theta_high + tolerance:
+        if logger.isEnabledFor(logging.WARNING):
             logger.warning(f"Blaker CI: Lower bound {theta_low:.4f} > Upper bound {theta_high:.4f} for ({a},{b},{c},{d}). This can indicate issues with root finding or p-value function. Returning (0, inf) as a safe default. Original raw values: low={raw_theta_low}, high={raw_theta_high}")
-            return 0.0, float('inf')
-        
-        return theta_low, theta_high
-    finally:
-        # Clear cache at the end of each CI calculation to free memory
-        _clear_blaker_cache()
+        return 0.0, float('inf')
+    
+    return theta_low, theta_high
 
 
 def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]], 
@@ -398,14 +398,16 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
     
     if not has_parallel_support:
         # Fall back to sequential processing
-        logger.info("Parallel support not available, using sequential processing")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info("Parallel support not available, using sequential processing")
         results = []
         for i, (a, b, c, d) in enumerate(tables):
             try:
                 result = exact_ci_blaker(a, b, c, d, alpha)
                 results.append(result)
             except Exception as e:
-                logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
+                if logger.isEnabledFor(logging.WARNING):
+                    logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
                 results.append((0.0, float('inf')))  # Conservative fallback
             
             if progress_callback:
@@ -423,7 +425,8 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
     from exactcis.utils.shared_cache import init_shared_cache_for_parallel
     cache = init_shared_cache_for_parallel()
     
-    logger.info(f"Processing {len(tables)} tables with Blaker method using {max_workers} workers")
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(f"Processing {len(tables)} tables with Blaker method using {max_workers} workers")
     
     # Use the improved parallel processing with shared cache
     results = parallel_compute_ci(
@@ -438,9 +441,11 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
         from exactcis.utils.shared_cache import get_shared_cache
         cache = get_shared_cache()
         stats = cache.get_stats()
-        logger.info(f"Cache statistics: {stats['hit_rate_percent']:.1f}% hit rate ({stats['hits']}/{stats['total_lookups']} lookups)")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"Cache statistics: {stats['hit_rate_percent']:.1f}% hit rate ({stats['hits']}/{stats['total_lookups']} lookups)")
     except Exception:
         pass  # Don't fail if cache stats unavailable
     
-    logger.info(f"Completed batch processing of {len(tables)} tables with Blaker method")
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(f"Completed batch processing of {len(tables)} tables with Blaker method")
     return results
