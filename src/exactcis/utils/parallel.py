@@ -137,15 +137,38 @@ def parallel_compute_ci(method_func: Callable,
         conservative interval (0.0, inf) is returned for that table to
         ensure the function completes successfully.
     """
-    def process_table(table):
-        a, b, c, d = table
-        try:
-            return method_func(a, b, c, d, alpha=alpha, **kwargs)
-        except Exception as e:
-            logger.warning(f"Error computing CI for table {table}: {e}")
-            return (0.0, float('inf'))  # Return a conservative interval on error
+    # Use a module-level function to avoid pickle issues
+    task_data = [(table, method_func.__name__, alpha, kwargs) for table in tables]
+    return parallel_map(_process_ci_task, task_data, timeout=timeout)
+
+
+def _process_ci_task(task_data):
+    """
+    Process a single CI computation task. 
     
-    return parallel_map(process_table, tables, timeout=timeout)
+    This is a module-level function to avoid pickle issues with local functions.
+    """
+    table, method_name, alpha, kwargs = task_data
+    a, b, c, d = table
+    
+    try:
+        # Import the method function by name
+        if method_name == 'exact_ci_conditional':
+            from exactcis.methods.conditional import exact_ci_conditional
+            return exact_ci_conditional(a, b, c, d, alpha=alpha, **kwargs)
+        elif method_name == 'exact_ci_blaker':
+            from exactcis.methods.blaker import exact_ci_blaker
+            return exact_ci_blaker(a, b, c, d, alpha=alpha, **kwargs)
+        elif method_name == 'exact_ci_midp':
+            from exactcis.methods.midp import exact_ci_midp
+            return exact_ci_midp(a, b, c, d, alpha=alpha, **kwargs)
+        else:
+            logger.error(f"Unknown method: {method_name}")
+            return (0.0, float('inf'))
+            
+    except Exception as e:
+        logger.warning(f"Error computing CI for table {table} with {method_name}: {e}")
+        return (0.0, float('inf'))
 
 
 def chunk_parameter_space(theta_range: Tuple[float, float], 

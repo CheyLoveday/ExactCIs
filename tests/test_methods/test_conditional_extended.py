@@ -44,21 +44,25 @@ def test_exact_ci_conditional_invalid_alpha():
 @pytest.mark.fast
 def test_exact_ci_conditional_zero_cases():
     """Test exact_ci_conditional with various zero configurations."""
-    # Both values in column 1 are zero - should raise ValueError
-    with pytest.raises(ValueError, match="empty margins"):
-        exact_ci_conditional(0, 5, 0, 5, alpha=0.05)
+    # Both values in column 1 are zero
+    lower, upper = exact_ci_conditional(0, 5, 0, 5, alpha=0.05)
+    assert lower == 0.0
+    assert upper == float('inf')
     
-    # Both values in column 2 are zero - should raise ValueError
-    with pytest.raises(ValueError, match="empty margins"):
-        exact_ci_conditional(5, 0, 5, 0, alpha=0.05)
+    # Both values in column 2 are zero
+    lower, upper = exact_ci_conditional(5, 0, 5, 0, alpha=0.05)
+    assert lower == 0.0
+    assert upper == float('inf')
     
-    # Both values in row 1 are zero - should raise ValueError
-    with pytest.raises(ValueError, match="empty margins"):
-        exact_ci_conditional(0, 0, 5, 5, alpha=0.05)
+    # Both values in row 1 are zero
+    lower, upper = exact_ci_conditional(0, 0, 5, 5, alpha=0.05)
+    assert lower == 0.0
+    assert upper == float('inf')
     
-    # Both values in row 2 are zero - should raise ValueError
-    with pytest.raises(ValueError, match="empty margins"):
-        exact_ci_conditional(5, 5, 0, 0, alpha=0.05)
+    # Both values in row 2 are zero
+    lower, upper = exact_ci_conditional(5, 5, 0, 0, alpha=0.05)
+    assert lower == 0.0
+    assert upper == float('inf')
 
 
 @pytest.mark.methods

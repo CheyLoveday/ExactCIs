@@ -9,23 +9,32 @@ import numpy as np
 import logging
 from scipy.stats import nchypergeom_fisher, norm
 from scipy.optimize import brentq, bisect
-from typing import Tuple, Callable, Optional
+from typing import Tuple, Callable, Optional, List
 from functools import lru_cache
 from exactcis.core import validate_counts, find_sign_change
+from exactcis.utils.shared_cache import cached_cdf_function, cached_sf_function
+
+# Try to import parallel utilities
+try:
+    from ..utils.parallel import parallel_compute_ci
+    has_parallel_support = True
+except ImportError:
+    has_parallel_support = False
+    logger.info("Parallel processing not available for conditional method")
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Memoized CDF/SF functions for performance optimization
-@lru_cache(maxsize=512)
+# Shared cache functions for inter-process performance optimization
+@cached_cdf_function
 def _cdf_cached(a, N, c1, r1, psi):
-    """Cached version of nchypergeom_fisher.cdf for repeated calls."""
+    """Shared cached version of nchypergeom_fisher.cdf for repeated calls."""
     return nchypergeom_fisher.cdf(a, N, c1, r1, psi)
 
-@lru_cache(maxsize=512) 
+@cached_sf_function 
 def _sf_cached(a, N, c1, r1, psi):
-    """Cached version of nchypergeom_fisher.sf for repeated calls."""
+    """Shared cached version of nchypergeom_fisher.sf for repeated calls."""
     return nchypergeom_fisher.sf(a, N, c1, r1, psi)
 
 
@@ -99,6 +108,17 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
     
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1)")
+        
+    # Special case handling for tables with empty margins
+    r1 = a + b  # Row 1 total
+    r2 = c + d  # Row 2 total
+    c1 = a + c  # Column 1 total
+    c2 = b + d  # Column 2 total
+    
+    # Handle empty margins before validation
+    if r1 == 0 or r2 == 0 or c1 == 0 or c2 == 0:
+        return 0.0, float('inf')
+        
     validate_counts(a, b, c, d)
 
     # Debug information - log the table
@@ -109,10 +129,6 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
     logger.info(f"Point estimate of odds ratio: {or_point}")
 
     # Special case handling for tables with zeros
-    r1 = a + b  # Row 1 total
-    r2 = c + d  # Row 2 total
-    c1 = a + c  # Column 1 total
-    c2 = b + d  # Column 2 total
     N = a + b + c + d  # Total sample size
     
     # Zero handling that matches R's fisher.test implementation
@@ -399,7 +415,7 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             # Use brentq to find the root with higher precision
             result = brentq(p_value_func, improved_lo, improved_hi, rtol=1e-12, maxiter=200, full_output=False)
             logger.debug(f"Found upper bound using brentq: {result}")
-            return result
+            return max(1.0, result)  # Ensure result is at least 1.0
         except (ValueError, RuntimeError) as e:
             logger.error(f"Root finding failed for upper bound: {str(e)}")
             # Try a different method if brentq fails
@@ -408,7 +424,7 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
                 from scipy.optimize import bisect
                 result = bisect(p_value_func, lo, hi, rtol=1e-10, maxiter=200)
                 logger.debug(f"Found upper bound using bisect: {result}")
-                return result
+                return max(1.0, result)  # Ensure result is at least 1.0
             except Exception as e2:
                 logger.error(f"Secondary root finding failed: {str(e2)}")
     
@@ -666,3 +682,72 @@ def fisher_tippett_zero_cell_lower(a, b, c, d, alpha):
     lower = np.exp(log_lower)
     
     return max(0.0, lower)
+
+
+def exact_ci_conditional_batch(tables: List[Tuple[int, int, int, int]], 
+                               alpha: float = 0.05,
+                               max_workers: Optional[int] = None,
+                               progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
+    """
+    Calculate conditional (Fisher's) exact confidence intervals for multiple 2x2 tables in parallel.
+    
+    This function leverages parallel processing with shared inter-process caching to compute 
+    confidence intervals for multiple tables simultaneously, providing significant speedup for 
+    large datasets.
+    
+    Args:
+        tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
+        alpha: Significance level (default: 0.05)
+        max_workers: Maximum number of parallel workers (default: auto-detected)
+        progress_callback: Optional callback function to report progress (0-100)
+        
+    Returns:
+        List of (lower_bound, upper_bound) tuples, one for each input table
+        
+    Note:
+        This implementation uses shared inter-process caching to eliminate redundant
+        CDF/SF calculations across worker processes, providing substantial performance
+        improvements over sequential processing.
+    """
+    if not tables:
+        return []
+    
+    if not has_parallel_support:
+        # Fall back to sequential processing
+        logger.info("Parallel support not available, using sequential processing")
+        results = []
+        for i, (a, b, c, d) in enumerate(tables):
+            try:
+                result = exact_ci_conditional(a, b, c, d, alpha)
+                results.append(result)
+            except Exception as e:
+                logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
+                results.append((0.0, float('inf')))  # Conservative fallback
+            
+            if progress_callback:
+                progress_callback(min(100, int(100 * (i+1) / len(tables))))
+        
+        return results
+    
+    # Initialize shared cache for parallel processing
+    from exactcis.utils.shared_cache import init_shared_cache_for_parallel
+    cache = init_shared_cache_for_parallel()
+    
+    logger.info(f"Processing {len(tables)} tables with conditional method using shared cache")
+    
+    # Use the improved parallel processing with shared cache
+    results = parallel_compute_ci(
+        exact_ci_conditional,
+        tables,
+        alpha=alpha,
+        timeout=None  # No timeout for batch processing
+    )
+    
+    # Report final statistics
+    from exactcis.utils.shared_cache import get_shared_cache
+    cache = get_shared_cache()
+    stats = cache.get_stats()
+    logger.info(f"Completed batch processing of {len(tables)} tables")
+    logger.info(f"Cache statistics: {stats['hit_rate_percent']:.1f}% hit rate ({stats['hits']}/{stats['total_lookups']} lookups)")
+    
+    return results

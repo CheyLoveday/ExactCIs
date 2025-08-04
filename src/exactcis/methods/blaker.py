@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import parallel utilities
 try:
-    from ..utils.parallel import parallel_map, get_optimal_workers
+    from ..utils.parallel import parallel_compute_ci, get_optimal_workers
     has_parallel_support = True
 except ImportError:
     has_parallel_support = False
@@ -419,25 +419,28 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
     
     max_workers = min(max_workers, len(tables))  # Don't use more workers than tables
     
+    # Initialize shared cache for parallel processing  
+    from exactcis.utils.shared_cache import init_shared_cache_for_parallel
+    cache = init_shared_cache_for_parallel()
+    
     logger.info(f"Processing {len(tables)} tables with Blaker method using {max_workers} workers")
     
-    # Create worker function that handles errors gracefully
-    def process_single_table(table_data):
-        a, b, c, d = table_data
-        try:
-            return exact_ci_blaker(a, b, c, d, alpha)
-        except Exception as e:
-            logger.warning(f"Error processing table ({a},{b},{c},{d}): {e}")
-            return (0.0, float('inf'))  # Conservative fallback
-    
-    # Process tables in parallel
-    results = parallel_map(
-        process_single_table,
+    # Use the improved parallel processing with shared cache
+    results = parallel_compute_ci(
+        exact_ci_blaker,
         tables,
-        max_workers=max_workers,
-        force_processes=True,  # CPU-bound task
-        progress_callback=progress_callback
+        alpha=alpha,
+        timeout=None  # No timeout for batch processing
     )
+    
+    # Report final statistics
+    try:
+        from exactcis.utils.shared_cache import get_shared_cache
+        cache = get_shared_cache()
+        stats = cache.get_stats()
+        logger.info(f"Cache statistics: {stats['hit_rate_percent']:.1f}% hit rate ({stats['hits']}/{stats['total_lookups']} lookups)")
+    except Exception:
+        pass  # Don't fail if cache stats unavailable
     
     logger.info(f"Completed batch processing of {len(tables)} tables with Blaker method")
     return results
