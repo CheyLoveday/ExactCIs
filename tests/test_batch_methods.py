@@ -11,6 +11,7 @@ import csv
 from unittest.mock import patch, MagicMock
 from exactcis.methods.blaker import exact_ci_blaker_batch, exact_ci_blaker
 from exactcis.methods.midp import exact_ci_midp_batch, exact_ci_midp
+from exactcis.methods.conditional import exact_ci_conditional_batch, exact_ci_conditional
 from exactcis.core import batch_validate_counts, batch_calculate_odds_ratios, optimize_core_cache_for_batch
 
 
@@ -390,3 +391,74 @@ def test_batch_methods_with_edge_cases():
         assert isinstance(result, tuple) and len(result) == 2
         assert result[0] >= 0, f"Negative lower bound for table {i}: {tables[i]}"
         assert result[1] >= result[0], f"Invalid interval for table {i}: {tables[i]}"
+
+
+@pytest.mark.methods
+@pytest.mark.fast
+def test_batch_methods_with_different_backends():
+    """Test batch methods with different backend options (thread vs process)."""
+    # Create a set of test tables
+    tables = [
+        (10, 20, 15, 30),
+        (5, 10, 8, 12),
+        (2, 3, 1, 4),
+        (0, 1, 1, 10),  # Edge case with zero
+        (20, 5, 10, 2)   # Different proportions
+    ]
+    
+    # Test Blaker method with different backends
+    blaker_thread = exact_ci_blaker_batch(tables, backend='thread')
+    blaker_process = exact_ci_blaker_batch(tables, backend='process')
+    blaker_auto = exact_ci_blaker_batch(tables, backend=None)  # Auto-detection
+    
+    # Results should be the same regardless of backend
+    for i in range(len(tables)):
+        assert abs(blaker_thread[i][0] - blaker_process[i][0]) < 1e-6, f"Lower bound mismatch for table {i}"
+        assert abs(blaker_thread[i][1] - blaker_process[i][1]) < 1e-6, f"Upper bound mismatch for table {i}"
+        assert abs(blaker_thread[i][0] - blaker_auto[i][0]) < 1e-6, f"Lower bound mismatch for auto-detection"
+        assert abs(blaker_thread[i][1] - blaker_auto[i][1]) < 1e-6, f"Upper bound mismatch for auto-detection"
+    
+    # Test Mid-P method with different backends
+    midp_thread = exact_ci_midp_batch(tables, backend='thread')
+    midp_process = exact_ci_midp_batch(tables, backend='process')
+    midp_auto = exact_ci_midp_batch(tables, backend=None)  # Auto-detection
+    
+    # Results should be the same regardless of backend
+    for i in range(len(tables)):
+        assert abs(midp_thread[i][0] - midp_process[i][0]) < 1e-6, f"Lower bound mismatch for table {i}"
+        assert abs(midp_thread[i][1] - midp_process[i][1]) < 1e-6, f"Upper bound mismatch for table {i}"
+        assert abs(midp_thread[i][0] - midp_auto[i][0]) < 1e-6, f"Lower bound mismatch for auto-detection"
+        assert abs(midp_thread[i][1] - midp_auto[i][1]) < 1e-6, f"Upper bound mismatch for auto-detection"
+    
+    # Test Conditional method with different backends
+    conditional_thread = exact_ci_conditional_batch(tables, backend='thread')
+    conditional_process = exact_ci_conditional_batch(tables, backend='process')
+    conditional_auto = exact_ci_conditional_batch(tables, backend=None)  # Auto-detection
+    
+    # Results should be the same regardless of backend
+    for i in range(len(tables)):
+        assert abs(conditional_thread[i][0] - conditional_process[i][0]) < 1e-6, f"Lower bound mismatch for table {i}"
+        assert abs(conditional_thread[i][1] - conditional_process[i][1]) < 1e-6, f"Upper bound mismatch for table {i}"
+        assert abs(conditional_thread[i][0] - conditional_auto[i][0]) < 1e-6, f"Lower bound mismatch for auto-detection"
+        assert abs(conditional_thread[i][1] - conditional_auto[i][1]) < 1e-6, f"Upper bound mismatch for auto-detection"
+    
+    # Verify consistency with individual method calls
+    for i, (a, b, c, d) in enumerate(tables):
+        # Skip tables with zeros for individual calls to avoid errors
+        if a == 0 or b == 0 or c == 0 or d == 0:
+            continue
+            
+        # Blaker method
+        individual = exact_ci_blaker(a, b, c, d)
+        assert abs(individual[0] - blaker_thread[i][0]) < 1e-6, f"Blaker individual vs batch mismatch for table {i}"
+        assert abs(individual[1] - blaker_thread[i][1]) < 1e-6, f"Blaker individual vs batch mismatch for table {i}"
+        
+        # Mid-P method
+        individual = exact_ci_midp(a, b, c, d)
+        assert abs(individual[0] - midp_thread[i][0]) < 1e-6, f"Mid-P individual vs batch mismatch for table {i}"
+        assert abs(individual[1] - midp_thread[i][1]) < 1e-6, f"Mid-P individual vs batch mismatch for table {i}"
+        
+        # Conditional method
+        individual = exact_ci_conditional(a, b, c, d)
+        assert abs(individual[0] - conditional_thread[i][0]) < 1e-6, f"Conditional individual vs batch mismatch for table {i}"
+        assert abs(individual[1] - conditional_thread[i][1]) < 1e-6, f"Conditional individual vs batch mismatch for table {i}"

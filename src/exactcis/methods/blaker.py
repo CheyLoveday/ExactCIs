@@ -365,6 +365,7 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
 def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]], 
                           alpha: float = 0.05,
                           max_workers: Optional[int] = None,
+                          backend: Optional[str] = None,
                           progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
     """
     Calculate Blaker's exact confidence intervals for multiple 2x2 tables in parallel.
@@ -376,6 +377,7 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
         tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
         alpha: Significance level (default: 0.05)
         max_workers: Maximum number of parallel workers (default: auto-detected)
+        backend: Backend to use ('thread', 'process', or None for auto-detection)
         progress_callback: Optional callback function to report progress (0-100)
         
     Returns:
@@ -386,6 +388,10 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
         numerical issues, invalid data, etc.), a conservative interval (0.0, inf)
         is returned for that table, allowing the batch processing to complete
         successfully.
+        
+        Backend Selection: For methods that use Numba-accelerated functions,
+        the 'thread' backend may be more efficient. If not specified, the backend
+        is auto-detected based on the method.
         
     Example:
         >>> tables = [(10, 20, 15, 30), (5, 10, 8, 12), (2, 3, 1, 4)]
@@ -433,7 +439,9 @@ def exact_ci_blaker_batch(tables: List[Tuple[int, int, int, int]],
         exact_ci_blaker,
         tables,
         alpha=alpha,
-        timeout=None  # No timeout for batch processing
+        timeout=None,  # No timeout for batch processing
+        backend=backend,
+        max_workers=max_workers
     )
     
     # Report final statistics

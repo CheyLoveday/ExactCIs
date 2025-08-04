@@ -738,6 +738,7 @@ def fisher_tippett_zero_cell_lower(a, b, c, d, alpha):
 def exact_ci_conditional_batch(tables: List[Tuple[int, int, int, int]], 
                                alpha: float = 0.05,
                                max_workers: Optional[int] = None,
+                               backend: Optional[str] = None,
                                progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
     """
     Calculate conditional (Fisher's) exact confidence intervals for multiple 2x2 tables in parallel.
@@ -750,6 +751,7 @@ def exact_ci_conditional_batch(tables: List[Tuple[int, int, int, int]],
         tables: List of (a, b, c, d) tuples representing 2x2 contingency tables
         alpha: Significance level (default: 0.05)
         max_workers: Maximum number of parallel workers (default: auto-detected)
+        backend: Backend to use ('thread', 'process', or None for auto-detection)
         progress_callback: Optional callback function to report progress (0-100)
         
     Returns:
@@ -759,6 +761,10 @@ def exact_ci_conditional_batch(tables: List[Tuple[int, int, int, int]],
         This implementation uses shared inter-process caching to eliminate redundant
         CDF/SF calculations across worker processes, providing substantial performance
         improvements over sequential processing.
+        
+        Backend Selection: For methods that use Numba-accelerated functions,
+        the 'thread' backend may be more efficient. If not specified, the backend
+        is auto-detected based on the method.
     """
     if not tables:
         return []
@@ -791,7 +797,9 @@ def exact_ci_conditional_batch(tables: List[Tuple[int, int, int, int]],
         exact_ci_conditional,
         tables,
         alpha=alpha,
-        timeout=None  # No timeout for batch processing
+        timeout=None,  # No timeout for batch processing
+        backend=backend,
+        max_workers=max_workers
     )
     
     # Report final statistics
