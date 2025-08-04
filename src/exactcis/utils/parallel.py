@@ -9,11 +9,41 @@ import logging
 import multiprocessing
 import numpy as np
 from functools import partial
-from typing import Callable, List, Dict, Any, Tuple, Optional, Union
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from typing import Callable, List, Dict, Any, Tuple, Optional, Union, Literal
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def has_numba_support() -> bool:
+    """
+    Check if Numba is available and can be used for acceleration.
+    
+    Returns:
+        bool: True if Numba is available, False otherwise
+    """
+    try:
+        # Try to import Numba
+        import numba
+        return True
+    except ImportError:
+        return False
+    
+    
+def get_optimal_backend(force_processes: bool = False) -> str:
+    """
+    Determine the optimal backend based on the task and environment.
+    
+    Args:
+        force_processes: Force use of processes even if Numba is available
+        
+    Returns:
+        str: 'thread' if Numba is available and not forcing processes, 'process' otherwise
+    """
+    if not force_processes and has_numba_support():
+        return 'thread'
+    return 'process'
 
 
 def get_optimal_workers():
@@ -27,24 +57,28 @@ def get_optimal_workers():
 
 
 def parallel_map(func: Callable, items: List[Any], 
-                 use_threads: bool = False, 
+                 backend: Optional[str] = None,
+                 use_threads: bool = False,  # Deprecated, use backend='thread' instead
                  max_workers: Optional[int] = None,
                  chunk_size: Optional[int] = None,
+                 min_batch_size: int = 4,  # Minimum items per worker for efficient batching
                  timeout: Optional[float] = None,
                  progress_callback: Optional[Callable[[float], None]] = None,
-                 force_processes: bool = True) -> List[Any]:
+                 force_processes: bool = False) -> List[Any]:
     """
     Execute a function over a list of items in parallel.
     
     Args:
         func: Function to execute
         items: List of items to process
-        use_threads: Use threads instead of processes (better for I/O bound tasks)
+        backend: Backend to use ('thread', 'process', or None for auto-detection)
+        use_threads: [Deprecated] Use threads instead of processes (better for I/O bound tasks)
         max_workers: Maximum number of workers (default: auto-determined)
         chunk_size: Size of chunks for processing (default: auto-determined)
+        min_batch_size: Minimum number of items per worker for efficient batching (default: 4)
         timeout: Maximum time to wait for completion in seconds
         progress_callback: Optional callback to report progress (0-100)
-        force_processes: Force use of processes for CPU-bound tasks (default: True)
+        force_processes: Force use of processes for CPU-bound tasks (default: False)
         
     Returns:
         List of results in the same order as input items
@@ -54,6 +88,15 @@ def parallel_map(func: Callable, items: List[Any],
         the function automatically falls back to sequential processing to ensure
         all items are processed. This fallback behavior ensures robustness but
         may result in longer execution times.
+        
+        Backend Selection: The 'thread' backend is more efficient for Numba-accelerated
+        functions that release the GIL. The 'process' backend is better for CPU-bound
+        tasks that don't release the GIL. If not specified, the backend is auto-detected
+        based on the presence of Numba.
+        
+        Batch Size Autotuning: The function automatically adjusts the number of workers
+        and chunk size to ensure each worker gets at least min_batch_size items.
+        This reduces overhead for small batches and improves performance.
     """
     if not items:
         return []
@@ -70,34 +113,93 @@ def parallel_map(func: Callable, items: List[Any],
     if max_workers is None:
         max_workers = get_optimal_workers()
     
-    # Adjust workers if we have fewer items than workers
+    # Batch size autotuning: ensure each worker gets at least min_batch_size items
+    if n_items < max_workers * min_batch_size:
+        # Reduce number of workers to ensure each gets at least min_batch_size items
+        adjusted_workers = max(1, n_items // min_batch_size)
+        logger.info(f"Reducing workers from {max_workers} to {adjusted_workers} to ensure each worker gets at least {min_batch_size} items")
+        max_workers = adjusted_workers
+    
+    # Adjust workers if we have fewer items than workers (safety check)
     max_workers = min(max_workers, n_items)
     
     # Auto-determine chunk size if not specified
     if chunk_size is None:
-        chunk_size = max(1, n_items // (max_workers * 4))
+        # Ensure chunk_size is at least min_batch_size
+        chunk_size = max(min_batch_size, n_items // max_workers)
+        logger.info(f"Auto-determined chunk_size={chunk_size} to ensure efficient batching")
+    elif chunk_size < min_batch_size:
+        # If specified chunk_size is too small, adjust it
+        logger.info(f"Increasing chunk_size from {chunk_size} to {min_batch_size} for efficient batching")
+        chunk_size = min_batch_size
     
     logger.info(f"Running parallel map with {max_workers} workers, chunk_size={chunk_size}")
     
-    # For process pools, we need a simpler approach - progress tracking with shared
-    # objects like multiprocessing.Value causes issues with serialization
-    if use_threads and not force_processes:
-        executor_class = ThreadPoolExecutor
+    # Determine which backend to use
+    if backend is None:
+        # Handle deprecated use_threads parameter for backward compatibility
+        if use_threads and not force_processes:
+            selected_backend = 'thread'
+        else:
+            selected_backend = get_optimal_backend(force_processes)
     else:
+        selected_backend = backend.lower()
+    
+    # Select executor class based on backend
+    if selected_backend == 'thread':
+        executor_class = ThreadPoolExecutor
+        logger.info(f"Using ThreadPoolExecutor for parallelization")
+    else:  # 'process' or any other value
         executor_class = ProcessPoolExecutor
         # Disable progress tracking for process pools to avoid serialization issues
-        progress_callback = None
-        logger.info(f"Using ProcessPoolExecutor for CPU-bound parallelization")
+        if progress_callback is not None:
+            logger.info(f"Progress tracking disabled for ProcessPoolExecutor to avoid serialization issues")
+            progress_callback = None
+        logger.info(f"Using ProcessPoolExecutor for parallelization")
     
     try:
         with executor_class(max_workers=max_workers) as executor:
-            # Use map with chunksize for better performance
-            results = list(executor.map(
-                func, 
-                items, 
-                chunksize=chunk_size,
-                timeout=timeout
-            ))
+            # Create a dictionary to track futures
+            future_to_index = {}
+            
+            # Submit all tasks
+            for i, item in enumerate(items):
+                future = executor.submit(func, item)
+                future_to_index[future] = i
+            
+            # Process results as they complete
+            results = [None] * len(items)  # Pre-allocate result list
+            completed = 0
+            
+            for future in as_completed(future_to_index.keys(), timeout=timeout):
+                index = future_to_index[future]
+                try:
+                    results[index] = future.result()
+                except Exception as e:
+                    logger.warning(f"Error in task {index}: {e}")
+                    # Handle individual task failure without failing the entire batch
+                    try:
+                        # Fall back to sequential for this item
+                        results[index] = func(items[index])
+                        logger.info(f"Successfully recovered task {index} with sequential processing")
+                    except Exception as e2:
+                        logger.error(f"Failed to recover task {index}: {e2}")
+                        # Return a default value or raise an exception
+                        results[index] = None  # Or some other default value
+                
+                completed += 1
+                if progress_callback:
+                    progress_callback(min(100, int(100 * completed / len(items))))
+            
+            # Check if any tasks are still None (timed out or failed)
+            for i, result in enumerate(results):
+                if result is None:
+                    logger.warning(f"Task {i} did not complete (timeout or error). Processing sequentially.")
+                    try:
+                        results[i] = func(items[i])
+                    except Exception as e:
+                        logger.error(f"Sequential processing for task {i} also failed: {e}")
+                        results[i] = None  # Or some other default value
             
         logger.info(f"Parallel map completed successfully with {len(results)} results")
         return results
@@ -118,6 +220,8 @@ def parallel_compute_ci(method_func: Callable,
                         tables: List[Tuple[int, int, int, int]],
                         alpha: float = 0.05,
                         timeout: Optional[float] = None,
+                        backend: Optional[str] = None,
+                        max_workers: Optional[int] = None,
                         **kwargs) -> List[Tuple[float, float]]:
     """
     Compute confidence intervals for multiple tables in parallel.
@@ -127,6 +231,8 @@ def parallel_compute_ci(method_func: Callable,
         tables: List of 2x2 tables as (a,b,c,d) tuples
         alpha: Significance level
         timeout: Maximum time to wait for completion in seconds
+        backend: Backend to use ('thread', 'process', or None for auto-detection)
+        max_workers: Maximum number of workers (default: auto-determined)
         **kwargs: Additional arguments to pass to the method function
         
     Returns:
@@ -136,10 +242,35 @@ def parallel_compute_ci(method_func: Callable,
         Error Handling: If computation fails for any individual table, a
         conservative interval (0.0, inf) is returned for that table to
         ensure the function completes successfully.
+        
+        Backend Selection: For methods that use Numba-accelerated functions
+        (like Blaker's method), the 'thread' backend may be more efficient.
+        If not specified, the backend is auto-detected based on the method.
     """
+    # Check if the method uses Numba
+    method_has_numba = False
+    if method_func.__name__ == 'exact_ci_blaker':
+        # Blaker's method uses Numba if available
+        try:
+            from exactcis.utils.jit_functions import HAS_NUMBA
+            method_has_numba = HAS_NUMBA
+        except ImportError:
+            pass
+    
+    # Auto-select backend if not specified
+    if backend is None and method_has_numba:
+        backend = 'thread'
+        logger.info(f"Auto-selected 'thread' backend for Numba-accelerated method: {method_func.__name__}")
+    
     # Use a module-level function to avoid pickle issues
     task_data = [(table, method_func.__name__, alpha, kwargs) for table in tables]
-    return parallel_map(_process_ci_task, task_data, timeout=timeout)
+    return parallel_map(
+        _process_ci_task, 
+        task_data, 
+        backend=backend,
+        timeout=timeout,
+        max_workers=max_workers
+    )
 
 
 def _process_ci_task(task_data):

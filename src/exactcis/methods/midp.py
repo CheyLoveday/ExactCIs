@@ -9,6 +9,7 @@ import math
 import logging
 from typing import Tuple, List, Optional, Dict, Any, Callable
 import numpy as np
+from functools import lru_cache
 
 from exactcis.core import (
     validate_counts,
@@ -24,16 +25,14 @@ logger = logging.getLogger(__name__)
 
 # Try to import parallel utilities
 try:
-    from ..utils.parallel import parallel_map, get_optimal_workers
+    from ..utils.parallel import parallel_map, get_optimal_workers, parallel_compute_ci
     has_parallel_support = True
 except ImportError:
     has_parallel_support = False
     logger.info("Parallel processing not available for Mid-P method")
 
-# Cache for previously computed values
-_cache: Dict[Tuple[int, int, int, int, float], Tuple[float, float]] = {}
 
-
+@lru_cache(maxsize=4096)
 def exact_ci_midp(a: int, b: int, c: int, d: int,
                   alpha: float = 0.05, 
                   progress_callback: Optional[Callable] = None) -> Tuple[float, float]:
@@ -56,12 +55,6 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     """
-    # Check cache first
-    cache_key = (a, b, c, d, alpha)
-    if cache_key in _cache:
-        logger.info(f"Using cached CI values for: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")
-        return _cache[cache_key]
-    
     validate_counts(a, b, c, d)
     
     if not 0 < alpha < 1:
@@ -291,9 +284,7 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     
     logger.info(f"Mid-P CI result for original counts ({a_orig},{b_orig},{c_orig},{d_orig}): ({low:.6f}, {high if high != float('inf') else 'inf'})")
     
-    result = (low, high)
-    _cache[cache_key] = result
-    return result
+    return (low, high)
 
 
 def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]], 
@@ -353,25 +344,33 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
     
     max_workers = min(max_workers, len(tables))  # Don't use more workers than tables
     
+    # Initialize shared cache for parallel processing
+    try:
+        from ..utils.shared_cache import init_shared_cache_for_parallel
+        cache = init_shared_cache_for_parallel()
+        logger.info("Initialized shared cache for parallel processing")
+    except ImportError:
+        logger.warning("Shared cache not available, performance may be reduced")
+    
     logger.info(f"Processing {len(tables)} tables with Mid-P method using {max_workers} workers")
     
-    # Create worker function that handles errors gracefully
-    def process_single_table(table_data):
-        a, b, c, d = table_data
-        try:
-            return exact_ci_midp(a, b, c, d, alpha)
-        except Exception as e:
-            logger.warning(f"Error processing table ({a},{b},{c},{d}): {e}")
-            return (0.0, float('inf'))  # Conservative fallback
-    
-    # Process tables in parallel
-    results = parallel_map(
-        process_single_table,
+    # Use parallel_compute_ci for better performance and error handling
+    results = parallel_compute_ci(
+        exact_ci_midp,
         tables,
-        max_workers=max_workers,
-        force_processes=True,  # CPU-bound task
-        progress_callback=progress_callback
+        alpha=alpha,
+        timeout=None,  # No timeout for batch processing
+        max_workers=max_workers
     )
+    
+    # Report cache statistics if available
+    try:
+        from ..utils.shared_cache import get_shared_cache
+        cache = get_shared_cache()
+        stats = cache.get_stats()
+        logger.info(f"Cache statistics: {stats['hit_rate_percent']:.1f}% hit rate ({stats['hits']}/{stats['total_lookups']} lookups)")
+    except (ImportError, AttributeError):
+        pass
     
     logger.info(f"Completed batch processing of {len(tables)} tables with Mid-P method")
     return results
