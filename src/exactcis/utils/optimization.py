@@ -53,7 +53,8 @@ class CICache:
         
         if result is not None:
             self.cache_hits += 1
-            logger.debug(f"Cache hit for {key}, hit rate: {self.cache_hits}/{self.total_lookups} = {self.cache_hits/self.total_lookups:.2%}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Cache hit for {key}, hit rate: {self.cache_hits}/{self.total_lookups} = {self.cache_hits/self.total_lookups:.2%}")
         
         return result
     
@@ -108,7 +109,8 @@ class CICache:
         
         if result:
             self.similar_hits += 1
-            logger.debug(f"Similar pattern found for ({a},{b},{c},{d}), pattern hits: {self.similar_hits}/{self.total_lookups}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Similar pattern found for ({a},{b},{c},{d}), pattern hits: {self.similar_hits}/{self.total_lookups}")
         
         return result
     

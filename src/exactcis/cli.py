@@ -381,7 +381,8 @@ def process_batch_tables(tables: List[Dict[str, Any]], method: str, alpha: float
                 'width': None
             })
             logger.warning(f"Error processing table {table_id}: {e}")
-            logger.debug(f"Full traceback for table {table_id}:\n{traceback.format_exc()}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Full traceback for table {table_id}:\n{traceback.format_exc()}")
             
         return result
     

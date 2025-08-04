@@ -14,6 +14,10 @@ from functools import lru_cache
 from exactcis.core import validate_counts, find_sign_change
 from exactcis.utils.shared_cache import cached_cdf_function, cached_sf_function
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Try to import parallel utilities
 try:
     from ..utils.parallel import parallel_compute_ci
@@ -21,10 +25,6 @@ try:
 except ImportError:
     has_parallel_support = False
     logger.info("Parallel processing not available for conditional method")
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # Shared cache functions for inter-process performance optimization
 @cached_cdf_function
@@ -136,7 +136,8 @@ def _expand_bracket_vectorized(p_value_func, initial_lo, initial_hi, target_sign
     
     except Exception as e:
         # On any error, fall back to the original bounds
-        logger.debug(f"Vectorized bracket expansion failed: {str(e)}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Vectorized bracket expansion failed: {str(e)}")
         return initial_lo, initial_hi
 
 
@@ -343,7 +344,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             
             # Use brentq to find the root with higher precision for better results
             result = max(0.0, brentq(p_value_func, improved_lo, improved_hi, rtol=1e-12, maxiter=200, full_output=False))
-            logger.debug(f"Found lower bound using brentq: {result}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Found lower bound using brentq: {result}")
             return result
         except (ValueError, RuntimeError) as e:
             logger.error(f"Root finding failed for lower bound: {str(e)}")
@@ -352,7 +354,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
                 # Fall back to bisection method which is more robust but slower
                 from scipy.optimize import bisect
                 result = max(0.0, bisect(p_value_func, lo, hi, rtol=1e-10, maxiter=200))
-                logger.debug(f"Found lower bound using bisect: {result}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Found lower bound using bisect: {result}")
                 return result
             except Exception as e2:
                 logger.error(f"Secondary root finding failed: {str(e2)}")
@@ -360,7 +363,8 @@ def fisher_lower_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # If we don't have proper bracket, but we have an OR > 0
     if or_point > 0:
         result = max(0.0, or_point / 5.0)  # More conservative estimate based on point OR
-        logger.debug(f"Using conservative lower bound estimate: {result}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Using conservative lower bound estimate: {result}")
         return result
     else:
         return 0.0
@@ -437,7 +441,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
         
         # If we still don't have proper bracket, use conservative fallbacks
         if lo_val <= 0:
-            logger.debug(f"Upper bound extremely small for table ({a},{b},{c},{d})")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Upper bound extremely small for table ({a},{b},{c},{d})")
             return or_point * 3.0  # More conservative estimate
             
         if hi_val >= 0:
@@ -456,7 +461,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
             
             # Use brentq to find the root with higher precision
             result = brentq(p_value_func, improved_lo, improved_hi, rtol=1e-12, maxiter=200, full_output=False)
-            logger.debug(f"Found upper bound using brentq: {result}")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Found upper bound using brentq: {result}")
             return max(1.0, result)  # Ensure result is at least 1.0
         except (ValueError, RuntimeError) as e:
             logger.error(f"Root finding failed for upper bound: {str(e)}")
@@ -465,7 +471,8 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
                 # Fall back to bisection method which is more robust but slower
                 from scipy.optimize import bisect
                 result = bisect(p_value_func, lo, hi, rtol=1e-10, maxiter=200)
-                logger.debug(f"Found upper bound using bisect: {result}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Found upper bound using bisect: {result}")
                 return max(1.0, result)  # Ensure result is at least 1.0
             except Exception as e2:
                 logger.error(f"Secondary root finding failed: {str(e2)}")
@@ -473,12 +480,14 @@ def fisher_upper_bound(a, b, c, d, min_k, max_k, N, r1, c1, alpha):
     # If bracket has wrong signs, use conservative estimate
     if or_point < 1.0:
         result = max(1.0, or_point * 10.0)  # For small OR, upper bound is moderate
-        logger.debug(f"Using conservative upper bound estimate for small OR: {result}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Using conservative upper bound estimate for small OR: {result}")
         return result
     else:
         # For large OR, use a very large upper bound
         result = max(1000.0, or_point * 100.0)
-        logger.debug(f"Using conservative upper bound estimate for large OR: {result}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Using conservative upper bound estimate for large OR: {result}")
         return result
 
 

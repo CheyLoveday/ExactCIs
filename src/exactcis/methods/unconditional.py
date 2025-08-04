@@ -326,7 +326,8 @@ def _process_grid_point(args):
 
         except Exception as e:
             # Fallback to pure Python if NumPy fails
-            logger.debug(f"NumPy version in _process_grid_point failed: {e}, falling back to pure Python.")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"NumPy version in _process_grid_point failed: {e}, falling back to pure Python.")
             pass
     
     # Pure Python implementation

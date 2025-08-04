@@ -725,7 +725,8 @@ def find_sign_change(f: Callable[[float], float], lo: float, hi: float,
         return None
 
     if np.sign(f_lo) == np.sign(f_hi):
-        logger.debug(f"find_sign_change: No sign change in interval [{lo}, {hi}]. f(lo)={f_lo}, f(hi)={f_hi}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"find_sign_change: No sign change in interval [{lo}, {hi}]. f(lo)={f_lo}, f(hi)={f_hi}")
         return None
     
     if abs(f_lo) < tol: return lo
@@ -762,7 +763,8 @@ def find_sign_change(f: Callable[[float], float], lo: float, hi: float,
         if (hi - lo) < tol * abs(hi + lo) or (hi - lo) < min_interval_size: # Relative and absolute tolerance
             return (lo + hi) / 2.0
             
-    logger.debug(f"find_sign_change: Max iterations reached. Returning best guess: {(lo + hi) / 2.0}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"find_sign_change: Max iterations reached. Returning best guess: {(lo + hi) / 2.0}")
     return (lo + hi) / 2.0 # Return best estimate if max_iter reached
 
 
