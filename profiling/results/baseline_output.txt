@@ -1,0 +1,81 @@
+Bracket Expansion Benchmark - Baseline
+=====================================
+
+Benchmarking medium_balanced table: (10, 15, 12, 18)
+  Run 1: 7.09ms, Result: (0.29420789105730777, 2.488835148652099)
+  Run 2: 7.38ms, Result: (0.29420789105730777, 2.488835148652099)
+  Run 3: 7.01ms, Result: (0.29420789105730777, 2.488835148652099)
+  Run 4: 6.91ms, Result: (0.29420789105730777, 2.488835148652099)
+  Run 5: 6.80ms, Result: (0.29420789105730777, 2.488835148652099)
+  Average time: 7.04ms
+  Min time: 6.80ms
+  Max time: 7.38ms
+  Std deviation: 0.22ms
+
+Benchmarking large_balanced table: (50, 75, 60, 90)
+  Run 1: 7.20ms, Result: (0.5980060266253221, 1.5713690565196878)
+  Run 2: 7.19ms, Result: (0.5980060266253221, 1.5713690565196878)
+  Run 3: 6.72ms, Result: (0.5980060266253221, 1.5713690565196878)
+  Run 4: 7.03ms, Result: (0.5980060266253221, 1.5713690565196878)
+  Run 5: 7.10ms, Result: (0.5980060266253221, 1.5713690565196878)
+  Average time: 7.05ms
+  Min time: 6.72ms
+  Max time: 7.20ms
+  Std deviation: 0.20ms
+
+Benchmarking very_large table: (100, 200, 150, 300)
+  Run 1: 9.18ms, Result: (0.7239973188967688, 1.3449540773270283)
+  Run 2: 9.86ms, Result: (0.7239973188967688, 1.3449540773270283)
+  Run 3: 8.88ms, Result: (0.7239973188967688, 1.3449540773270283)
+  Run 4: 9.16ms, Result: (0.7239973188967688, 1.3449540773270283)
+  Run 5: 9.02ms, Result: (0.7239973188967688, 1.3449540773270283)
+  Average time: 9.22ms
+  Min time: 8.88ms
+  Max time: 9.86ms
+  Std deviation: 0.38ms
+
+Benchmarking extreme_imbalanced table: (1, 20, 2, 40)
+  Run 1: 4.66ms, Result: (0.016152437398776306, 4.854184117677018)
+  Run 2: 4.87ms, Result: (0.016152437398776306, 4.854184117677018)
+  Run 3: 4.35ms, Result: (0.016152437398776306, 4.854184117677018)
+  Run 4: 3.77ms, Result: (0.016152437398776306, 4.854184117677018)
+  Run 5: 3.83ms, Result: (0.016152437398776306, 4.854184117677018)
+  Average time: 4.29ms
+  Min time: 3.77ms
+  Max time: 4.87ms
+  Std deviation: 0.49ms
+
+Benchmarking reverse_imbalanced table: (30, 5, 40, 2)
+  Run 1: 8.45ms, Result: (0.027245309235009993, 1.0769612438568166)
+  Run 2: 7.29ms, Result: (0.027245309235009993, 1.0769612438568166)
+  Run 3: 7.22ms, Result: (0.027245309235009993, 1.0769612438568166)
+  Run 4: 7.75ms, Result: (0.027245309235009993, 1.0769612438568166)
+  Run 5: 7.26ms, Result: (0.027245309235009993, 1.0769612438568166)
+  Average time: 7.59ms
+  Min time: 7.22ms
+  Max time: 8.45ms
+  Std deviation: 0.52ms
+
+Benchmarking sparse_case table: (1, 1, 20, 20)
+  Run 1: 5.29ms, Result: (0.012139833374601233, 5.282653472281579)
+  Run 2: 5.00ms, Result: (0.012139833374601233, 5.282653472281579)
+  Run 3: 4.83ms, Result: (0.012139833374601233, 5.282653472281579)
+  Run 4: 5.18ms, Result: (0.012139833374601233, 5.282653472281579)
+  Run 5: 5.05ms, Result: (0.012139833374601233, 5.282653472281579)
+  Average time: 5.07ms
+  Min time: 4.83ms
+  Max time: 5.29ms
+  Std deviation: 0.17ms
+
+Performance Summary:
+===================
+Table Type           Avg Time (ms)   Min Time (ms)   Max Time (ms)  
+----------------------------------------------------------------------
+medium_balanced      7.04            6.80            7.38           
+large_balanced       7.05            6.72            7.20           
+very_large           9.22            8.88            9.86           
+extreme_imbalanced   4.29            3.77            4.87           
+reverse_imbalanced   7.59            7.22            8.45           
+sparse_case          5.07            4.83            5.29           
+
+Baseline benchmark complete. This data will be used to compare with vectorized implementation.
