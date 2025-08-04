@@ -11,7 +11,6 @@ import numpy as np
 from scipy.stats import nchypergeom_fisher
 from scipy.optimize import brentq
 from functools import lru_cache
-import hashlib
 
 from exactcis.core import (
     validate_counts,
@@ -41,21 +40,21 @@ class BlakerPMFCache:
     """High-performance cache for Blaker PMF calculations with LRU eviction."""
     
     def __init__(self, max_size: int = 1024):
-        self.cache: Dict[str, np.ndarray] = {}
+        self.cache: Dict[tuple, np.ndarray] = {}
         self.max_size = max_size
-        self.access_count: Dict[str, int] = {}
+        self.access_count: Dict[tuple, int] = {}
         
     def _generate_cache_key(self, n1: int, n2: int, m1: int, 
-                          theta: float, support_hash: str) -> str:
+                          theta: float, support_tuple: tuple) -> tuple:
         """Generate stable cache key for PMF parameters."""
         theta_rounded = round(theta, 12)  # Avoid floating point precision issues
-        return f"{n1}_{n2}_{m1}_{theta_rounded}_{support_hash}"
+        return (n1, n2, m1, theta_rounded, support_tuple)
     
     def get_pmf_values(self, n1: int, n2: int, m1: int, 
                       theta: float, support_x: np.ndarray) -> np.ndarray:
         """Get cached PMF values or calculate if not cached."""
-        support_hash = hashlib.md5(support_x.tobytes()).hexdigest()[:8]
-        cache_key = self._generate_cache_key(n1, n2, m1, theta, support_hash)
+        support_tuple = tuple(support_x)
+        cache_key = self._generate_cache_key(n1, n2, m1, theta, support_tuple)
         
         if cache_key in self.cache:
             self.access_count[cache_key] += 1
@@ -104,18 +103,20 @@ def blaker_acceptability(n1: int, n2: int, m1: int, theta: float, support_x: np.
     """
     # DEBUG LOGGING FOR SPECIFIC CASE
     if n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6:
-        logger.info(f"[DEBUG_ACCEPTABILITY] n1=5,n2=10,m1=7,theta={theta:.2e}, support_x={support_x}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_ACCEPTABILITY] n1=5,n2=10,m1=7,theta={theta:.2e}, support_x={support_x}")
     
     # Get PMF values from cache or calculate
     probs = _blaker_cache.get_pmf_values(n1, n2, m1, theta, support_x)
 
     if n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6:
-        logger.info(f"[DEBUG_ACCEPTABILITY] Probs from nchg_pdf: {probs}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_ACCEPTABILITY] Probs from nchg_pdf: {probs}")
     
     return probs
 
 
-def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportData) -> float:
+def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportData, skip_validation: bool = False) -> float:
     """
     Calculates Blaker's p-value for a given theta, for observed count 'a'.
     s: SupportData object containing s.x (support array), s.min_val, s.max_val, and s.offset.
@@ -128,15 +129,16 @@ def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportDa
     # DEBUG LOGGING FOR SPECIFIC CASE
     is_debug_case = (a == 5 and n1 == 5 and n2 == 10 and m1 == 7 and theta > 1e6)
     if is_debug_case:
-        logger.info(f"[DEBUG_PVAL] For a=5,n1=5,n2=10,m1=7,theta={theta:.2e}")
-        logger.info(f"[DEBUG_PVAL] support s.x={s.x}, s.min_val={s.min_val}, s.offset={s.offset}")
-        logger.info(f"[DEBUG_PVAL] accept_probs_all_k = {accept_probs_all_k}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_PVAL] For a=5,n1=5,n2=10,m1=7,theta={theta:.2e}")
+            logger.info(f"[DEBUG_PVAL] support s.x={s.x}, s.min_val={s.min_val}, s.offset={s.offset}")
+            logger.info(f"[DEBUG_PVAL] accept_probs_all_k = {accept_probs_all_k}")
 
     # 2. Get the acceptability probability for the observed 'a'
     idx_a = s.offset + a
     
-    # This check is a safeguard. The primary validation should happen in the calling function.
-    if not (0 <= idx_a < len(accept_probs_all_k)):
+    # This check is a safeguard when validation is not skipped
+    if not skip_validation and not (0 <= idx_a < len(accept_probs_all_k)):
         logger.error(f"Blaker p-value: Calculated index for 'a' ({idx_a}) is out of bounds. This should have been caught by earlier validation. a={a}, s.min_val={s.min_val}, s.max_val={s.max_val}")
         # Return a p-value that will not incorrectly satisfy the root-finder
         return 1.0
@@ -144,7 +146,8 @@ def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportDa
     current_accept_prob_at_a = accept_probs_all_k[idx_a]
     
     if is_debug_case:
-        logger.info(f"[DEBUG_PVAL] idx_a = {idx_a}, current_accept_prob_at_a = {current_accept_prob_at_a}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_PVAL] idx_a = {idx_a}, current_accept_prob_at_a = {current_accept_prob_at_a}")
 
     # 3. Sum probabilities for k where P(k|theta) <= P(a|theta) * (1 + epsilon)
     # Epsilon is a small tolerance factor for floating point comparisons, as per Blaker (2000) and R's exact2x2.
@@ -152,15 +155,83 @@ def blaker_p_value(a: int, n1: int, n2: int, m1: int, theta: float, s: SupportDa
     
     # Vectorized comparison - much faster than loop
     mask = accept_probs_all_k <= current_accept_prob_at_a * (1 + epsilon)
+    
+    # Vectorized comparison - much faster than loop
     p_val = np.sum(accept_probs_all_k[mask])
     
     if is_debug_case:
-        logger.info(f"[DEBUG_PVAL] p_val_terms = {accept_probs_all_k[mask]}")
-        logger.info(f"[DEBUG_PVAL] Final p_val = {p_val}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"[DEBUG_PVAL] p_val_terms = {accept_probs_all_k[mask]}")
+            logger.info(f"[DEBUG_PVAL] Final p_val = {p_val}")
 
     return p_val
 
 
+
+
+def _find_better_bracket(p_value_func, target_alpha: float, lo: float, hi: float, increasing: bool = True) -> Tuple[float, float]:
+    """
+    Use 3-point evaluation to find better brackets for root finding.
+    
+    Args:
+        p_value_func: Function that returns p-value given theta
+        target_alpha: Target p-value we're searching for
+        lo: Lower bound of search range
+        hi: Upper bound of search range  
+        increasing: Whether p-value function is increasing with theta
+        
+    Returns:
+        Tuple of (improved_lo, improved_hi) bounds
+    """
+    try:
+        # Evaluate at 3 strategic points
+        if increasing:
+            # For increasing functions, check points closer to where we expect the root
+            mid = np.sqrt(lo * hi)  # Geometric mean for log-scale spacing
+            test_points = [lo + 0.1 * (mid - lo), mid, hi - 0.1 * (hi - mid)]
+        else:
+            # For decreasing functions, similar but different strategy
+            mid = np.sqrt(lo * hi)
+            test_points = [lo + 0.1 * (mid - lo), mid, hi - 0.1 * (hi - mid)]
+        
+        # Evaluate p-values at test points
+        p_values = []
+        for theta in test_points:
+            try:
+                p_val = p_value_func(theta)
+                p_values.append(p_val)
+            except:
+                p_values.append(None)
+        
+        # Find the best bracketing based on which points are above/below target
+        valid_points = [(theta, p_val) for theta, p_val in zip(test_points, p_values) if p_val is not None]
+        
+        if len(valid_points) >= 2:
+            # Find points that bracket the target
+            if increasing:
+                below_target = [(theta, p_val) for theta, p_val in valid_points if p_val < target_alpha]
+                above_target = [(theta, p_val) for theta, p_val in valid_points if p_val > target_alpha]
+                
+                if below_target and above_target:
+                    # Use the best bracketing points
+                    new_lo = max(theta for theta, _ in below_target)
+                    new_hi = min(theta for theta, _ in above_target)
+                    return max(lo, new_lo * 0.9), min(hi, new_hi * 1.1)  # Small safety margin
+            else:
+                above_target = [(theta, p_val) for theta, p_val in valid_points if p_val > target_alpha]
+                below_target = [(theta, p_val) for theta, p_val in valid_points if p_val < target_alpha]
+                
+                if above_target and below_target:
+                    # For decreasing function, logic is reversed
+                    new_lo = max(theta for theta, _ in below_target)
+                    new_hi = min(theta for theta, _ in above_target)
+                    return max(lo, new_lo * 0.9), min(hi, new_hi * 1.1)
+                    
+    except Exception:
+        # If pre-bracketing fails, return original bounds
+        pass
+    
+    return lo, hi
 
 
 def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[float, float]:
@@ -199,6 +270,11 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
         # Guard against impossible 'a' for the given marginals
         if not (kmin <= a <= kmax):
             raise ValueError(f"Count 'a' ({a}) is outside the valid support range [{kmin}, {kmax}] for the given marginals.")
+        
+        # Pre-validate 'a' range for p-value calculations to skip repeated boundary checks
+        idx_a = s.offset + a
+        if not (0 <= idx_a < len(s.x)):
+            raise ValueError(f"Calculated index for 'a' ({idx_a}) is out of support bounds. a={a}, s.min_val={s.min_val}, s.max_val={s.max_val}")
 
         # Initialize raw_theta_low and raw_theta_high for cases where search might fail
         raw_theta_low = 0.0 
@@ -210,16 +286,21 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
         # Ensure hi > lo for the search
         if hi_search_lower <= lo_search_lower: hi_search_lower = 1e7
 
-        # Lower bound calculation
-        blaker_p_value_lower = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s)
+        # Lower bound calculation (skip validation since we pre-validated above)
+        blaker_p_value_lower = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, skip_validation=True)
         logger.info(f"Blaker exact_ci_blaker: Finding lower bound. Target p-value for search: {alpha/2.0:.4f}")
         
         if a > kmin:
+            # Use 3-point pre-bracketing to improve root finding efficiency
+            improved_lo, improved_hi = _find_better_bracket(
+                blaker_p_value_lower, alpha / 2.0, lo_search_lower, hi_search_lower, increasing=False
+            )
+            
             candidate_raw_theta_low = find_smallest_theta(
                 func=blaker_p_value_lower, 
                 alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
-                lo=lo_search_lower, 
-                hi=hi_search_lower, 
+                lo=improved_lo, 
+                hi=improved_hi, 
                 increasing=False
             )
             if candidate_raw_theta_low is not None:
@@ -231,8 +312,8 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
             logger.info(f"Blaker exact_ci_blaker: a ({a}) == kmin ({kmin}). Lower bound is 0.")
             raw_theta_low = 0.0
 
-        # Upper bound calculation
-        blaker_p_value_upper = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s)
+        # Upper bound calculation (skip validation since we pre-validated above)
+        blaker_p_value_upper = lambda theta_val: blaker_p_value(a, n1, n2, m1, theta_val, s, skip_validation=True)
         logger.info(f"Blaker exact_ci_blaker: Finding upper bound. Target p-value for search: {alpha/2.0:.4f}")
 
         # Determine search range for upper bound based on OR estimate
@@ -242,11 +323,16 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
         if lo_search_upper >= hi_search_upper: lo_search_upper = 1e-9
 
         if a < kmax:
+            # Use 3-point pre-bracketing to improve root finding efficiency
+            improved_lo, improved_hi = _find_better_bracket(
+                blaker_p_value_upper, alpha / 2.0, lo_search_upper, hi_search_upper, increasing=True
+            )
+            
             candidate_raw_theta_high = find_smallest_theta(
                 func=blaker_p_value_upper, 
                 alpha=alpha / 2.0,  # Divide alpha by 2 as in original implementation
-                lo=lo_search_upper, 
-                hi=hi_search_upper, 
+                lo=improved_lo, 
+                hi=improved_hi, 
                 increasing=True
             )
             if candidate_raw_theta_high is not None:
