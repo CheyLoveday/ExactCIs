@@ -3,89 +3,43 @@ API Reference
 
 This section provides detailed documentation for the ExactCIs package API.
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   api/index
+
 Core Module
 -----------
 
-.. automodule:: exactcis.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
+The core module provides the fundamental functionality for calculating confidence intervals.
+
+:doc:`api/core`
 
 Methods
 -------
 
-Blaker's Method
-~~~~~~~~~~~~~~
+ExactCIs implements various methods for calculating confidence intervals:
 
-.. automodule:: exactcis.methods.blaker
-   :members:
-   :undoc-members:
-   :show-inheritance:
+* :doc:`api/methods/blaker` - Blaker's confidence interval method
+* :doc:`api/methods/conditional` - Conditional (Fisher's exact) confidence intervals
+* :doc:`api/methods/midp` - Mid-P confidence intervals
+* :doc:`api/methods/unconditional` - Unconditional exact confidence intervals
+* :doc:`api/methods/wald` - Wald confidence intervals
 
-Conditional Method
-~~~~~~~~~~~~~~~~
+Utilities
+---------
 
-.. automodule:: exactcis.methods.conditional
-   :members:
-   :undoc-members:
-   :show-inheritance:
+The utilities modules provide supporting functionality:
 
-Mid-P Method
-~~~~~~~~~~~
-
-.. automodule:: exactcis.methods.midp
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Unconditional Method
-~~~~~~~~~~~~~~~~~~
-
-.. automodule:: exactcis.methods.unconditional
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Wald Method
-~~~~~~~~~~
-
-.. automodule:: exactcis.methods.wald
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Utils
------
-
-Statistics
-~~~~~~~~~
-
-.. automodule:: exactcis.utils.stats
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Optimization
-~~~~~~~~~~~
-
-.. automodule:: exactcis.utils.optimization
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Parallel Processing
-~~~~~~~~~~~~~~~~~
-
-.. automodule:: exactcis.utils.parallel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+* :doc:`api/utils/parallel` - Parallel processing utilities
+* :doc:`api/utils/shared_cache` - Shared inter-process cache implementation
+* :doc:`api/utils/stats` - Statistical utility functions
+* :doc:`api/utils/optimization` - Optimization algorithms
 
 Command Line Interface
 --------------------
 
-.. automodule:: exactcis.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
+ExactCIs provides a command-line interface for quick calculations:
+
+:doc:`api/cli`

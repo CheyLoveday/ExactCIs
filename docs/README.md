@@ -6,33 +6,66 @@ ExactCIs is a Python package for calculating exact confidence intervals for 2×2
 
 This documentation provides comprehensive information about the package, its methodology, and guidance on when to use different approaches.
 
-## Contents
+## Documentation Structure
 
-1. [Introduction](#introduction)
-2. [Installation](#installation)
-3. [Quick Start](#quick-start)
-4. [Core Documentation](#core-documentation)
-   - [API Reference](api_reference.md)
-   - [Methodology](methodology.md)
-   - [Method Comparison Guide](method_comparison.md)
-5. [Examples & Tutorials](#examples--tutorials)
-   - [Basic Usage](examples/basic_usage.md)
-   - [Working with Rare Events](examples/rare_events.md)
-   - [Method Selection Guide](examples/method_selection.md)
-6. [Performance Considerations](performance.md)
-7. [References & Citations](references.md)
+The documentation is organized using Sphinx, a popular documentation generator for Python projects. The structure follows standard Python documentation practices:
 
-## Introduction
-
-ExactCIs implements multiple methods for calculating confidence intervals for odds ratios and relative risks in 2×2 contingency tables, with a primary focus on Barnard's unconditional exact test. This method is particularly valuable for small sample sizes, sparse tables, and situations where the most conservative (but statistically valid) inference is required.
-
-The package offers both the standard implementation and an improved implementation with enhanced performance characteristics through adaptive search strategies and caching.
-
-## Installation
-
-```bash
-pip install exactcis
 ```
+docs/
+├── Makefile                  # Build script for Sphinx
+├── build/                    # Built documentation (output)
+├── source/                   # Source files for Sphinx
+│   ├── _static/              # Static files (CSS, images, etc.)
+│   ├── _templates/           # Custom Sphinx templates
+│   ├── api/                  # API reference documentation
+│   │   ├── core.rst          # Core module API
+│   │   ├── methods/          # Methods API documentation
+│   │   └── utils/            # Utils API documentation
+│   ├── user_guide/           # User guide documentation
+│   ├── development/          # Development documentation
+│   ├── conf.py               # Sphinx configuration
+│   └── index.rst             # Main index file
+└── README.md                 # This file
+```
+
+## Building the Documentation
+
+To build the documentation:
+
+1. Install the required dependencies:
+   ```bash
+   pip install sphinx sphinx_rtd_theme m2r2
+   ```
+
+2. Build the HTML documentation:
+   ```bash
+   cd docs
+   make html
+   ```
+
+3. The built documentation will be available in `docs/build/html/index.html`.
+
+## Contributing to the Documentation
+
+When contributing to the documentation, please follow these guidelines:
+
+1. **API Documentation**: API documentation is automatically generated from docstrings. Update the docstrings in the source code rather than editing the RST files directly.
+
+2. **User Guide**: The user guide is written in reStructuredText (.rst) format. Edit the files in `docs/source/user_guide/`.
+
+3. **Development Documentation**: Documentation for developers is in `docs/source/development/`.
+
+4. **Examples**: Add examples to `docs/source/user_guide/examples/`.
+
+5. **Images**: Place images in `docs/source/_static/images/`.
+
+## Documentation Standards
+
+- Use NumPy-style docstrings in the source code.
+- Write clear, concise documentation with examples.
+- Include mathematical formulas using LaTeX syntax where appropriate.
+- Cross-reference related documentation using Sphinx's cross-referencing syntax.
+- Test code examples to ensure they work as expected.
 
 ## Quick Start
 
@@ -49,22 +82,13 @@ lower, upper = exact_ci_unconditional(7, 3, 2, 8, alpha=0.05)
 print(f"95% CI for odds ratio: ({lower:.6f}, {upper:.6f})")
 ```
 
-## Core Documentation
+## Documentation Sections
 
-- **[API Reference](api_reference.md)**: Detailed documentation of all functions, classes, and parameters.
-- **[Methodology](methodology.md)**: Mathematical foundations and algorithmic details of implemented methods.
-- **[Method Comparison Guide](method_comparison.md)**: Comprehensive comparison of different confidence interval methods and when to use each.
-
-## Examples & Tutorials
-
-- **[Basic Usage](examples/basic_usage.md)**: Step-by-step guide to common use cases.
-- **[Working with Rare Events](examples/rare_events.md)**: Special considerations for tables with rare events.
-- **[Method Selection Guide](examples/method_selection.md)**: Decision tree for selecting the appropriate method.
-
-## Performance Considerations
-
-See [Performance Considerations](performance.md) for detailed information on optimizing computation time and memory usage.
+- **API Reference**: Detailed documentation of all functions, classes, and parameters.
+- **User Guide**: Step-by-step guides for using ExactCIs.
+- **Development**: Information for developers contributing to ExactCIs.
+- **Examples**: Practical examples demonstrating ExactCIs usage.
 
 ## References & Citations
 
-See [References & Citations](references.md) for academic references and how to cite this package.
+See the References section in the built documentation for academic references and how to cite this package.
