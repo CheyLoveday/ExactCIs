@@ -450,4 +450,6 @@ def find_root_log_impl_functional(
     )
     
     result = find_root_log_functional(f, config, progress_callback, timeout_checker)
+    # Return None instead of raising RuntimeError when result.value is None
+    # This handles timeout cases and bracketing failures gracefully
     return result.value

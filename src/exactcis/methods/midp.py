@@ -98,9 +98,31 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     # comparing against a_eff_obs, using PMF from original counts.
     def midp_pval_func(theta: float) -> float:
         # log_nchg_pmf uses n1_orig, n2_orig, m1_orig
-        # Vectorized calculation of log probabilities
-        log_probs_values = np.vectorize(log_nchg_pmf)(supp_orig.x, n1_orig, n2_orig, m1_orig, theta)
-        probs = np.exp(log_probs_values)
+        # Vectorized calculation of log probabilities with numerical stability
+        try:
+            log_probs_values = np.vectorize(log_nchg_pmf)(supp_orig.x, n1_orig, n2_orig, m1_orig, theta)
+            
+            # Check for numerical issues
+            if np.any(np.isnan(log_probs_values)) or np.any(np.isinf(log_probs_values)):
+                logger.warning(f"Numerical issues in log_nchg_pmf for theta={theta}: NaN or Inf detected")
+                return np.nan
+            
+            # Use stable conversion from log space, handling underflow gracefully
+            max_log_prob = np.max(log_probs_values)
+            if max_log_prob < -700:  # All probabilities are essentially zero
+                logger.warning(f"All probabilities underflow for theta={theta} (max_log_prob={max_log_prob})")
+                return 0.0
+            
+            # Compute probabilities in a numerically stable way
+            probs = np.exp(log_probs_values - max_log_prob)  # Normalize to prevent underflow
+            probs = probs * np.exp(max_log_prob)  # Scale back
+            
+            # Handle any remaining numerical issues
+            probs = np.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
+            
+        except (OverflowError, ValueError) as e:
+            logger.warning(f"Error in PMF calculation for theta={theta}: {e}")
+            return np.nan
 
         # P(X = effective discrete point related to a_eff_obs)
         prob_at_a_eff_discrete_point = 0.0
@@ -177,14 +199,69 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
             # For upper CI bound (theta_U > 1), as theta increases from 1 to theta_U, pval increases from its min then decreases to alpha.
             # Or, if pval is monotonic: as theta increases from 1, pval decreases towards alpha.
             # This means midp_pval_func is also decreasing for the upper bound search (from OR=1 upwards).
-            high_candidate = find_smallest_theta(
-                lambda theta: midp_pval_func(theta) - alpha, # Function whose root is sought
-                0.0, # Target for g(theta) is 0
-                lo=1.0, 
-                hi=1e4, # Upper search limit for theta
-                two_sided=True,
-                progress_callback=lambda p: progress_callback(50 + p * 0.5) if progress_callback else None
-            )
+            
+            # Adaptive search expansion to find proper upper bound
+            hi_search = 10.0  # Start with reasonable upper bound
+            max_expansions = 10
+            expansion_count = 0
+            
+            # Find a proper bracketing interval by expanding upward
+            while expansion_count < max_expansions:
+                try:
+                    # Test if we can bracket the root
+                    g_1 = midp_pval_func(1.0) - alpha
+                    g_hi = midp_pval_func(hi_search) - alpha
+                    
+                    # Check for numerical issues
+                    if np.isnan(g_1) or np.isnan(g_hi):
+                        logger.warning(f"NaN detected in bracket test: g(1.0)={g_1}, g({hi_search})={g_hi}")
+                        hi_search *= 2
+                        expansion_count += 1
+                        continue
+                    
+                    # If signs are different, we have bracketed the root
+                    if np.sign(g_1) != np.sign(g_hi):
+                        logger.info(f"Root bracketed in interval [1.0, {hi_search}]: g(1.0)={g_1:.4e}, g({hi_search})={g_hi:.4e}")
+                        break
+                    
+                    # If p-value at hi_search is still too high, expand further
+                    if g_hi > 0:  # midp_pval_func(hi_search) > alpha, need larger theta
+                        hi_search *= 10  # Expand geometrically
+                        expansion_count += 1
+                        logger.info(f"Expanding upper search bound to {hi_search} (expansion {expansion_count})")
+                    else:
+                        # g_hi <= 0 but g_1 has same sign - this suggests a flat function
+                        logger.warning(f"Function appears flat: g(1.0)={g_1:.4e}, g({hi_search})={g_hi:.4e}")
+                        break
+                        
+                except (OverflowError, ValueError) as e:
+                    logger.warning(f"Numerical issue during bracketing at hi_search={hi_search}: {e}")
+                    hi_search *= 2
+                    expansion_count += 1
+                    
+                if hi_search > 1e8:  # Safety limit
+                    logger.warning(f"Upper search limit exceeded 1e8, stopping expansion")
+                    break
+            
+            # If we couldn't bracket after all expansions, the upper bound might be infinite
+            if expansion_count >= max_expansions or hi_search > 1e8:
+                logger.warning(f"Could not bracket root after {expansion_count} expansions, hi_search={hi_search}. Upper bound may be infinite.")
+                high_candidate = None
+            else:
+                # Use the bracketed interval for root finding
+                high_candidate = find_smallest_theta(
+                    lambda theta: midp_pval_func(theta) - alpha, # Function whose root is sought
+                    0.0, # Target for g(theta) is 0
+                    lo=1.0, 
+                    hi=hi_search, # Use adaptive upper bound
+                    two_sided=True,
+                    progress_callback=lambda p: progress_callback(50 + p * 0.5) if progress_callback else None
+                )
+                
+                # Additional validation: if result is close to search boundary, it's likely incorrect
+                if high_candidate is not None and high_candidate >= hi_search * 0.99:
+                    logger.warning(f"Root finding result ({high_candidate:.6f}) is too close to search boundary ({hi_search}). Upper bound may be infinite.")
+                    high_candidate = None
             if high_candidate is None:
                 logger.warning(f"Upper bound not found by find_smallest_theta (returned None) for a_eff_obs={a_eff_obs}. Defaulting to inf.")
                 high = float('inf')

@@ -59,6 +59,6 @@ def compute_all_cis(a: int, b: int, c: int, d: int,
         "conditional": exact_ci_conditional(a, b, c, d, alpha),
         "midp": exact_ci_midp(a, b, c, d, alpha),
         "blaker": exact_ci_blaker(a, b, c, d, alpha),
-        "unconditional": exact_ci_unconditional(a, b, c, d, alpha, grid_size),
+        "unconditional": exact_ci_unconditional(a, b, c, d, alpha=alpha, grid_size=grid_size),
         "wald_haldane": ci_wald_haldane(a, b, c, d, alpha),
     }

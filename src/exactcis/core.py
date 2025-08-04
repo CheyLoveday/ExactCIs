@@ -148,13 +148,31 @@ def log_nchg_pmf(k: int, n1: int, n2: int, m1: int, theta: float) -> float:
     if theta <= 0:
         return 0.0 if k == supp.min_val else float('-inf')
     
-    # Calculate in log space to avoid overflow
-    log_theta = math.log(theta)
-    log_comb_n1_k = log_binom_coeff(n1, k)
-    log_comb_n2_m1_k = log_binom_coeff(n2, m1 - k)
-    
-    # Unnormalized log probability
-    log_p_unnorm = log_comb_n1_k + log_comb_n2_m1_k + k * log_theta
+    # Calculate in log space to avoid overflow with improved stability
+    try:
+        log_theta = math.log(theta)
+        log_comb_n1_k = log_binom_coeff(n1, k)
+        log_comb_n2_m1_k = log_binom_coeff(n2, m1 - k)
+        
+        # Check for numerical issues in binomial coefficients
+        if not (math.isfinite(log_comb_n1_k) and math.isfinite(log_comb_n2_m1_k)):
+            return float('-inf')
+        
+        # Handle extreme theta values more carefully
+        k_log_theta = k * log_theta
+        if not math.isfinite(k_log_theta):
+            # For very large theta and k, this could overflow
+            if theta > 1e100 and k > 0:
+                return float('inf')  # Probability mass at high k values
+            elif theta < 1e-100 and k > 0:
+                return float('-inf')  # Essentially zero probability
+        
+        # Unnormalized log probability
+        log_p_unnorm = log_comb_n1_k + log_comb_n2_m1_k + k_log_theta
+        
+    except (OverflowError, ValueError) as e:
+        # Handle numerical issues gracefully
+        return float('-inf')
     
     # Vectorized calculation of normalizing constant in log space
     i = supp.x
@@ -418,8 +436,15 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
         The caller should exponentiate the result if a root in normal space is needed.
         
     Raises:
+        ValueError: If the bounds are invalid (negative or lo >= hi)
         RuntimeError: If the root cannot be bracketed after attempts to expand search.
     """
+    # Validate bounds
+    if lo <= 0 or hi <= 0:
+        raise ValueError("Bounds must be positive for log-space root finding")
+    if lo >= hi:
+        raise ValueError("Lower bound must be less than upper bound")
+        
     try:
         from .utils.root_finding import find_root_log_impl_functional
         return find_root_log_impl_functional(
@@ -428,9 +453,14 @@ def find_root_log(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0
     except ImportError:
         logger.warning("Functional root finding implementation not available, using original")
         # Fallback to original implementation
-        return _find_root_log_original_impl(
+        result = _find_root_log_original_impl(
             f, lo, hi, tol, maxiter, progress_callback, timeout_checker, **kwargs
         )
+        if result is None:
+            # Return None instead of raising RuntimeError on timeout or bracketing failure
+            logger.warning("Root finding failed - timeout or bracketing issue")
+            return None
+        return result
 
 
 def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target: float = 0, 

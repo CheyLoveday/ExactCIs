@@ -4,13 +4,36 @@ Pure functions for PMF (Probability Mass Function) calculations.
 
 import math
 import logging
+import time
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict
 from functools import lru_cache
 from .data_models import PMFWeightsConfig, PMFWeightsResult
 from ..core import support, log_binom_coeff, SupportData
 
 logger = logging.getLogger(__name__)
+
+# Rate limiting for repetitive warnings
+_warning_timestamps: Dict[str, float] = {}
+_warning_cooldown = 60.0  # Seconds between similar warnings
+
+def _rate_limited_warning(message: str, warning_key: str = None) -> None:
+    """
+    Issue a warning with rate limiting to prevent log spam.
+    
+    Args:
+        message: Warning message to log
+        warning_key: Unique key for this type of warning (defaults to message)
+    """
+    if warning_key is None:
+        warning_key = message
+    
+    current_time = time.time()
+    last_warning_time = _warning_timestamps.get(warning_key, 0)
+    
+    if current_time - last_warning_time > _warning_cooldown:
+        logger.warning(message)
+        _warning_timestamps[warning_key] = current_time
 
 
 def handle_theta_zero_case(supp: SupportData) -> PMFWeightsResult:
@@ -81,13 +104,15 @@ def check_for_large_values(config: PMFWeightsConfig) -> bool:
     """
     Check if parameters contain unusually large values that might cause issues.
     
+    Increased threshold to 5000 to be more appropriate for epidemiological studies.
+    
     Args:
         config: PMF weights configuration
         
     Returns:
         True if large values detected
     """
-    return any(float(val) > 100 for val in [config.n1, config.n2, config.m])
+    return any(float(val) > 5000 for val in [config.n1, config.n2, config.m])
 
 
 def calculate_log_binomial_terms(
@@ -204,11 +229,12 @@ def pmf_weights_normal_case(config: PMFWeightsConfig) -> PMFWeightsResult:
     """
     supp = support(config.n1, config.n2, config.m)
     
-    # Check for potential numerical issues
+    # Check for potential numerical issues with rate limiting
     if check_for_large_values(config):
-        logger.warning(
+        _rate_limited_warning(
             f"Large values detected in pmf_weights: "
-            f"n1={config.n1}, n2={config.n2}, m={config.m}"
+            f"n1={config.n1}, n2={config.n2}, m={config.m}",
+            "large_values_pmf"
         )
     
     # Calculate log binomial terms

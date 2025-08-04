@@ -83,7 +83,7 @@ def calculate_unconditional_log_pvalue_for_grid_point(
     p1: float
 ) -> float:
     """
-    Calculate log p-value for a single grid point.
+    Calculate log p-value for a single grid point using fast vectorized implementation.
     
     Args:
         observed_table: Observed table data
@@ -93,20 +93,12 @@ def calculate_unconditional_log_pvalue_for_grid_point(
     Returns:
         Log p-value for this grid point
     """
-    p2 = calculate_p2_from_theta(p1, theta)
+    # Import the fast implementation from the methods module
+    from ..methods.unconditional import _process_grid_point
     
-    # Calculate log probability for observed table
-    log_p_obs = calculate_log_probability_for_table(observed_table, p1, p2)
-    
-    # Calculate probabilities for all possible tables
-    log_probs = []
-    for possible_table in enumerate_all_possible_tables(observed_table.n1, observed_table.n2):
-        log_p_table = calculate_log_probability_for_table(possible_table, p1, p2)
-        
-        if log_p_table <= log_p_obs:
-            log_probs.append(log_p_table)
-    
-    return logsumexp(log_probs) if log_probs else float('-inf')
+    # Use the fast vectorized implementation
+    return _process_grid_point((p1, observed_table.a, observed_table.c, 
+                               observed_table.n1, observed_table.n2, theta))
 
 
 def calculate_unconditional_log_pvalue(
@@ -116,7 +108,7 @@ def calculate_unconditional_log_pvalue(
     timeout_checker: Optional[Callable[[], bool]] = None
 ) -> Optional[float]:
     """
-    Calculate log p-value for unconditional test across all grid points.
+    Calculate log p-value for unconditional test using fast vectorized implementation.
     
     Args:
         table: Table data
@@ -125,21 +117,26 @@ def calculate_unconditional_log_pvalue(
         timeout_checker: Optional timeout checking function
         
     Returns:
-        Maximum log p-value across grid points, or None if timeout
+        Log p-value for the test, or None if timeout
     """
     if timeout_checker and timeout_checker():
         return None
     
-    results = []
-    for p1 in grid.p1_values:
-        if timeout_checker and timeout_checker():
-            return None
-            
-        result = calculate_unconditional_log_pvalue_for_grid_point(table, theta, p1)
-        if result > float('-inf'):
-            results.append(result)
+    # Import the fast implementation from the methods module
+    from ..methods.unconditional import _log_pvalue_barnard
     
-    return max(results) if results else float('-inf')
+    # Use the fast vectorized implementation directly
+    # Convert grid config to the format expected by _log_pvalue_barnard
+    return _log_pvalue_barnard(
+        a=table.a,
+        c=table.c, 
+        n1=table.n1,
+        n2=table.n2,
+        theta=theta,
+        grid_size=grid.grid_size,
+        timeout_checker=timeout_checker,
+        p1_grid_override=list(grid.p1_values) if hasattr(grid, 'p1_values') else None
+    )
 
 
 def create_pvalue_function(

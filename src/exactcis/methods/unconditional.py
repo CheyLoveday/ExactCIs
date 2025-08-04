@@ -38,6 +38,21 @@ except ImportError:
     has_numpy = False
     logger.info("NumPy not available, using pure Python implementation")
 
+# Try to import Numba for JIT acceleration
+try:
+    from numba import jit, prange
+    has_numba = True
+    logger.info("Numba available for JIT acceleration")
+except ImportError:
+    has_numba = False
+    logger.info("Numba not available, using standard Python")
+    # Create no-op decorator if numba is not available
+    def jit(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    prange = range
+
 # Import parallel processing utilities if available
 try:
     from ..utils.parallel import (
@@ -86,6 +101,68 @@ def _log_binom_pmf(n: Union[int, float], k: Union[int, float], p: float) -> floa
     log_1mp_term = (n - k) * math.log(1 - p)
     
     return log_choose + log_p_term + log_1mp_term
+
+# Numba-accelerated version for intensive calculations
+if has_numba:
+    @jit(nopython=True, cache=True)
+    def _log_binom_coeff_numba(n: int, k: int) -> float:
+        """JIT-compiled log binomial coefficient calculation."""
+        import math
+        
+        if k < 0 or k > n:
+            return float('-inf')
+        if k == 0 or k == n:
+            return 0.0
+        
+        # Use the symmetry property: C(n,k) = C(n,n-k)
+        if k > n - k:
+            k = n - k
+            
+        # More accurate calculation using log factorials
+        result = 0.0
+        for i in range(k):
+            result += math.log(n - i) - math.log(i + 1)
+        
+        return result
+
+    @jit(nopython=True, cache=True)
+    def _log_binom_pmf_numba(n: float, k: float, p: float) -> float:
+        """JIT-compiled version of log binomial PMF for performance."""
+        if p <= 0.0 or p >= 1.0:
+            return float('-inf')
+        
+        # More accurate log binomial coefficient calculation
+        log_choose = _log_binom_coeff_numba(int(n), int(k))
+        log_p_term = k * math.log(p)
+        log_1mp_term = (n - k) * math.log(1 - p)
+        
+        return log_choose + log_p_term + log_1mp_term
+        
+    @jit(nopython=True, cache=True)
+    def _logsumexp_numba(log_values):
+        """JIT-compiled version of logsumexp for performance."""
+        import math
+        
+        if len(log_values) == 0:
+            return float('-inf')
+        
+        max_val = float('-inf')
+        for val in log_values:
+            if val > max_val:
+                max_val = val
+        
+        if max_val == float('-inf'):
+            return float('-inf')
+        
+        sum_exp = 0.0
+        for val in log_values:
+            sum_exp += math.exp(val - max_val)
+        
+        return max_val + math.log(sum_exp)
+else:
+    _log_binom_pmf_numba = _log_binom_pmf
+    def _logsumexp_numba(log_values):
+        return logsumexp(log_values)
 
 
 def _optimize_grid_size(n1: int, n2: int, base_grid_size: int) -> int:
@@ -212,12 +289,18 @@ def _process_grid_point(args):
     
     if has_numpy:
         try:
-            # Vectorized calculation of binomial probabilities
+            # Use JIT-accelerated version if available for medium to large problems
+            # Lower threshold since even medium-sized problems benefit significantly from JIT
+            if has_numba and n1 * n2 > 1000:  # Use JIT for problems with >1000 combinations
+                return _process_grid_point_numba(p1, a, c, n1, n2, theta, log_p_obs_for_this_p1)
+            
+            # Vectorized calculation of binomial probabilities with better performance
             x_vals = np.arange(n1 + 1)
             y_vals = np.arange(n2 + 1)
 
-            log_px_all = _log_binom_pmf(n1, x_vals, p1)
-            log_py_all = _log_binom_pmf(n2, y_vals, current_p2)
+            # Use vectorized _log_binom_pmf more efficiently
+            log_px_all = np.array([_log_binom_pmf(n1, x, p1) for x in x_vals])
+            log_py_all = np.array([_log_binom_pmf(n2, y, current_p2) for y in y_vals])
             
             # Calculate the joint log probability matrix using outer addition
             # This is significantly faster than nested loops for large n1, n2
@@ -227,7 +310,17 @@ def _process_grid_point(args):
             mask = log_joint <= log_p_obs_for_this_p1
 
             if np.any(mask):
-                return logsumexp(log_joint[mask].flatten().tolist())
+                # Use numpy's logsumexp for better numerical stability
+                masked_values = log_joint[mask]
+                if len(masked_values) > 0:
+                    max_val = np.max(masked_values)
+                    if max_val > -700:  # Prevent underflow
+                        sum_exp = np.sum(np.exp(masked_values - max_val))
+                        return max_val + np.log(sum_exp)
+                    else:
+                        return float('-inf')
+                else:
+                    return float('-inf')
             else:
                 return float('-inf')
 
@@ -280,6 +373,50 @@ def _process_grid_point(args):
     else:
         # This can happen if log_p_obs_for_this_p1 itself is -inf, or no tables meet criteria
         return float('-inf')
+
+
+# Enhanced Numba-accelerated grid point processing
+if has_numba:
+    @jit(nopython=True, cache=True)
+    def _process_grid_point_numba_core(p1: float, a: int, c: int, n1: int, n2: int, 
+                                      theta: float, log_p_obs: float) -> float:
+        """
+        Core JIT-compiled grid point processing for maximum performance.
+        """
+        import math
+        
+        # Calculate p2 from theta and p1
+        p2 = (theta * p1) / (1 - p1 + theta * p1)
+        
+        log_probs = []
+        
+        # Use JIT-compiled binomial PMF calculations with early termination
+        for k_val in range(n1 + 1):
+            log_pk = _log_binom_pmf_numba(float(n1), float(k_val), p1)
+            if log_pk < log_p_obs - 20:  # Skip negligible probabilities
+                continue
+            
+            for l_val in range(n2 + 1):
+                log_pl = _log_binom_pmf_numba(float(n2), float(l_val), p2)
+                if log_pl < log_p_obs - 20:  # Skip negligible probabilities
+                    continue
+                
+                log_table_prob = log_pk + log_pl
+                if log_table_prob <= log_p_obs:
+                    log_probs.append(log_table_prob)
+        
+        return _logsumexp_numba(log_probs) if len(log_probs) > 0 else float('-inf')
+
+    def _process_grid_point_numba(p1: float, a: int, c: int, n1: int, n2: int, 
+                                 theta: float, log_p_obs: float) -> float:
+        """
+        Enhanced version that uses JIT-compiled calculations.
+        """
+        return _process_grid_point_numba_core(p1, a, c, n1, n2, theta, log_p_obs)
+else:
+    def _process_grid_point_numba(*args):
+        """Fallback if Numba is not available."""
+        return _process_grid_point(args[:6])
 
 
 def _log_pvalue_barnard(a: int, c: int, n1: int, n2: int,
