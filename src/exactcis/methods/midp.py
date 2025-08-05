@@ -2,7 +2,23 @@
 Mid-P adjusted confidence interval for odds ratio.
 
 This module implements the Mid-P adjusted confidence interval method
-for the odds ratio of a 2x2 contingency table.
+for the odds ratio of a 2x2 contingency table using a grid search approach
+with confidence interval inversion.
+
+The Mid-P method is a modification of Fisher's exact test that gives half-weight
+to the observed table in the tail probability calculation, reducing the conservatism
+of Fisher's exact test. This results in confidence intervals that are narrower than
+Fisher's exact intervals but maintain good coverage properties.
+
+This implementation uses a grid search approach with confidence interval inversion,
+which is more reliable for large sample sizes than root-finding methods. The approach
+is similar to that used in the R 'Exact' package by Fay and Fay (2021).
+
+References:
+    Lancaster, H. O. (1961). Significance tests in discrete distributions.
+        Journal of the American Statistical Association, 56(294), 223-234.
+    Fay, M. P., & Fay, M. M. (2021). Exact: Unconditional Exact Test. R package
+        version 3.1. https://CRAN.R-project.org/package=Exact
 """
 
 import math
@@ -15,9 +31,7 @@ from exactcis.core import (
     validate_counts,
     support,
     log_nchg_pmf,
-    logsumexp,
-    find_smallest_theta,
-    apply_haldane_correction
+    calculate_odds_ratio
 )
 
 # Configure logging
@@ -32,17 +46,115 @@ except ImportError:
     logger.info("Parallel processing not available for Mid-P method")
 
 
+def calculate_midp_pvalue(a_obs: int, n1: int, n2: int, m1: int, theta: float) -> float:
+    """
+    Calculate Mid-P p-value for given parameters.
+    
+    Args:
+        a_obs: Observed count in cell (1,1)
+        n1: Row 1 total (a + b)
+        n2: Row 2 total (c + d)
+        m1: Column 1 total (a + c)
+        theta: Odds ratio parameter
+        
+    Returns:
+        Two-sided Mid-P p-value
+    """
+    # Get support for the distribution
+    supp = support(n1, n2, m1)
+    
+    if not supp or len(supp.x) == 0:
+        logger.error("Support is empty, cannot calculate p-value.")
+        return np.nan
+    
+    try:
+        # Calculate log probabilities for all possible tables
+        log_probs = np.vectorize(log_nchg_pmf)(supp.x, n1, n2, m1, theta)
+        
+        # Check for numerical issues
+        if np.any(np.isnan(log_probs)) or np.any(np.isinf(log_probs)):
+            logger.warning(f"Numerical issues in log_nchg_pmf for theta={theta}: NaN or Inf detected")
+            return np.nan
+        
+        # Convert log probabilities to probabilities in a numerically stable way
+        max_log_prob = np.max(log_probs)
+        if max_log_prob < -700:  # All probabilities are essentially zero
+            logger.warning(f"All probabilities underflow for theta={theta} (max_log_prob={max_log_prob})")
+            return 0.0
+        
+        # Compute probabilities in a numerically stable way
+        probs = np.exp(log_probs - max_log_prob)  # Normalize to prevent underflow
+        probs = probs * np.exp(max_log_prob)  # Scale back
+        
+        # Handle any remaining numerical issues
+        probs = np.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
+        
+        # Find probability of observed table
+        idx = np.where(supp.x == a_obs)[0]
+        if len(idx) == 0:
+            # a_obs not in support
+            prob_obs = 0.0
+        else:
+            prob_obs = probs[idx[0]]
+        
+        # Calculate p-values for lower and upper tails
+        p_lower = np.sum(probs[supp.x < a_obs]) + 0.5 * prob_obs
+        p_upper = np.sum(probs[supp.x > a_obs]) + 0.5 * prob_obs
+        
+        # Return two-sided p-value
+        return min(1.0, 2.0 * min(p_lower, p_upper))
+        
+    except (OverflowError, ValueError) as e:
+        logger.warning(f"Error in PMF calculation for theta={theta}: {e}")
+        return np.nan
+
+
+def find_ci_bound(theta_grid: np.ndarray, p_values: np.ndarray, alpha: float, is_lower: bool = True) -> float:
+    """
+    Find confidence interval bound from grid of theta values and p-values.
+    
+    Args:
+        theta_grid: Array of theta values
+        p_values: Array of p-values corresponding to theta_grid
+        alpha: Significance level
+        is_lower: If True, find lower bound; if False, find upper bound
+        
+    Returns:
+        Confidence interval bound
+    """
+    # Find values in the confidence interval (p_value >= alpha)
+    in_ci = p_values >= alpha
+    
+    if not np.any(in_ci):
+        # No values in CI, return boundary
+        return theta_grid[0] if is_lower else theta_grid[-1]
+    
+    # Find the bound
+    if is_lower:
+        # Lower bound is the smallest theta in CI
+        return theta_grid[np.where(in_ci)[0][0]]
+    else:
+        # Upper bound is the largest theta in CI
+        return theta_grid[np.where(in_ci)[0][-1]]
+
+
 @lru_cache(maxsize=4096)
 def exact_ci_midp(a: int, b: int, c: int, d: int,
                   alpha: float = 0.05, 
-                  progress_callback: Optional[Callable] = None) -> Tuple[float, float]:
+                  progress_callback: Optional[Callable] = None,
+                  grid_size: int = 200,
+                  theta_min: float = 0.001,
+                  theta_max: float = 1000) -> Tuple[float, float]:
     """
-    Calculate the Mid-P adjusted confidence interval for the odds ratio.
+    Calculate the Mid-P adjusted confidence interval for the odds ratio using grid search.
 
     This method is similar to the conditional (Fisher) method but gives half-weight
     to the observed table in the tail p-value, reducing conservatism. It is appropriate
     for epidemiology or surveillance where conservative Fisher intervals are too wide,
     and for moderate samples where slight undercoverage is tolerable for tighter intervals.
+    
+    This implementation uses a grid search approach with confidence interval inversion,
+    which is more reliable for large sample sizes than root-finding methods.
 
     Args:
         a: Count in cell (1,1)
@@ -51,249 +163,84 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         d: Count in cell (2,2)
         alpha: Significance level (default: 0.05)
         progress_callback: Optional callback function to report progress (0-100)
+        grid_size: Number of points in the theta grid (default: 200)
+        theta_min: Minimum theta value for grid search (default: 0.001)
+        theta_max: Maximum theta value for grid search (default: 1000)
 
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     """
+    # Validate inputs
     validate_counts(a, b, c, d)
     
     if not 0 < alpha < 1:
         raise ValueError(f"Alpha must be between 0 and 1, got {alpha}")
-
-    # Store original counts for PMF calculation basis
-    a_orig, b_orig, c_orig, d_orig = a, b, c, d
-
-    # Effective observed count 'a_eff_obs' for comparison against PMF.
-    # For Mid-P, we use the original integer count without Haldane correction
-    # to maintain consistency between observation and distribution
-    a_eff_obs = a_orig
-
-    # Marginals for PMF calculations are ALWAYS based on original integer counts.
-    n1_orig = a_orig + b_orig
-    n2_orig = c_orig + d_orig
-    m1_orig = a_orig + c_orig
     
-    # Support is based on original integer counts/marginals.
-    # support() returns a SupportData named tuple with x, min_val, max_val, offset
-    supp_orig = support(n1_orig, n2_orig, m1_orig)
-    if not supp_orig or len(supp_orig.x) == 0: # Should not happen with valid counts
-        logger.error("Original support is empty, cannot proceed.")
-        return (0.0, float('inf')) # Or raise error
-    supp_orig_list = list(supp_orig.x)  # Convert the x array to list for compatibility
+    # Calculate marginals
+    n1 = a + b
+    n2 = c + d
+    m1 = a + c
     
-    kmin_orig, kmax_orig = supp_orig.min_val, supp_orig.max_val
-
-    logger.info(f"Computing Mid-P CI: original_a={a_orig}, original_b={b_orig}, original_c={c_orig}, original_d={d_orig}, alpha={alpha}")
-    logger.info(f"Effective a_obs for comparison: {a_eff_obs}")
-    logger.info(f"Support for PMF based on original marginals ({n1_orig}, {n2_orig}, {m1_orig}): {supp_orig_list}")
+    # Calculate odds ratio
+    odds_ratio = calculate_odds_ratio(a, b, c, d)
     
-    # This function calculates the two-sided mid-p-value for a given theta,
-    # comparing against a_eff_obs, using PMF from original counts.
-    def midp_pval_func(theta: float) -> float:
-        # log_nchg_pmf uses n1_orig, n2_orig, m1_orig
-        # Vectorized calculation of log probabilities with numerical stability
-        try:
-            log_probs_values = np.vectorize(log_nchg_pmf)(supp_orig.x, n1_orig, n2_orig, m1_orig, theta)
-            
-            # Check for numerical issues
-            if np.any(np.isnan(log_probs_values)) or np.any(np.isinf(log_probs_values)):
-                logger.warning(f"Numerical issues in log_nchg_pmf for theta={theta}: NaN or Inf detected")
-                return np.nan
-            
-            # Use stable conversion from log space, handling underflow gracefully
-            max_log_prob = np.max(log_probs_values)
-            if max_log_prob < -700:  # All probabilities are essentially zero
-                logger.warning(f"All probabilities underflow for theta={theta} (max_log_prob={max_log_prob})")
-                return 0.0
-            
-            # Compute probabilities in a numerically stable way
-            probs = np.exp(log_probs_values - max_log_prob)  # Normalize to prevent underflow
-            probs = probs * np.exp(max_log_prob)  # Scale back
-            
-            # Handle any remaining numerical issues
-            probs = np.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
-            
-        except (OverflowError, ValueError) as e:
-            logger.warning(f"Error in PMF calculation for theta={theta}: {e}")
-            return np.nan
-
-        # P(X = effective discrete point related to a_eff_obs)
-        prob_at_a_eff_discrete_point = 0.0
-        if a_eff_obs == math.floor(a_eff_obs): # If a_eff_obs is an integer (e.g., 3.0 or 3)
-            # Check if this integer is in the support_orig_list
-            # (it should be if it's within kmin_orig and kmax_orig and support is contiguous)
-            try:
-                # Ensure we use int(a_eff_obs) for indexing if supp_orig_list contains ints
-                idx = supp_orig_list.index(int(a_eff_obs)) 
-                prob_at_a_eff_discrete_point = probs[idx]
-            except ValueError:
-                # a_eff_obs is an integer but not in the discrete support (e.g. sparse support, or outside range)
-                # If it's outside kmin/kmax range, P(X=a_eff_obs) is 0. If inside, but not in list (sparse), also 0.
-                prob_at_a_eff_discrete_point = 0.0 
-        # If a_eff_obs is k.5, P(X=a_eff_obs) for a discrete PMF is 0.
+    # Log initial information
+    logger.info(f"Computing Mid-P CI using grid search: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")
+    logger.info(f"Marginals: n1={n1}, n2={n2}, m1={m1}, odds_ratio={odds_ratio}")
+    
+    # Handle edge cases
+    if b == 0 or c == 0:
+        logger.info(f"Edge case: b={b}, c={c}, returning (0, inf)")
+        return (0.0, float('inf'))
+    
+    # Generate grid of theta values (logarithmically spaced)
+    # Ensure the grid includes the point estimate
+    if odds_ratio > 0 and odds_ratio < float('inf'):
+        # Adjust theta_min and theta_max to ensure they bracket the odds ratio
+        theta_min = min(theta_min, odds_ratio * 0.1)
+        theta_max = max(theta_max, odds_ratio * 10)
+    
+    theta_grid = np.logspace(np.log10(theta_min), np.log10(theta_max), grid_size)
+    
+    # Calculate p-values for each theta in the grid
+    p_values = []
+    for i, theta in enumerate(theta_grid):
+        p_value = calculate_midp_pvalue(a, n1, n2, m1, theta)
+        p_values.append(p_value)
         
-        # P(X < a_eff_obs)
-        # Example: a_eff_obs = 3.5. We need sum P(k) for k in supp_orig_list where k < 3.5 (i.e., k <= 3)
-        p_strictly_less = np.sum(probs[np.array(supp_orig_list) < a_eff_obs])
-        
-        # P(X > a_eff_obs)
-        # Example: a_eff_obs = 3.5. We need sum P(k) for k in supp_orig_list where k > 3.5 (i.e., k >= 4)
-        p_strictly_more = np.sum(probs[np.array(supp_orig_list) > a_eff_obs])
-
-        # Mid-P tail definitions:
-        # Lower tail sum: P(X < a_eff_obs) + 0.5 * P(X = discrete point for a_eff_obs)
-        # Upper tail sum: P(X > a_eff_obs) + 0.5 * P(X = discrete point for a_eff_obs)
-        p_val_lower_tail = p_strictly_less + 0.5 * prob_at_a_eff_discrete_point
-        p_val_upper_tail = p_strictly_more + 0.5 * prob_at_a_eff_discrete_point
-        
-        p_value = 2 * min(p_val_lower_tail, p_val_upper_tail)
-        return min(p_value, 1.0)
+        # Report progress
+        if progress_callback:
+            progress_callback(min(100, int(100 * (i+1) / grid_size)))
     
-    # Edge cases for CI bounds based on a_eff_obs relative to original support's kmin/kmax.
-    # If a_eff_obs is at or below kmin_orig (e.g., 0.5 <= 0, or 0.0 <= 0), lower bound is 0.
-    low = 0.0 # Default lower bound
-        
-    if a_eff_obs <= kmin_orig:
-        logger.info(f"Lower bound is 0.0 because a_eff_obs ({a_eff_obs}) <= kmin_orig ({kmin_orig})")
-        # low is already 0.0
-    else:
-        logger.info(f"Finding lower bound for Mid-P interval (a_eff_obs={a_eff_obs}) target alpha={alpha}")
-        try:
-            # For lower CI bound (theta < 1), midp_pval_func(theta) generally increases as theta -> 0.
-            # So we need find_smallest_theta that searches appropriately.
-            # Let's define g(theta) = midp_pval_func(theta) - alpha. Root is when g(theta)=0.
-            # For lower CI (theta_L), as theta increases from 0 to theta_L, pval decreases to alpha.
-            # So midp_pval_func is decreasing for the lower bound search.
-            low_candidate = find_smallest_theta(
-                func=midp_pval_func, # Function that returns p-values
-                alpha=alpha, # Target p-value
-                lo=1e-8, 
-                hi=1.0,
-                two_sided=True,
-                increasing=False,  # p-value decreases as theta increases for lower bound
-                progress_callback=lambda p: progress_callback(p * 0.5) if progress_callback else None
-            )
-            if low_candidate is None:
-                logger.warning(f"Lower bound not found by find_smallest_theta (returned None) for a_eff_obs={a_eff_obs}. Defaulting to 0.0.")
-                low = 0.0
-            else:
-                low = low_candidate
-                logger.info(f"Lower bound found: {low:.6f}")
-        except Exception as e:
-            logger.warning(f"Error finding lower bound for a_eff_obs={a_eff_obs}: {e}. Defaulting to 0.0.")
-            low = 0.0
-
-    high = float('inf') # Default upper bound
-    if a_eff_obs >= kmax_orig:
-        logger.info(f"Upper bound is infinity because a_eff_obs ({a_eff_obs}) >= kmax_orig ({kmax_orig})")
-        # high is already inf
-    else:
-        logger.info(f"Finding upper bound for Mid-P interval (a_eff_obs={a_eff_obs}) target alpha={alpha}")
-        try:
-            # For upper CI bound (theta_U > 1), as theta increases from 1 to theta_U, pval increases from its min then decreases to alpha.
-            # Or, if pval is monotonic: as theta increases from 1, pval decreases towards alpha.
-            # This means midp_pval_func is also decreasing for the upper bound search (from OR=1 upwards).
-            
-            # Adaptive search expansion to find proper upper bound
-            hi_search = 10.0  # Start with reasonable upper bound
-            max_expansions = 10
-            expansion_count = 0
-            
-            # Find a proper bracketing interval by expanding upward
-            while expansion_count < max_expansions:
-                try:
-                    # Test if we can bracket the root
-                    g_1 = midp_pval_func(1.0) - alpha
-                    g_hi = midp_pval_func(hi_search) - alpha
-                    
-                    # Check for numerical issues
-                    if np.isnan(g_1) or np.isnan(g_hi):
-                        logger.warning(f"NaN detected in bracket test: g(1.0)={g_1}, g({hi_search})={g_hi}")
-                        hi_search *= 2
-                        expansion_count += 1
-                        continue
-                    
-                    # If signs are different, we have bracketed the root
-                    if np.sign(g_1) != np.sign(g_hi):
-                        logger.info(f"Root bracketed in interval [1.0, {hi_search}]: g(1.0)={g_1:.4e}, g({hi_search})={g_hi:.4e}")
-                        break
-                    
-                    # If p-value at hi_search is still too high, expand further
-                    if g_hi > 0:  # midp_pval_func(hi_search) > alpha, need larger theta
-                        hi_search *= 10  # Expand geometrically
-                        expansion_count += 1
-                        logger.info(f"Expanding upper search bound to {hi_search} (expansion {expansion_count})")
-                    else:
-                        # g_hi <= 0 but g_1 has same sign - this suggests a flat function
-                        logger.warning(f"Function appears flat: g(1.0)={g_1:.4e}, g({hi_search})={g_hi:.4e}")
-                        break
-                        
-                except (OverflowError, ValueError) as e:
-                    logger.warning(f"Numerical issue during bracketing at hi_search={hi_search}: {e}")
-                    hi_search *= 2
-                    expansion_count += 1
-                    
-                if hi_search > 1e8:  # Safety limit
-                    logger.warning(f"Upper search limit exceeded 1e8, stopping expansion")
-                    break
-            
-            # If we couldn't bracket after all expansions, the upper bound might be infinite
-            if expansion_count >= max_expansions or hi_search > 1e8:
-                logger.warning(f"Could not bracket root after {expansion_count} expansions, hi_search={hi_search}. Upper bound may be infinite.")
-                high_candidate = None
-            else:
-                # Use the bracketed interval for root finding
-                high_candidate = find_smallest_theta(
-                    func=midp_pval_func, # Function that returns p-values
-                    alpha=alpha, # Target p-value
-                    lo=1.0, 
-                    hi=hi_search, # Use adaptive upper bound
-                    two_sided=True,
-                    increasing=False,  # p-value typically decreases as theta increases for upper bound
-                    progress_callback=lambda p: progress_callback(50 + p * 0.5) if progress_callback else None
-                )
-                
-                # Additional validation: if result is close to search boundary, it's likely incorrect
-                if high_candidate is not None and high_candidate >= hi_search * 0.99:
-                    logger.warning(f"Root finding result ({high_candidate:.6f}) is too close to search boundary ({hi_search}). Upper bound may be infinite.")
-                    high_candidate = None
-            if high_candidate is None:
-                logger.warning(f"Upper bound not found by find_smallest_theta (returned None) for a_eff_obs={a_eff_obs}. Defaulting to inf.")
-                high = float('inf')
-            else:
-                high = high_candidate
-                logger.info(f"Upper bound found: {high:.6f}")
-        except Exception as e:
-            logger.warning(f"Error finding upper bound for a_eff_obs={a_eff_obs}: {e}. Defaulting to inf.")
-            high = float('inf')
+    # Convert to numpy arrays
+    p_values = np.array(p_values)
     
-    # Ensure lower bound is less than or equal to upper bound
-    if low > high:
-        logger.warning(f"Invalid CI detected: lower bound ({low:.6f}) > upper bound ({high:.6f}). Swapping bounds.")
-        low, high = high, low
+    # Find confidence interval bounds
+    lower_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=True)
+    upper_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=False)
     
-    # Calculate odds ratio to verify it's within the CI
-    odds_ratio = (a_orig * d_orig) / (b_orig * c_orig) if b_orig * c_orig > 0 else float('inf')
+    # Ensure the odds ratio is within the CI
+    if odds_ratio < lower_bound:
+        logger.warning(f"Odds ratio ({odds_ratio}) < lower bound ({lower_bound}), adjusting lower bound")
+        lower_bound = max(0.0, odds_ratio * 0.9)
     
-    # If odds ratio is not within CI, adjust bounds
-    if odds_ratio < low or odds_ratio > high:
-        logger.warning(f"Odds ratio ({odds_ratio:.6f}) not within CI ({low:.6f}, {high:.6f}). Adjusting bounds.")
-        # Expand CI to include odds ratio
-        if odds_ratio < low:
-            low = max(0.0, odds_ratio * 0.9)  # Set lower bound slightly below odds ratio
-        if odds_ratio > high:
-            high = odds_ratio * 1.1  # Set upper bound slightly above odds ratio
+    if odds_ratio > upper_bound and upper_bound < theta_max * 0.99:
+        logger.warning(f"Odds ratio ({odds_ratio}) > upper bound ({upper_bound}), adjusting upper bound")
+        upper_bound = min(float('inf'), odds_ratio * 1.1)
     
-    logger.info(f"Mid-P CI result for original counts ({a_orig},{b_orig},{c_orig},{d_orig}): ({low:.6f}, {high if high != float('inf') else 'inf'})")
+    logger.info(f"Mid-P CI result: ({lower_bound:.6f}, {upper_bound:.6f})")
     
-    return (low, high)
+    return (lower_bound, upper_bound)
 
 
 def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]], 
                         alpha: float = 0.05,
                         max_workers: Optional[int] = None,
                         backend: Optional[str] = None,
-                        progress_callback: Optional[Callable] = None) -> List[Tuple[float, float]]:
+                        progress_callback: Optional[Callable] = None,
+                        grid_size: int = 200,
+                        theta_min: float = 0.001,
+                        theta_max: float = 1000) -> List[Tuple[float, float]]:
     """
     Calculate Mid-P adjusted confidence intervals for multiple 2x2 tables in parallel.
     
@@ -306,6 +253,9 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
         max_workers: Maximum number of parallel workers (default: auto-detected)
         backend: Backend to use ('thread', 'process', or None for auto-detection)
         progress_callback: Optional callback function to report progress (0-100)
+        grid_size: Number of points in the theta grid (default: 200)
+        theta_min: Minimum theta value for grid search (default: 0.001)
+        theta_max: Maximum theta value for grid search (default: 1000)
         
     Returns:
         List of (lower_bound, upper_bound) tuples, one for each input table
@@ -335,7 +285,11 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
         results = []
         for i, (a, b, c, d) in enumerate(tables):
             try:
-                result = exact_ci_midp(a, b, c, d, alpha)
+                result = exact_ci_midp(a, b, c, d, alpha, 
+                                      progress_callback=progress_callback,
+                                      grid_size=grid_size,
+                                      theta_min=theta_min,
+                                      theta_max=theta_max)
                 results.append(result)
             except Exception as e:
                 logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
@@ -367,6 +321,9 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
         exact_ci_midp,
         tables,
         alpha=alpha,
+        grid_size=grid_size,
+        theta_min=theta_min,
+        theta_max=theta_max,
         timeout=None,  # No timeout for batch processing
         backend=backend,
         max_workers=max_workers

@@ -179,10 +179,14 @@ def calculate_scipy_wald(a, b, c, d, alpha=0.05):
     
     return lower, upper
 
-def generate_comparison_csv(output_file="method_comparison.csv"):
-    """Generate a CSV file comparing CI methods across different implementations."""
+def generate_comparison_data():
+    """Generate comparison data for CI methods across different implementations.
     
-    # Define the columns for our CSV
+    Returns:
+        tuple: (header, results) where header is a list of column names and
+               results is a list of rows with data for each test case.
+    """
+    # Define the columns for our output
     header = [
         "Case", "a", "b", "c", "d", "Odds Ratio", 
         "ExactCIs Conditional Lower", "ExactCIs Conditional Upper",
@@ -280,6 +284,14 @@ def generate_comparison_csv(output_file="method_comparison.csv"):
         
         results.append(row)
     
+    return header, results
+
+def generate_comparison_csv(output_file="method_comparison.csv"):
+    """Generate a CSV file comparing CI methods across different implementations."""
+    
+    # Get the comparison data
+    header, results = generate_comparison_data()
+    
     # Write to CSV
     with open(output_file, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -288,9 +300,74 @@ def generate_comparison_csv(output_file="method_comparison.csv"):
     
     print(f"Comparison results written to {output_file}")
 
-if __name__ == "__main__":
-    # Define output file path
-    output_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "method_comparison.csv"))
+def generate_comparison_markdown(output_file="docs/source/_markdown/analysis/comparison_tables.md"):
+    """Generate a Markdown file comparing CI methods across different implementations."""
     
-    # Generate the comparison
-    generate_comparison_csv(output_file)
+    # Get the comparison data
+    header, results = generate_comparison_data()
+    
+    # Create the markdown content
+    content = "# Confidence Intervals for 2x2 Tables\n\n"
+    content += "This table compares confidence interval methods across different implementations (ExactCIs, SciPy, and R) for various 2x2 tables.\n\n"
+    
+    # Create a simplified table for better readability
+    # We'll include Case, a, b, c, d, OR, and the ExactCIs methods
+    simplified_header = [
+        "Case", "a", "b", "c", "d", "OR", 
+        "Conditional CI", "MidP CI", "Blaker CI", "Unconditional CI", "Wald-Haldane CI"
+    ]
+    
+    # Create the table header
+    content += "| " + " | ".join(simplified_header) + " |\n"
+    content += "|" + "|".join(["---"] * len(simplified_header)) + "|\n"
+    
+    # Add each row to the table
+    for row in results:
+        # Extract the values we want to include
+        case = row[0]
+        a, b, c, d = row[1], row[2], row[3], row[4]
+        odds_ratio = row[5]
+        
+        # Format the confidence intervals
+        conditional_ci = f"({row[6]}, {row[7]})"
+        midp_ci = f"({row[8]}, {row[9]})"
+        blaker_ci = f"({row[10]}, {row[11]})"
+        unconditional_ci = f"({row[12]}, {row[13]})"
+        wald_haldane_ci = f"({row[14]}, {row[15]})"
+        
+        # Add the row to the table
+        simplified_row = [
+            case, str(a), str(b), str(c), str(d), str(odds_ratio),
+            conditional_ci, midp_ci, blaker_ci, unconditional_ci, wald_haldane_ci
+        ]
+        content += "| " + " | ".join(simplified_row) + " |\n"
+    
+    # Add a section with the full comparison data
+    content += "\n## Full Comparison Data\n\n"
+    content += "For a complete comparison including SciPy and R implementations, see the CSV file `method_comparison.csv` in the project root directory.\n\n"
+    
+    # Add a section with interpretation
+    content += "\n## Interpretation\n\n"
+    content += "- **Conditional CI**: Fisher's exact test, conditions on marginal totals\n"
+    content += "- **MidP CI**: Mid-P adjusted Fisher's exact test, less conservative than Fisher's\n"
+    content += "- **Blaker CI**: Blaker's exact test, typically narrower than Fisher's\n"
+    content += "- **Unconditional CI**: Barnard's unconditional exact test, doesn't condition on margins\n"
+    content += "- **Wald-Haldane CI**: Normal approximation with Haldane correction\n\n"
+    content += "The confidence intervals show how different methods can produce different results for the same data. "
+    content += "In general, unconditional methods are more conservative (wider intervals) than conditional methods, "
+    content += "and exact methods are more reliable for small sample sizes than approximate methods.\n"
+    
+    # Write to file
+    with open(output_file, 'w') as f:
+        f.write(content)
+    
+    print(f"Markdown comparison results written to {output_file}")
+
+if __name__ == "__main__":
+    # Define output file paths
+    csv_output_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "method_comparison.csv"))
+    md_output_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "docs", "source", "_markdown", "analysis", "comparison_tables.md"))
+    
+    # Generate the comparisons
+    generate_comparison_csv(csv_output_file)
+    generate_comparison_markdown(md_output_file)

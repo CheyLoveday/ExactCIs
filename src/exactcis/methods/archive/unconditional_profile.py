@@ -174,13 +174,13 @@ def find_mle_p1(a: int, c: int, n1: int, n2: int, theta: float) -> float:
     p1_init = a / n1 if n1 > 0 else 0.5
     
     # Ensure initial guess is within bounds
-    p1_init = max(1e-9, min(1 - 1e-9, p1_init))
+    p1_init = max(0.001, min(0.999, p1_init))
     
     try:
         # Use scipy's minimize function to find the MLE
         result = optimize.minimize_scalar(
             lambda p: _neg_log_likelihood(p, a, c, n1, n2, theta),
-            bounds=(1e-9, 1 - 1e-9),
+            bounds=(0.001, 0.999),
             method='bounded'
         )
         
@@ -224,16 +224,6 @@ def _log_pvalue_profile(a: int, c: int, n1: int, n2: int, theta: float,
         if time.time() - start_time > timeout:
             logger.info(f"Timeout reached in _log_pvalue_profile")
             return None
-    
-    # Calculate sample odds ratio
-    b = n1 - a
-    d = n2 - c
-    sample_or = (a * d) / (b * c) if b > 0 and c > 0 else float('inf')
-    
-    # Log if theta is close to the sample odds ratio, but don't force p-value to 1.0
-    if abs(theta - sample_or) < 1e-6:
-        logger.info(f"Theta {theta:.6f} is the sample odds ratio")
-        # Note: We don't force p-value to 1.0 as this can artificially constrain the CI
     
     logger.info(f"Calculating log p-value with profile likelihood: a={a}, c={c}, n1={n1}, n2={n2}, theta={theta:.6f}")
     
@@ -351,7 +341,6 @@ def _log_pvalue_profile(a: int, c: int, n1: int, n2: int, theta: float,
         progress_callback(100)
     
     # Special case: at the sample odds ratio, the p-value should be 1.0
-    # This is a key part of the solution that ensures the odds ratio is in the CI
     sample_or = (a * (n2 - c)) / ((n1 - a) * c) if (n1 - a) * c > 0 else float('inf')
     if abs(theta - sample_or) < 1e-6:
         logger.info(f"Theta {theta:.6f} is the sample odds ratio, setting p-value to 1.0")
@@ -406,20 +395,15 @@ def find_ci_bound(theta_grid: np.ndarray, p_values: np.ndarray,
         return bound
 
 
-def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
+def exact_ci_unconditional_profile(a: int, b: int, c: int, d: int, alpha: float = 0.05,
                                   grid_size: int = 200, theta_min: float = 0.001, 
                                   theta_max: float = 1000, **kwargs) -> Tuple[float, float]:
     """
-    Calculate Barnard's exact unconditional confidence interval using a profile likelihood.
-
-    This implementation uses a grid search over the odds ratio (theta) and, for
-    each theta, calculates a p-value using the profile likelihood approach. This
-    involves finding the maximum likelihood estimate of the nuisance parameter (p1)
-    for that specific theta.
-
-    This method is recommended over supremum-based approaches as it has better
-    statistical properties and guarantees that the resulting confidence interval
-    contains the sample odds ratio.
+    Calculate Barnard's exact unconditional confidence interval using profile likelihood.
+    
+    This implementation uses a grid search over the theta parameter space with
+    profile likelihood for the nuisance parameter, which ensures that the confidence
+    interval contains the sample odds ratio.
     
     The confidence interval is calculated by finding all theta values where the
     p-value is greater than or equal to alpha. The p-value is calculated using
@@ -442,10 +426,10 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
         Tuple of (lower, upper) confidence interval bounds
         
     Example:
-        >>> exact_ci_unconditional(50, 950, 25, 975, alpha=0.05)
+        >>> exact_ci_unconditional_profile(50, 950, 25, 975, alpha=0.05)
         (1.500, 3.000)  # Example values, actual results will vary
         
-        >>> exact_ci_unconditional(10, 90, 5, 95, alpha=0.05)
+        >>> exact_ci_unconditional_profile(10, 90, 5, 95, alpha=0.05)
         (0.500, 4.500)  # Example values, actual results will vary
     """
     # Validate inputs
@@ -597,7 +581,7 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
         return (theta_min, theta_max)
 
 
-def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]], 
+def exact_ci_unconditional_batch_profile(tables: List[Tuple[int, int, int, int]], 
                                         alpha: float = 0.05,
                                         max_workers: Optional[int] = None,
                                         backend: Optional[str] = None,
@@ -638,7 +622,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
         
     Example:
         >>> tables = [(10, 20, 15, 30), (5, 10, 8, 12), (2, 3, 1, 4)]
-        >>> results = exact_ci_unconditional_batch(tables, alpha=0.05)
+        >>> results = exact_ci_unconditional_batch_profile(tables, alpha=0.05)
         >>> print(results)
         [(0.234, 1.567), (0.123, 2.345), (0.045, 8.901)]  # Example values
     """
@@ -651,7 +635,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
         results = []
         for i, (a, b, c, d) in enumerate(tables):
             try:
-                result = exact_ci_unconditional(a, b, c, d, alpha, 
+                result = exact_ci_unconditional_profile(a, b, c, d, alpha, 
                                                       grid_size=grid_size,
                                                       theta_min=theta_min,
                                                       theta_max=theta_max,
@@ -684,7 +668,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
     
     # Use parallel_compute_ci for better performance and error handling
     results = parallel_compute_ci(
-        exact_ci_unconditional,
+        exact_ci_unconditional_profile,
         tables,
         alpha=alpha,
         grid_size=grid_size,

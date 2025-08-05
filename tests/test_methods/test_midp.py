@@ -1,10 +1,15 @@
 """
 Tests for the mid-p adjusted confidence interval method.
+
+This file contains tests for the grid search implementation of the Mid-P method,
+which is designed to handle large sample sizes better than the previous implementation.
 """
 
 import pytest
-from exactcis.methods.midp import exact_ci_midp
-from exactcis.core import validate_counts
+import numpy as np
+import time
+from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue, find_ci_bound
+from exactcis.core import validate_counts, calculate_odds_ratio
 
 
 def test_exact_ci_midp_basic():

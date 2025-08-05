@@ -1,0 +1,167 @@
+name: Build and Deploy Docs to GitBook
+
+# 1. TRIGGER: Run this workflow on every push to the 'main' branch
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+  schedule:
+    - cron: '0 0 * * 1'  # Run weekly on Mondays at midnight
+
+# 2. PERMISSIONS: Grant the GITHUB_TOKEN write permissions to push to the sync branch
+permissions:
+  contents: write
+  issues: write  # For creating issues when broken links are found
+
+jobs:
+  build-and-deploy:
+    # 3. JOB SETUP: Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+
+    steps:
+      # 4. STEP 1: Check out the source code from the 'main' branch
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 5. STEP 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Specify your project's Python version
+
+      # 6. STEP 3: Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,docs]"
+          pip install requests
+
+      # 7. STEP 4: Install Pandoc
+      - name: Install Pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      # 8. STEP 5: Build Sphinx HTML documentation
+      - name: Build Sphinx docs
+        run: |
+          cd docs
+          make html
+
+      # 9. STEP 6: Convert HTML to Markdown with SUMMARY.md generation
+      - name: Convert HTML to Markdown
+        run: |
+          chmod +x scripts/convert_html_to_md.sh
+          ./scripts/convert_html_to_md.sh
+          
+          # Add version information to README.md
+          echo "" >> ./markdown_output/README.md
+          echo "## Versions" >> ./markdown_output/README.md
+          echo "" >> ./markdown_output/README.md
+          echo "This is the documentation for the latest development version of ExactCIs." >> ./markdown_output/README.md
+          echo "For released versions, use the version selector in the GitBook interface." >> ./markdown_output/README.md
+
+      # 10. STEP 7: Check for broken links
+      - name: Check for broken links
+        id: link_check
+        run: |
+          chmod +x scripts/check_links.py
+          python scripts/check_links.py --markdown-dir ./markdown_output
+          echo "link_check_status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true  # Continue even if broken links are found
+
+      # 11. STEP 8: Upload link check report as artifact
+      - name: Upload link check report
+        uses: actions/upload-artifact@v3
+        with:
+          name: link-check-report
+          path: |
+            link_check_report.md
+            link_check_results.log
+
+      # 12. STEP 9: Create issue if broken links are found
+      - name: Create issue for broken links
+        if: steps.link_check.outputs.link_check_status != '0'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Broken links found in documentation"
+          content-filepath: ./link_check_report.md
+          labels: documentation, bug
+
+      # 13. STEP 10: Deploy Markdown to gitbook-sync branch
+      - name: Deploy to GitBook sync branch
+        id: deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./markdown_output
+          publish_branch: gitbook-sync
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "Deploy: Auto-generate docs for ${{ github.sha }}"
+
+      # 14. STEP 11: Verify GitBook sync status
+      - name: Verify GitBook sync status
+        run: |
+          echo "Waiting for GitBook sync to complete..."
+          sleep 60  # Give GitBook some time to sync
+          
+          # Check if the gitbook-sync branch exists and was updated recently
+          LAST_COMMIT_TIME=$(git ls-remote --heads origin gitbook-sync | \
+            xargs -I{} git show --no-patch --format=%ct {} 2>/dev/null || echo 0)
+          CURRENT_TIME=$(date +%s)
+          TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIME))
+          
+          if [ $TIME_DIFF -lt 3600 ]; then
+            echo "GitBook sync branch was updated recently. Sync likely successful."
+          else
+            echo "Warning: GitBook sync branch has not been updated recently. Sync may have failed."
+            echo "::warning::GitBook sync may have failed. Please check the GitBook dashboard."
+          fi
+
+  # 15. Scheduled link validation job
+  validate-links:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'  # Only run on scheduled events
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: gitbook-sync  # Check out the GitBook sync branch
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Check for broken links (including external)
+        id: link_check
+        run: |
+          chmod +x scripts/check_links.py
+          python scripts/check_links.py --check-external
+          echo "link_check_status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload link check report
+        uses: actions/upload-artifact@v3
+        with:
+          name: scheduled-link-check-report
+          path: |
+            link_check_report.md
+            link_check_results.log
+      
+      - name: Create issue for broken links
+        if: steps.link_check.outputs.link_check_status != '0'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Scheduled check: Broken links found in documentation"
+          content-filepath: ./link_check_report.md
+          labels: documentation, bug
