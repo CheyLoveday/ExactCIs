@@ -8,7 +8,7 @@ which is designed to handle large sample sizes better than the previous implemen
 import pytest
 import numpy as np
 import time
-from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue, find_ci_bound
+from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue
 from exactcis.core import validate_counts, calculate_odds_ratio
 
 

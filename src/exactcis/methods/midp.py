@@ -34,6 +34,12 @@ from exactcis.core import (
     calculate_odds_ratio
 )
 
+# Import CI search utilities
+from exactcis.utils.ci_search import (
+    find_confidence_interval_grid,
+    find_confidence_interval_adaptive_grid
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -109,34 +115,6 @@ def calculate_midp_pvalue(a_obs: int, n1: int, n2: int, m1: int, theta: float) -
         return np.nan
 
 
-def find_ci_bound(theta_grid: np.ndarray, p_values: np.ndarray, alpha: float, is_lower: bool = True) -> float:
-    """
-    Find confidence interval bound from grid of theta values and p-values.
-    
-    Args:
-        theta_grid: Array of theta values
-        p_values: Array of p-values corresponding to theta_grid
-        alpha: Significance level
-        is_lower: If True, find lower bound; if False, find upper bound
-        
-    Returns:
-        Confidence interval bound
-    """
-    # Find values in the confidence interval (p_value >= alpha)
-    in_ci = p_values >= alpha
-    
-    if not np.any(in_ci):
-        # No values in CI, return boundary
-        return theta_grid[0] if is_lower else theta_grid[-1]
-    
-    # Find the bound
-    if is_lower:
-        # Lower bound is the smallest theta in CI
-        return theta_grid[np.where(in_ci)[0][0]]
-    else:
-        # Upper bound is the largest theta in CI
-        return theta_grid[np.where(in_ci)[0][-1]]
-
 
 @lru_cache(maxsize=4096)
 def exact_ci_midp(a: int, b: int, c: int, d: int,
@@ -144,17 +122,20 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
                   progress_callback: Optional[Callable] = None,
                   grid_size: int = 200,
                   theta_min: float = 0.001,
-                  theta_max: float = 1000) -> Tuple[float, float]:
+                  theta_max: float = 1000,
+                  use_adaptive_grid: bool = True,
+                  refinement_rounds: int = 2) -> Tuple[float, float]:
     """
-    Calculate the Mid-P adjusted confidence interval for the odds ratio using grid search.
+    Calculate the Mid-P adjusted confidence interval for the odds ratio.
 
     This method is similar to the conditional (Fisher) method but gives half-weight
     to the observed table in the tail p-value, reducing conservatism. It is appropriate
     for epidemiology or surveillance where conservative Fisher intervals are too wide,
     and for moderate samples where slight undercoverage is tolerable for tighter intervals.
     
-    This implementation uses a grid search approach with confidence interval inversion,
-    which is more reliable for large sample sizes than root-finding methods.
+    This implementation uses an adaptive grid search approach with confidence interval inversion,
+    which provides better precision than a fixed-size grid without the computational cost of
+    a uniformly dense grid.
 
     Args:
         a: Count in cell (1,1)
@@ -166,6 +147,8 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         grid_size: Number of points in the theta grid (default: 200)
         theta_min: Minimum theta value for grid search (default: 0.001)
         theta_max: Maximum theta value for grid search (default: 1000)
+        use_adaptive_grid: Whether to use adaptive grid refinement (default: True)
+        refinement_rounds: Number of refinement rounds for adaptive grid (default: 2)
 
     Returns:
         Tuple containing (lower_bound, upper_bound) of the confidence interval
@@ -185,7 +168,8 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
     odds_ratio = calculate_odds_ratio(a, b, c, d)
     
     # Log initial information
-    logger.info(f"Computing Mid-P CI using grid search: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")
+    method = "adaptive grid search" if use_adaptive_grid else "fixed grid search"
+    logger.info(f"Computing Mid-P CI using {method}: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")
     logger.info(f"Marginals: n1={n1}, n2={n2}, m1={m1}, odds_ratio={odds_ratio}")
     
     # Handle edge cases
@@ -193,40 +177,62 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         logger.info(f"Edge case: b={b}, c={c}, returning (0, inf)")
         return (0.0, float('inf'))
     
-    # Generate grid of theta values (logarithmically spaced)
-    # Ensure the grid includes the point estimate
+    # Handle case where a == 0 (odds ratio is 0)
+    if a == 0:
+        logger.info(f"Edge case: a={a}, odds ratio is 0, adjusting lower bound")
+        # For a=0, the odds ratio is 0, so we need to ensure the CI includes 0
+        # We'll proceed with the normal calculation but ensure lower bound is 0
+        special_case_a_zero = True
+    else:
+        special_case_a_zero = False
+    
+    # Adjust theta_min and theta_max to ensure they bracket the odds ratio
     if odds_ratio > 0 and odds_ratio < float('inf'):
-        # Adjust theta_min and theta_max to ensure they bracket the odds ratio
         theta_min = min(theta_min, odds_ratio * 0.1)
         theta_max = max(theta_max, odds_ratio * 10)
     
-    theta_grid = np.logspace(np.log10(theta_min), np.log10(theta_max), grid_size)
+    # Define p-value function for CI search
+    def p_value_func(theta):
+        """Calculate Mid-P p-value for given theta"""
+        return calculate_midp_pvalue(a, n1, n2, m1, theta)
     
-    # Calculate p-values for each theta in the grid
-    p_values = []
-    for i, theta in enumerate(theta_grid):
-        p_value = calculate_midp_pvalue(a, n1, n2, m1, theta)
-        p_values.append(p_value)
-        
-        # Report progress
-        if progress_callback:
-            progress_callback(min(100, int(100 * (i+1) / grid_size)))
+    # Choose search method based on use_adaptive_grid parameter
+    if use_adaptive_grid:
+        logger.info("Using adaptive grid search for CI search")
+        lower_bound, upper_bound = find_confidence_interval_adaptive_grid(
+            p_value_func, theta_min, theta_max, alpha, 
+            initial_grid_size=grid_size // 4,  # Use smaller initial grid
+            refinement_rounds=refinement_rounds,
+            odds_ratio=odds_ratio, 
+            progress_callback=progress_callback
+        )
+    else:
+        logger.info(f"Using fixed grid search with {grid_size} points for CI search")
+        lower_bound, upper_bound = find_confidence_interval_grid(
+            p_value_func, theta_min, theta_max, alpha, 
+            grid_size=grid_size, odds_ratio=odds_ratio, 
+            progress_callback=progress_callback
+        )
     
-    # Convert to numpy arrays
-    p_values = np.array(p_values)
-    
-    # Find confidence interval bounds
-    lower_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=True)
-    upper_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=False)
-    
-    # Ensure the odds ratio is within the CI
+    # Log if the odds ratio is not within the CI (should be rare with adaptive grid)
     if odds_ratio < lower_bound:
-        logger.warning(f"Odds ratio ({odds_ratio}) < lower bound ({lower_bound}), adjusting lower bound")
-        lower_bound = max(0.0, odds_ratio * 0.9)
+        logger.warning(f"Note: Odds ratio ({odds_ratio:.6f}) < lower bound ({lower_bound:.6f})")
+        # Adjust lower bound to include odds ratio if very close
+        if odds_ratio > lower_bound * 0.95:
+            lower_bound = odds_ratio * 0.99
+            logger.info(f"Adjusted lower bound to {lower_bound:.6f} to include odds ratio")
     
     if odds_ratio > upper_bound and upper_bound < theta_max * 0.99:
-        logger.warning(f"Odds ratio ({odds_ratio}) > upper bound ({upper_bound}), adjusting upper bound")
-        upper_bound = min(float('inf'), odds_ratio * 1.1)
+        logger.warning(f"Note: Odds ratio ({odds_ratio:.6f}) > upper bound ({upper_bound:.6f})")
+        # Adjust upper bound to include odds ratio if very close
+        if odds_ratio < upper_bound * 1.05:
+            upper_bound = odds_ratio * 1.01
+            logger.info(f"Adjusted upper bound to {upper_bound:.6f} to include odds ratio")    # Handle special case where a=0 (odds ratio is 0)
+    if special_case_a_zero and lower_bound > 0:
+        logger.info(f"Special case a=0: Setting lower bound to 0.0 (was {lower_bound:.6f})")
+        lower_bound = 0.0
+    
+
     
     logger.info(f"Mid-P CI result: ({lower_bound:.6f}, {upper_bound:.6f})")
     
@@ -240,7 +246,9 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
                         progress_callback: Optional[Callable] = None,
                         grid_size: int = 200,
                         theta_min: float = 0.001,
-                        theta_max: float = 1000) -> List[Tuple[float, float]]:
+                        theta_max: float = 1000,
+                        use_adaptive_grid: bool = True,
+                        refinement_rounds: int = 2) -> List[Tuple[float, float]]:
     """
     Calculate Mid-P adjusted confidence intervals for multiple 2x2 tables in parallel.
     
@@ -256,6 +264,8 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
         grid_size: Number of points in the theta grid (default: 200)
         theta_min: Minimum theta value for grid search (default: 0.001)
         theta_max: Maximum theta value for grid search (default: 1000)
+        use_adaptive_grid: Whether to use adaptive grid refinement (default: True)
+        refinement_rounds: Number of refinement rounds for adaptive grid (default: 2)
         
     Returns:
         List of (lower_bound, upper_bound) tuples, one for each input table
@@ -289,7 +299,9 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
                                       progress_callback=progress_callback,
                                       grid_size=grid_size,
                                       theta_min=theta_min,
-                                      theta_max=theta_max)
+                                      theta_max=theta_max,
+                                      use_adaptive_grid=use_adaptive_grid,
+                                      refinement_rounds=refinement_rounds)
                 results.append(result)
             except Exception as e:
                 logger.warning(f"Error processing table {i+1} ({a},{b},{c},{d}): {e}")
@@ -324,6 +336,8 @@ def exact_ci_midp_batch(tables: List[Tuple[int, int, int, int]],
         grid_size=grid_size,
         theta_min=theta_min,
         theta_max=theta_max,
+        use_adaptive_grid=use_adaptive_grid,
+        refinement_rounds=refinement_rounds,
         timeout=None,  # No timeout for batch processing
         backend=backend,
         max_workers=max_workers

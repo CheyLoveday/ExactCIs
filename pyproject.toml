@@ -105,6 +105,7 @@ disallow_incomplete_defs = true
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
+norecursedirs = ["archive", "*.egg", ".git", ".tox", "dist", "build"]
 markers = [
     "fast: mark a test as fast running",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

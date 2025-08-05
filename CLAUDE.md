@@ -80,12 +80,18 @@ The package follows a modular architecture with clear separation of concerns:
 - Caching at multiple levels (binomial coefficients, PMF weights, etc.)
 - Progress reporting callbacks for long-running calculations
 
-### Method Selection Guidance
+### Method Implementation Strategy Updates
 - **conditional** (Fisher): Guaranteed ≥1-α coverage, conservative, use for small samples
-- **midp**: Less conservative than Fisher, good for epidemiology
+- **midp**: Now uses **grid search with confidence interval inversion** instead of root-finding for better reliability with large samples. Similar to R's Exact package approach.
 - **blaker**: Exact coverage with minimal over-coverage, standard in genomics
-- **unconditional** (Barnard): Narrowest exact CI, requires optimization, good for unfixed margins
+- **unconditional** (Barnard): Completely rewritten to use **profile likelihood approach** with MLE optimization for each theta, ensuring the sample odds ratio is always contained in the CI.
 - **wald_haldane**: Fast approximation for large samples
+
+### New Performance Features
+- **Batch Processing**: Both midp and unconditional methods now support `*_batch()` functions with parallel processing
+- **Profile Likelihood**: Unconditional method uses scipy optimization to find MLE of nuisance parameter p1 for each theta
+- **Adaptive Grid Search**: More intelligent theta grid generation centered around the sample odds ratio
+- **Shared Caching**: Enhanced caching system for parallel processing scenarios
 
 ## Testing Strategy
 

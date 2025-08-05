@@ -85,6 +85,12 @@ from ..utils.optimization import (
     adaptive_grid_search
 )
 
+# Import CI search utilities
+from ..utils.ci_search import (
+    find_confidence_interval_grid,
+    find_confidence_interval_rootfinding
+)
+
 # Import tqdm if available, otherwise define a no-op version
 try:
     from tqdm import tqdm
@@ -361,61 +367,18 @@ def _log_pvalue_profile(a: int, c: int, n1: int, n2: int, theta: float,
     return log_pvalue
 
 
-def find_ci_bound(theta_grid: np.ndarray, p_values: np.ndarray, 
-                 alpha: float, is_lower: bool = True) -> float:
-    """
-    Find confidence interval bound from grid of theta values and p-values.
-    
-    Args:
-        theta_grid: Array of theta values
-        p_values: Array of p-values corresponding to theta_grid
-        alpha: Significance level
-        is_lower: If True, find lower bound; if False, find upper bound
-        
-    Returns:
-        Confidence interval bound
-    """
-    # Convert to numpy arrays if not already
-    theta_grid = np.array(theta_grid)
-    p_values = np.array(p_values)
-    
-    # Find values in the confidence interval (p_value >= alpha)
-    in_ci = p_values >= alpha
-    
-    # Log the number of values in the CI
-    bound_type = "lower" if is_lower else "upper"
-    logger.info(f"Finding {bound_type} bound: {np.sum(in_ci)} values in CI out of {len(theta_grid)}")
-    
-    if not np.any(in_ci):
-        # No values in CI, return boundary
-        logger.warning(f"No values in CI for {bound_type} bound, returning boundary")
-        return theta_grid[0] if is_lower else theta_grid[-1]
-    
-    # Find the bound
-    if is_lower:
-        # Lower bound is the smallest theta in CI
-        idx = np.where(in_ci)[0][0]
-        bound = theta_grid[idx]
-        logger.info(f"Lower bound: theta={bound:.6f}, p-value={p_values[idx]:.6f}, alpha={alpha:.6f}")
-        return bound
-    else:
-        # Upper bound is the largest theta in CI
-        idx = np.where(in_ci)[0][-1]
-        bound = theta_grid[idx]
-        logger.info(f"Upper bound: theta={bound:.6f}, p-value={p_values[idx]:.6f}, alpha={alpha:.6f}")
-        return bound
 
 
 def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
                                   grid_size: int = 200, theta_min: float = 0.001, 
-                                  theta_max: float = 1000, **kwargs) -> Tuple[float, float]:
+                                  theta_max: float = 1000, use_root_finding: bool = True, **kwargs) -> Tuple[float, float]:
     """
     Calculate Barnard's exact unconditional confidence interval using a profile likelihood.
 
-    This implementation uses a grid search over the odds ratio (theta) and, for
-    each theta, calculates a p-value using the profile likelihood approach. This
-    involves finding the maximum likelihood estimate of the nuisance parameter (p1)
-    for that specific theta.
+    This implementation uses either root-finding (default) or grid search over the odds 
+    ratio (theta) and, for each theta, calculates a p-value using the profile likelihood 
+    approach. This involves finding the maximum likelihood estimate of the nuisance 
+    parameter (p1) for that specific theta.
 
     This method is recommended over supremum-based approaches as it has better
     statistical properties and guarantees that the resulting confidence interval
@@ -429,9 +392,10 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
     Args:
         a, b, c, d: Cell counts in the 2x2 table
         alpha: Significance level (default: 0.05)
-        grid_size: Number of grid points for theta (default: 200)
-        theta_min: Minimum theta value for grid search (default: 0.001)
-        theta_max: Maximum theta value for grid search (default: 1000)
+        grid_size: Number of grid points for theta (default: 200, used only if use_root_finding=False)
+        theta_min: Minimum theta value for search (default: 0.001)
+        theta_max: Maximum theta value for search (default: 1000)
+        use_root_finding: Use root-finding instead of grid search (default: True, much faster)
         **kwargs: Additional configuration options including:
             haldane: Apply Haldane's correction (default: False)
             timeout: Optional timeout in seconds
@@ -507,29 +471,15 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
         
         logger.info(f"Theta range: ({theta_min:.6f}, {theta_max:.6f}), odds ratio: {odds_ratio:.6f}")
         
-        # Generate grid of theta values (logarithmically spaced)
-        # Ensure the grid includes the odds ratio
-        theta_values = list(np.logspace(np.log10(theta_min), np.log10(theta_max), grid_size))
-        if odds_ratio not in theta_values:
-            theta_values.append(odds_ratio)
-            theta_values.sort()
-        
-        theta_grid = np.array(theta_values)
-        logger.info(f"Using theta grid with {len(theta_grid)} points, including odds ratio {odds_ratio:.6f}")
-        
-        # Progress reporting
-        if progress_callback:
-            progress_callback(10)  # Initialization complete
-        
-        # Calculate p-values for each theta in the grid
-        p_values = []
-        for i, theta in enumerate(theta_grid):
+        # Define p-value function for CI search
+        def p_value_func(theta):
+            """Calculate p-value for given theta using profile likelihood"""
             log_pval = _log_pvalue_profile(
                 working_a, working_c, 
                 working_a + working_b, 
                 working_c + working_d, 
                 theta, 
-                progress_callback=lambda p: progress_callback(10 + (i+1) / len(theta_grid) * 80 * p / 100) if progress_callback else None,
+                progress_callback=None,  # Don't clutter output with inner progress
                 start_time=start_time, 
                 timeout=timeout, 
                 timeout_checker=timeout_checker
@@ -537,23 +487,29 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int, alpha: float = 0.05,
             
             # Check for timeout
             if log_pval is None:
-                logger.warning("Timeout occurred during p-value calculation")
-                return (theta_min, theta_max)  # Return conservative interval on timeout
+                raise RuntimeError("Timeout occurred during p-value calculation")
             
-            p_val = math.exp(log_pval) if log_pval > float('-inf') else 0.0
-            p_values.append(p_val)
-            
-            # Log p-values for key theta values
-            if abs(theta - odds_ratio) < 1e-6 or i % 20 == 0:
-                logger.info(f"Theta={theta:.6f}, p-value={p_val:.6f} (alpha={alpha:.6f})")
-            
-            # Update progress if callback provided
-            if progress_callback:
-                progress_callback(10 + (i+1) / len(theta_grid) * 80)
+            return math.exp(log_pval) if log_pval > float('-inf') else 0.0
         
-        # Find confidence interval bounds
-        lower_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=True)
-        upper_bound = find_ci_bound(theta_grid, p_values, alpha, is_lower=False)
+        # Choose search method based on use_root_finding parameter
+        if use_root_finding:
+            logger.info("Using root-finding algorithm for CI search")
+            try:
+                lower_bound, upper_bound = find_confidence_interval_rootfinding(
+                    p_value_func, theta_min, theta_max, alpha, 
+                    odds_ratio=odds_ratio, progress_callback=progress_callback
+                )
+            except Exception as e:
+                logger.warning(f"Root-finding failed: {e}, falling back to grid search")
+                use_root_finding = False
+        
+        if not use_root_finding:
+            logger.info(f"Using grid search with {grid_size} points for CI search")
+            lower_bound, upper_bound = find_confidence_interval_grid(
+                p_value_func, theta_min, theta_max, alpha, 
+                grid_size=grid_size, odds_ratio=odds_ratio, 
+                progress_callback=progress_callback
+            )
         
         # Ensure bounds are within valid range
         lower_bound = max(0.0, lower_bound)
@@ -604,7 +560,8 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
                                         progress_callback: Optional[Callable] = None,
                                         grid_size: int = 200,
                                         theta_min: float = 0.001,
-                                        theta_max: float = 1000) -> List[Tuple[float, float]]:
+                                        theta_max: float = 1000,
+                                        use_root_finding: bool = True) -> List[Tuple[float, float]]:
     """
     Calculate Barnard's exact unconditional confidence intervals for multiple 2x2 tables in parallel.
     
@@ -622,6 +579,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
         grid_size: Number of points in the theta grid (default: 200)
         theta_min: Minimum theta value for grid search (default: 0.001)
         theta_max: Maximum theta value for grid search (default: 1000)
+        use_root_finding: Use root-finding instead of grid search (default: True, much faster)
         
     Returns:
         List of (lower_bound, upper_bound) tuples, one for each input table
@@ -655,6 +613,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
                                                       grid_size=grid_size,
                                                       theta_min=theta_min,
                                                       theta_max=theta_max,
+                                                      use_root_finding=use_root_finding,
                                                       progress_callback=progress_callback)
                 results.append(result)
             except Exception as e:
@@ -690,6 +649,7 @@ def exact_ci_unconditional_batch(tables: List[Tuple[int, int, int, int]],
         grid_size=grid_size,
         theta_min=theta_min,
         theta_max=theta_max,
+        use_root_finding=use_root_finding,
         timeout=None,  # No timeout for batch processing
         backend=backend,
         max_workers=max_workers

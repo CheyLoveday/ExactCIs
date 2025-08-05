@@ -23,7 +23,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Import the Mid-P method and related functions
-from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue, find_ci_bound
+from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue
+from exactcis.utils.ci_search import _find_ci_bound as find_ci_bound
 from exactcis.core import validate_counts, calculate_odds_ratio
 
 # Try to import other methods for comparison

@@ -8,7 +8,8 @@ which is designed to handle large sample sizes better than the previous implemen
 import pytest
 import numpy as np
 import time
-from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue, find_ci_bound
+from exactcis.methods.midp import exact_ci_midp, exact_ci_midp_batch, calculate_midp_pvalue
+from exactcis.utils.ci_search import _find_ci_bound as find_ci_bound
 from exactcis.core import validate_counts, calculate_odds_ratio
 
 
@@ -38,11 +39,10 @@ def test_exact_ci_midp_edge_cases():
     # With the new implementation, we should get a finite upper bound even in edge cases
     assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
 
-    # When a is at the maximum possible value
+    # When a is at the maximum possible value (but b=0 and c=0, so should return (0, inf))
     lower, upper = exact_ci_midp(10, 0, 0, 10, alpha=0.05)
-    assert lower >= 0.0, f"Expected non-negative lower bound, got {lower}"
-    # With the new implementation, we should get a finite upper bound even in edge cases
-    assert upper < float('inf'), f"Expected finite upper bound, got {upper}"
+    assert lower == 0.0, f"Expected lower bound of 0.0 for b=0 and c=0, got {lower}"
+    assert upper == float('inf'), f"Expected upper bound of infinity for b=0 and c=0, got {upper}"
 
     # When b is zero (should return (0, inf) as documented in the function)
     lower, upper = exact_ci_midp(5, 0, 5, 5, alpha=0.05)
