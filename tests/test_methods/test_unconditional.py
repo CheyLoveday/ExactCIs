@@ -17,40 +17,67 @@ from typing import Tuple, List, Dict, Optional
 
 from exactcis.methods.unconditional import (
     exact_ci_unconditional,
-    find_mle_p1,
-    _log_likelihood
+    exact_ci_unconditional_batch,
+    calculate_unconditional_pvalue_or,
+    or_test_statistic
 )
 from exactcis.core import calculate_odds_ratio
 
 
-def test_find_mle_p1():
-    """Test the MLE optimization for p1."""
+def test_or_test_statistic():
+    """Test the odds ratio test statistic function."""
     # Simple test case
-    a, b, c, d = 10, 20, 5, 25
-    n1 = a + b
-    n2 = c + d
-    theta = 2.5
+    a, n1, n2, m1 = 10, 30, 30, 15
+    p1, p2 = 0.4, 0.3
     
-    # Find MLE
-    p1_mle = find_mle_p1(a, c, n1, n2, theta)
+    # Calculate test statistic
+    stat = or_test_statistic(a, n1, n2, m1, p1, p2)
     
-    # Check that it's within valid range
-    assert 0 < p1_mle < 1
+    # Check that it's a valid number
+    assert not math.isnan(stat), "Test statistic should not be NaN"
+    assert stat >= 0, "Test statistic should be non-negative"
     
-    # Calculate p2 from p1 and theta
-    p2_mle = (theta * p1_mle) / (1 - p1_mle + theta * p1_mle)
+    # Test edge cases
+    stat_edge = or_test_statistic(0, n1, n2, m1, p1, p2)
+    assert not math.isnan(stat_edge), "Test statistic should handle zero cells"
+
+
+def test_unconditional_pvalue():
+    """Test the unconditional p-value calculation."""
+    # Simple test case
+    a_obs, n1, n2, m1 = 10, 30, 30, 15
+    theta = 2.0
     
-    # Check that p2 is within valid range
-    assert 0 < p2_mle < 1
+    # Calculate p-value
+    pvalue = calculate_unconditional_pvalue_or(a_obs, n1, n2, m1, theta)
     
-    # Check that the MLE maximizes the likelihood
-    log_lik_mle = _log_likelihood(p1_mle, a, c, n1, n2, theta)
+    # Check that it's a valid probability
+    assert 0 <= pvalue <= 1, f"P-value should be between 0 and 1, got {pvalue}"
     
-    # Check nearby values
-    for delta in [-0.1, -0.05, -0.01, 0.01, 0.05, 0.1]:
-        p1_test = max(0.001, min(0.999, p1_mle + delta))
-        log_lik_test = _log_likelihood(p1_test, a, c, n1, n2, theta)
-        assert log_lik_test <= log_lik_mle + 1e-6, f"MLE check failed: {log_lik_test} > {log_lik_mle} at p1={p1_test}"
+    # Test with different theta values
+    for theta_test in [0.5, 1.0, 2.0, 5.0]:
+        pvalue_test = calculate_unconditional_pvalue_or(a_obs, n1, n2, m1, theta_test)
+        assert 0 <= pvalue_test <= 1, f"P-value should be between 0 and 1 for theta={theta_test}"
+
+
+def test_batch_processing():
+    """Test batch processing of multiple tables."""
+    tables = [
+        (10, 20, 5, 25),
+        (2, 8, 1, 9),
+        (50, 950, 25, 975)
+    ]
+    
+    # Test batch processing
+    results = exact_ci_unconditional_batch(tables, alpha=0.05)
+    
+    # Check that we get results for all tables
+    assert len(results) == len(tables), "Should get results for all tables"
+    
+    # Check that all results are valid
+    for i, (lower, upper) in enumerate(results):
+        assert lower >= 0, f"Lower bound should be non-negative for table {i}"
+        assert upper > lower, f"Upper bound should be greater than lower bound for table {i}"
 
 
 def test_large_sample_case():
@@ -174,13 +201,15 @@ def test_small_sample_cases():
 
 
 if __name__ == "__main__":
-    print("Testing unconditional method with profile likelihood approach")
-    print("===========================================================")
+    print("Testing unconditional method")
+    print("============================")
     
-    # Test the MLE optimization
-    print("\nTesting MLE optimization...")
-    test_find_mle_p1()
-    print("MLE optimization test passed")
+    # Test basic functions
+    print("\nTesting basic functions...")
+    test_or_test_statistic()
+    test_unconditional_pvalue()
+    test_batch_processing()
+    print("Basic function tests passed")
     
     # Test the large sample case
     print("\nTesting large sample case...")

@@ -224,7 +224,8 @@ class DetailedProfiler:
     
     def _extract_profile_data(self, stats: pstats.Stats) -> Dict[str, Any]:
         """Extract key data from cProfile stats."""
-        stats_dict = stats.get_stats()
+        # Get the stats dictionary directly from the stats object
+        stats_dict = stats.stats
         
         function_data = []
         total_time = 0
