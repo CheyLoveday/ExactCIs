@@ -24,6 +24,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Detect GitBook-native docs presence
+      - name: Detect GitBook-native docs
+        id: detect
+        run: |
+          if [ -f docs_md/SUMMARY.md ] && [ -f docs_md/README.md ]; then
+            echo "use_docs_md=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_docs_md=false" >> $GITHUB_OUTPUT
+          fi
+
       # 5. STEP 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,22 +49,25 @@ jobs:
 
       # 7. STEP 4: Install Pandoc
       - name: Install Pandoc
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y pandoc
 
       # 8. STEP 5: Build Sphinx HTML documentation
       - name: Build Sphinx docs
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           cd docs
           make html
 
       # 9. STEP 6: Convert HTML to Markdown with SUMMARY.md generation
       - name: Convert HTML to Markdown
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           chmod +x scripts/convert_html_to_md.sh
           ./scripts/convert_html_to_md.sh
-          
+
           # Add version information to README.md
           echo "" >> ./markdown_output/README.md
           echo "## Versions" >> ./markdown_output/README.md
@@ -62,9 +75,20 @@ jobs:
           echo "This is the documentation for the latest development version of ExactCIs." >> ./markdown_output/README.md
           echo "For released versions, use the version selector in the GitBook interface." >> ./markdown_output/README.md
 
+      # 9b. Alternative path: Check links directly in docs_md when present
+      - name: Check for broken links (docs_md)
+        id: link_check_md
+        if: steps.detect.outputs.use_docs_md == 'true'
+        run: |
+          chmod +x scripts/check_links.py
+          python scripts/check_links.py --markdown-dir ./docs_md
+          echo "link_check_status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # 10. STEP 7: Check for broken links
       - name: Check for broken links
         id: link_check
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           chmod +x scripts/check_links.py
           python scripts/check_links.py --markdown-dir ./markdown_output
@@ -73,6 +97,7 @@ jobs:
 
       # 11. STEP 8: Upload link check report as artifact
       - name: Upload link check report
+        if: steps.detect.outputs.use_docs_md != 'true'
         uses: actions/upload-artifact@v3
         with:
           name: link-check-report
@@ -80,18 +105,38 @@ jobs:
             link_check_report.md
             link_check_results.log
 
+      # 11b. Upload link check report for docs_md path
+      - name: Upload link check report (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: link-check-report-docs_md
+          path: |
+            link_check_report.md
+            link_check_results.log
+
       # 12. STEP 9: Create issue if broken links are found
       - name: Create issue for broken links
-        if: steps.link_check.outputs.link_check_status != '0'
+        if: steps.detect.outputs.use_docs_md != 'true' && steps.link_check.outputs.link_check_status != '0'
         uses: peter-evans/create-issue-from-file@v4
         with:
           title: "Broken links found in documentation"
           content-filepath: ./link_check_report.md
           labels: documentation, bug
 
+      # 12b. Create issue for broken links (docs_md path)
+      - name: Create issue for broken links (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true' && steps.link_check_md.outputs.link_check_status != '0'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Broken links found in documentation (docs_md)"
+          content-filepath: ./link_check_report.md
+          labels: documentation, bug
+
       # 13. STEP 10: Deploy Markdown to gitbook-sync branch
-      - name: Deploy to GitBook sync branch
+      - name: Deploy to GitBook sync branch (generated)
         id: deploy
+        if: steps.detect.outputs.use_docs_md != 'true'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -102,11 +147,24 @@ jobs:
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: "Deploy: Auto-generate docs for ${{ github.sha }}"
 
+      - name: Deploy to GitBook sync branch (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs_md
+          publish_branch: gitbook-sync
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "Deploy: GitBook-native docs for ${{ github.sha }}"
+
       # 14. STEP 11: Verify GitBook sync status
       - name: Verify GitBook sync status
         run: |
           echo "Waiting for GitBook sync to complete..."
           sleep 60  # Give GitBook some time to sync
+
           
           # Check if the gitbook-sync branch exists and was updated recently
           LAST_COMMIT_TIME=$(git ls-remote --heads origin gitbook-sync | \

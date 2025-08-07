@@ -19,6 +19,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      # Detect GitBook-native docs presence
+      - name: Detect GitBook-native docs
+        id: detect
+        run: |
+          if [ -f docs_md/SUMMARY.md ] && [ -f docs_md/README.md ]; then
+            echo "use_docs_md=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_docs_md=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Validate version format
         run: |
           if ! [[ ${{ github.event.inputs.version }} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -44,16 +54,19 @@ jobs:
           pip install requests
       
       - name: Install Pandoc
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y pandoc
       
       - name: Build Sphinx docs
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           cd docs
           make html
       
       - name: Convert HTML to Markdown
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           chmod +x scripts/convert_html_to_md.sh
           ./scripts/convert_html_to_md.sh
@@ -64,32 +77,71 @@ jobs:
           echo "" >> ./markdown_output/README.md
           echo "This is the documentation for ExactCIs version ${{ github.event.inputs.version }}." >> ./markdown_output/README.md
           echo "For other versions, use the version selector in the GitBook interface." >> ./markdown_output/README.md
+
+      # Append version information directly to docs_md when present
+      - name: Add version information to docs_md README
+        if: steps.detect.outputs.use_docs_md == 'true'
+        run: |
+          echo "" >> ./docs_md/README.md
+          echo "## Version Information" >> ./docs_md/README.md
+          echo "" >> ./docs_md/README.md
+          echo "This is the documentation for ExactCIs version ${{ github.event.inputs.version }}." >> ./docs_md/README.md
+          echo "For other versions, use the version selector in the GitBook interface." >> ./docs_md/README.md
       
       - name: Check for broken links
         id: link_check
+        if: steps.detect.outputs.use_docs_md != 'true'
         run: |
           chmod +x scripts/check_links.py
           python scripts/check_links.py --markdown-dir ./markdown_output
           echo "link_check_status=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
+
+      - name: Check for broken links (docs_md)
+        id: link_check_md
+        if: steps.detect.outputs.use_docs_md == 'true'
+        run: |
+          chmod +x scripts/check_links.py
+          python scripts/check_links.py --markdown-dir ./docs_md
+          echo "link_check_status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
       
       - name: Upload link check report
+        if: steps.detect.outputs.use_docs_md != 'true'
         uses: actions/upload-artifact@v3
         with:
           name: link-check-report-${{ github.event.inputs.version }}
           path: |
             link_check_report.md
             link_check_results.log
+
+      - name: Upload link check report (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: link-check-report-docs_md-${{ github.event.inputs.version }}
+          path: |
+            link_check_report.md
+            link_check_results.log
       
       - name: Create issue for broken links
-        if: steps.link_check.outputs.link_check_status != '0'
+        if: steps.detect.outputs.use_docs_md != 'true' && steps.link_check.outputs.link_check_status != '0'
         uses: peter-evans/create-issue-from-file@v4
         with:
           title: "Broken links found in documentation for ${{ github.event.inputs.version }}"
           content-filepath: ./link_check_report.md
           labels: documentation, bug
+
+      - name: Create issue for broken links (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true' && steps.link_check_md.outputs.link_check_status != '0'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Broken links found in documentation (docs_md) for ${{ github.event.inputs.version }}"
+          content-filepath: ./link_check_report.md
+          labels: documentation, bug
       
       - name: Deploy to versioned GitBook sync branch
+        if: steps.detect.outputs.use_docs_md != 'true'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -99,6 +151,18 @@ jobs:
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: "Deploy: Documentation for ${{ github.event.inputs.version }}"
+
+      - name: Deploy to versioned GitBook sync branch (docs_md)
+        if: steps.detect.outputs.use_docs_md == 'true'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs_md
+          publish_branch: gitbook-sync-${{ github.event.inputs.version }}
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "Deploy: GitBook-native documentation for ${{ github.event.inputs.version }}"
       
       - name: Verify deployment
         run: |

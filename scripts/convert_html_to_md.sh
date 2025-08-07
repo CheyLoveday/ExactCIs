@@ -106,6 +106,7 @@ add_to_summary "api/methods/conditional.md" 2 "Conditional Method"
 add_to_summary "api/methods/midp.md" 2 "Mid-P Method"
 add_to_summary "api/methods/unconditional.md" 2 "Unconditional Method"
 add_to_summary "api/methods/wald.md" 2 "Wald Method"
+add_to_summary "api/methods/relative_risk.md" 2 "Relative Risk Methods"
 
 echo "### Utilities" >> "$MARKDOWN_DIR/SUMMARY.md"
 add_to_summary "api/utils/parallel.md" 2 "Parallel Processing"
