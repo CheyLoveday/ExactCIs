@@ -26,6 +26,7 @@ ExactCIs implements various methods for calculating confidence intervals:
 * :doc:`api/methods/midp` - Mid-P confidence intervals
 * :doc:`api/methods/unconditional` - Unconditional exact confidence intervals
 * :doc:`api/methods/wald` - Wald confidence intervals
+* :doc:`api/methods/relative_risk` - Relative risk confidence intervals
 
 Utilities
 ---------

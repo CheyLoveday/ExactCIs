@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ExactCIs is a comprehensive Python package for computing confidence intervals for epidemiological measures from 2×2 contingency tables. The package provides:
+ExactCIs is a focused Python package for computing confidence intervals for **odds ratios and relative risks** from 2×2 contingency tables. The package provides comprehensive, peer-reviewed methods for the two most important epidemiological effect measures.
 
 **Odds Ratio Methods (5 implemented):**
 - Fisher's conditional (exact)
@@ -20,12 +20,14 @@ ExactCIs is a comprehensive Python package for computing confidence intervals fo
 - Score with continuity correction
 - U-statistic (nonparametric)
 
+**Scope**: Focused exclusively on OR and RR confidence intervals - the two fundamental epidemiological effect measures. Does not attempt to be a complete epidemiological analysis platform.
+
 **Target Applications:**
-- Biomedical research and clinical trials
-- Epidemiological studies
-- Meta-analysis
-- Regulatory submissions (FDA/EMA)
-- Academic research requiring peer-reviewed methods
+- Biomedical research requiring OR/RR confidence intervals
+- Clinical trials and observational studies  
+- Meta-analysis of OR/RR estimates
+- Regulatory submissions requiring validated CI methods
+- Academic research with peer-reviewed statistical methods
 
 ## Development Commands
 
@@ -364,6 +366,153 @@ def odds_ratio_ci(a, b, c, d, alpha=0.05, method="auto", **kwargs):
 - `epitools` (v0.5-10.1) - epidemiological OR calculations  
 - `meta` (v7.0-0) - meta-analysis OR pooling
 - `PropCIs` (v0.3-0) - proportion and OR confidence intervals
+
+## Additional Relative Risk Methods (High Priority Gaps)
+
+Based on comprehensive software survey (SAS, Stata, NCSS, R, SciPy), **four key RR methods** appear consistently and would complete the standard epidemiological toolkit:
+
+### 1. Mantel-Haenszel Pooled RR (Stratified Analysis)
+
+**When Essential:**
+- Multi-stratum studies (sex, site, ancestry groups)
+- Required by FDA and CONSORT for adjusted RR
+- Controlling for confounding variables
+
+**Reference Implementations:**
+- R `epiR::epi.2by2(type="mh")` 
+- SAS `PROC FREQ ... / CMH RISKDIFF(CL=MH)`
+- Stata `cs` command with stratification
+
+**Mathematical Foundation:**
+```
+RR_MH = Σ(a_i * n2_i / n_i) / Σ(c_i * n1_i / n_i)
+Variance via Robins et al. (1986) formula
+```
+
+### 2. Exact Unconditional RR (Cornfield/Fisher Hybrid)
+
+**When Essential:**
+- Very small cell counts (≤5) where conditional exact is too conservative
+- Unbalanced designs where Wald breaks down
+- Regulatory submissions requiring exact methods
+
+**Reference Implementations:**
+- R `exact2x2::riskratioUncond()`
+- Stata `cs` with `exact` option
+- NCSS "Two Proportions" exact unconditional
+
+### 3. Bonett-Price Hybrid Fieller Interval
+
+**When Essential:**
+- Moderate samples (30 ≤ n ≤ 200)
+- Better coverage than Wald, narrower than exact methods
+- Recommended for clinical trials with moderate sample sizes
+
+**Reference Implementation:**
+- R `DescTools::RelRisk(method="bonett")`
+
+**Mathematical Foundation:**
+```
+Hybrid of Wilson score intervals combined via Fieller method
+CI_BP = (p̂₁(1-q₂) ± z√[p̂₁(1-p̂₁)/n₁ + q₂(1-q₂)/n₂]) / (q₂(1-p̂₁) + z²/(2n₂))
+```
+
+### 4. Bootstrap BCa Interval (Non-parametric)
+
+**When Essential:**
+- Complex designs (clustering, matching)
+- When analytic variance formulas are disputed
+- Genetic epidemiology with family structures
+
+**Reference Implementation:**
+- `scikits-bootstrap` with bias-corrected and accelerated (BCa) method
+- Base `numpy.random` for simple bootstrap
+
+## Completing the RR Toolkit: Four Essential Additions
+
+To achieve **parity with standard epidemiological software** (SAS, Stata, R), these four RR methods would complete the professional toolkit while maintaining focused scope:
+
+### 1. **Exact Unconditional RR** (Small Sample Priority)
+- **Use Case**: Very small cells (≤5) where conditional exact is too conservative
+- **Reference**: R `exact2x2::riskratioUncond()`, Stata `cs, exact`
+- **Implementation**: Adapt existing unconditional OR algorithms to RR
+
+### 2. **Bonett-Price Hybrid Fieller** (Moderate Sample Priority)  
+- **Use Case**: Moderate samples (30-200) - better than Wald, narrower than exact
+- **Reference**: R `DescTools::RelRisk(method="bonett")`
+- **Implementation**: Wilson score intervals combined via Fieller method
+
+### 3. **Bootstrap BCa** (Complex Design Priority)
+- **Use Case**: Complex designs, disputed variance formulas, genetic studies
+- **Reference**: `scikits-bootstrap` or base `numpy.random`
+- **Implementation**: Non-parametric resampling with bias correction
+
+### 4. **Mantel-Haenszel Stratified RR** (Single-Table Focus)
+- **Use Case**: Single 2x2 table with known stratum weights (not full stratified analysis)
+- **Reference**: SAS `PROC FREQ CMH`, R `epiR::epi.2by2(type="mh")`  
+- **Implementation**: MH formula for pre-weighted single table
+
+**Strategic Note**: These four methods complete the RR toolkit without expanding beyond OR/RR focus. No risk difference, no full stratified analysis platform, no sample size calculations - just comprehensive OR/RR confidence intervals.
+
+## Complete Package Design Matrix
+
+Following the **"necessary and sufficient"** principle, the package covers every common study design with exactly the right methods:
+
+### Coverage Matrix: Study Design × Sample Size
+
+| Design / n-range | RR Method | OR Method | Justification |
+|------------------|-----------|-----------|---------------|
+| **Large, independent (n≥100)** | Wald-Katz | Wald-Haldane | SciPy/SAS standard, fast baseline |
+| **Moderate (30≤n<100)** | Score (Tang) + CC | Score + CC | EMA recommended, gold-standard coverage |
+| **Small (n<30)** | Exact conditional + Mid-P | Exact conditional + Mid-P | Exact methods, Mid-P less conservative |
+| **Ultra-small/zeros** | Exact unconditional | Exact unconditional | Narrower than conditional, Stata `exact` |
+| **Matched pairs** | U-statistic (Duan) | McNemar exact | Preserves pairing information |
+| **Multi-stratum** | Mantel-Haenszel | Mantel-Haenszel | CONSORT required for stratified analysis |
+| **Moderate, narrow CI** | Bonett-Price Fieller | Agresti-Caffo | Coverage-width trade-off optimization |
+| **Complex/clustered** | Bootstrap BCa | Bootstrap BCa | Design-agnostic, model diagnostic |
+
+### Three-Rule Filter Applied
+1. **✅ Widely Accepted**: Every method appears in major software (R/SAS/Stata) or regulatory guidance
+2. **✅ Complementary Coverage**: Every study scenario has at least one reliable method  
+3. **✅ No Redundancy**: No mathematically equivalent methods included
+
+### Recommended Defaults
+- **Primary Default**: Continuity-corrected Score (Tang for RR, score for OR)
+- **Rationale**: Tracks nominal 95% from n≈30 upward, never diverges like Wald, FDA template
+
+### Public API Design
+```python
+from exactcis import rr_ci, or_ci
+
+# Simple cases with smart defaults
+rr_ci(a, b, c, d)  # Uses score_cc method
+or_ci(a, b, c, d)  # Uses score_cc method
+
+# Explicit method selection
+rr_ci(a, b, c, d, method="tang_cc")      # Score with continuity correction
+rr_ci(a, b, c, d, method="katz")         # Wald-Katz for large samples
+rr_ci(a, b, c, d, method="exact_cond")   # Conditional exact for small samples
+rr_ci(a, b, c, d, method="exact_uncond") # Unconditional for zeros
+rr_ci(a, b, c, d, method="bonett")       # Bonett-Price for moderate samples
+rr_ci(a, b, c, d, method="ustat")        # U-statistic for matched data
+rr_ci(a, b, c, d, method="bootstrap")    # BCa bootstrap for complex designs
+
+# Advanced options
+rr_ci(a, b, c, d, method="bootstrap", B=10000, seed=42)
+```
+
+### Bootstrap BCa Implementation Priority
+**High Value Addition**:
+- **Design Agnostic**: Works for any table structure without re-deriving variance formulas
+- **Model Diagnostic**: Sanity-check for analytic CIs (mismatches reveal data issues)
+- **Pedagogical**: Easier to understand than complex score equations
+- **Rare Events**: Stable when analytic formulas break down
+
+**Implementation Strategy**:
+- Pure NumPy implementation (no external dependencies)
+- ~30ms for B=10,000 replicates (acceptable performance)
+- Bias-corrected & accelerated for second-order accuracy
+- Independent resampling within exposed/control groups
 
 ## File Navigation Helpers
 

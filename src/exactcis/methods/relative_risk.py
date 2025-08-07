@@ -188,6 +188,13 @@ def ci_wald_correlated_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -
     """
     validate_counts(a, b, c, d)
     
+    # Enhanced zero-cell handling (check before continuity correction)
+    if c == 0:
+        # When unexposed has no events, upper bound should be large/infinite
+        if a > 0:
+            # Use regular Wald method which handles this case better
+            return ci_wald_rr(a, b, c, d, alpha)
+    
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
     
@@ -200,7 +207,7 @@ def ci_wald_correlated_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -
     if n1 > 100 and n2 > 100:
         return ci_wald_rr(a, b, c, d, alpha)
     
-    if n1 == 0 or n2 == 0 or a_c == 0 or c_c == 0:
+    if n1 == 0 or n2 == 0 or a_c == 0:
         return 0.0, float('inf')
     
     # For truly matched data, use proper paired proportion variance
@@ -392,7 +399,7 @@ def corrected_score_statistic(x11: int, x12: int, x21: int, x22: int, theta0: fl
 def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
                       score_func: Callable, max_iter: int = 100, tol: float = 1e-10) -> float:
     """
-    Find the confidence interval bound using improved root finding
+    Find the confidence interval bound using enhanced root finding
     with better boundary detection and search range handling.
     """
     z_crit = stats.norm.ppf(1 - alpha/2)
@@ -416,43 +423,82 @@ def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is
         lo = max(1e-8, rr_hat / 1000)  # Much more aggressive lower search
         hi = rr_hat * 0.99  # Just below point estimate
     else:
-        # For upper bound
+        # For upper bound - start with conservative range and expand smartly
         lo = rr_hat * 1.01  # Just above point estimate  
-        hi = rr_hat * 10  # Start with reasonable upper search
+        hi = rr_hat * 2  # Start with smaller initial range
     
-    # Expand bracket until sign change
-    for _ in range(20):
+    # Enhanced bracket expansion with systematic search
+    max_expansion = 50  # More reasonable limit
+    expansion_count = 0
+    
+    while expansion_count < max_expansion:
         try:
             val_lo, val_hi = objective(lo), objective(hi)
             if val_lo * val_hi <= 0:
                 break
+            
             if is_lower:
-                lo /= 10.0  # More aggressive expansion
+                lo /= 2.0  # Systematic expansion for lower bound
             else:
-                hi *= 10.0
-        except:
-            if is_lower:
-                lo /= 10.0
-            else:
-                hi *= 10.0
+                # For upper bound, expand more carefully
+                if hi < rr_hat * 100:  # Don't expand too far initially
+                    hi *= 1.5  # Gentler expansion
+                else:
+                    hi *= 2.0  # More aggressive when we're already far out
+                
+            expansion_count += 1
+                
+        except (OverflowError, ValueError, ZeroDivisionError):
+            if not is_lower and hi > 1e6:
+                return float('inf')  # Legitimate infinite bound
+            break
     else:
-        return 0.0 if is_lower else float('inf')
+        # If standard expansion failed, try systematic search for upper bounds
+        if not is_lower:
+            # Try a systematic grid search for the sign change
+            search_multipliers = [2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 500, 1000]
+            for mult in search_multipliers:
+                try:
+                    test_hi = rr_hat * mult
+                    val_test = objective(test_hi)
+                    val_lo = objective(lo)
+                    if val_test * val_lo <= 0:
+                        hi = test_hi
+                        break
+                except:
+                    continue
+            else:
+                return float('inf')  # Legitimate infinite upper bound
+        else:
+            return 0.0
     
-    # Binary search for root
-    for _ in range(max_iter):
+    # Enhanced binary search with plateau detection
+    for iteration in range(max_iter):
         mid = (lo + hi) / 2
         try:
             val_mid = objective(mid)
+            
             if abs(val_mid) < tol:
                 return mid
+                
+            # Check for plateau (score function is flat)
+            if iteration > 10 and abs(hi - lo) < abs(mid) * 1e-8:
+                # Function may be flat in this region
+                return mid
+                
             if val_mid * objective(lo) < 0:
                 hi = mid
             else:
                 lo = mid
-        except:
-            break
+                
+        except (OverflowError, ValueError, ZeroDivisionError):
+            # Numerical issues, try to recover
+            if is_lower:
+                return max(0, lo)
+            else:
+                return hi if hi < 1e6 else float('inf')
     
-    return max(0, (lo + hi) / 2)  # Ensure non-negative result
+    return max(0, (lo + hi) / 2)
 
 
 def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[float, float]:
@@ -485,7 +531,7 @@ def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[fl
     return lower, upper
 
 
-def ci_score_cc_rr(a: int, b: int, c: int, d: int, delta: float = 4.0, alpha: float = 0.05) -> Tuple[float, float]:
+def ci_score_cc_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05, delta: float = 4.0) -> Tuple[float, float]:
     """
     Compute the continuity-corrected score-based confidence interval for the relative risk.
     

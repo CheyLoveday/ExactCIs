@@ -24,6 +24,10 @@ The methods modules implement various confidence interval calculation methods:
 * :doc:`methods/unconditional` - Unconditional exact confidence intervals
 * :doc:`methods/conditional` - Conditional (Fisher's exact) confidence intervals
 * :doc:`methods/blaker` - Blaker's confidence interval method
+* :doc:`methods/midp` - Mid-P confidence intervals
+* :doc:`methods/wald` - Wald confidence intervals
+* :doc:`methods/clopper_pearson` - Clopper-Pearson confidence intervals
+* :doc:`methods/relative_risk` - Relative risk confidence intervals
 
 Utilities
 ---------

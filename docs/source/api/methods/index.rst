@@ -13,6 +13,7 @@ This section provides documentation for the different confidence interval calcul
    midp
    wald
    clopper_pearson
+   relative_risk
 
 Unconditional Method
 -------------------
@@ -70,6 +71,16 @@ Clopper-Pearson Method
 The Clopper-Pearson method provides exact confidence intervals for binomial proportions using the binomial cumulative distribution function.
 
 .. automodule:: exactcis.methods.clopper_pearson
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Relative Risk Methods
+---------------------
+
+Relative risk methods provide confidence intervals for the risk ratio in 2x2 contingency tables, complementing the odds-ratio focused methods.
+
+.. automodule:: exactcis.methods.relative_risk
    :members:
    :undoc-members:
    :show-inheritance:
