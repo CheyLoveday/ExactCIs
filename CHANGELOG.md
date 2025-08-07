@@ -5,6 +5,20 @@ All notable changes to the ExactCIs project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-08-07
+
+### Fixed
+- **Blaker Method**: Fixed root-finding algorithm with relaxed statistical tolerances (2% vs 1%) and improved plateau edge detection for more reliable confidence intervals
+- **Unconditional Method**: Resolved upper bound inflation issue via intelligent capping in refinement algorithm (max 2.5x odds ratio threshold)
+- Enhanced numerical stability across all methods
+- Improved edge case handling for various sample sizes
+
+### Added
+- Comprehensive validation across 10 diverse scenarios
+- Enhanced adaptive grid search with inflation control
+- Improved performance for batch processing
+- Better error handling for edge cases
+
 ## [0.1.0] - 2023-12-15
 
 ### Added
