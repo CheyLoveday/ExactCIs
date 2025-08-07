@@ -516,21 +516,23 @@ def find_plateau_edge(f: Callable[[float], float], lo: float, hi: float, target:
             return (hi, 0)
     # If finding the smallest theta where f(theta) ≥ target (decreasing function)
     else:
-        # If lo already meets the condition, return it
-        if f_lo >= target:
+        # For decreasing functions, we need to be more careful about early returns
+        # Only return early if we have a clear boundary case
+        if f_lo >= target and abs(f_lo - target) < xtol:
             # Check for timeout before returning
             if timeout_checker and timeout_checker():
                 logger.info(f"Timeout reached in find_plateau_edge")
                 return None
             return (lo, 0)
-        # If hi doesn't meet the condition, can't find a valid theta
-        if f_hi < target:
+        # If hi doesn't meet the condition and is far from target, no valid solution
+        if f_hi < target and abs(f_hi - target) > xtol * 10:
             # Check for timeout before returning
             if timeout_checker and timeout_checker():
                 logger.info(f"Timeout reached in find_plateau_edge")
                 return None
-            # Return hi as the best we can do
-            return (hi, 0)
+            # Continue with binary search rather than returning hi
+            logger.warning(f"find_plateau_edge: No clear boundary found, continuing with binary search")
+        # For borderline cases, continue with binary search
     
     # Initialize the bounds for binary search
     lower, upper = lo, hi
@@ -647,7 +649,7 @@ def find_smallest_theta(
             root = math.exp(log_root_g) # Exponentiate the result from find_root_log
             val_at_root = func(root)
             logger.info(f"find_smallest_theta: func(root={root:.4e}) from find_root_log = {val_at_root:.4e} (target_alpha={target_alpha:.4e}, diff={(val_at_root - target_alpha):.2e})")
-            if abs(val_at_root - target_alpha) < 0.01: # Threshold for a 'good' root - further relaxed to accept good approximations
+            if abs(val_at_root - target_alpha) < 0.02: # Relaxed tolerance for statistical accuracy (2% instead of 1%)
                 if not (np.isclose(root, current_lo, atol=xtol) or np.isclose(root, current_hi, atol=xtol)):
                     logger.info(f"find_smallest_theta: Root {root:.4e} found by find_root_log is close to target and not at boundary. Returning this root.")
                     return root

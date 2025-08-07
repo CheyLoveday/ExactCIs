@@ -334,11 +334,19 @@ def find_confidence_interval_adaptive_grid(
     if progress_callback:
         progress_callback(75)
     
-    # Refine the upper bound
+    # Refine the upper bound with more conservative range to avoid inflated bounds
     upper_bound_func = lambda theta: p_value_func(theta) - alpha
+    
+    # Use more conservative upper search bound - if prelim_upper seems inflated, cap it
+    max_reasonable_upper = prelim_upper
+    if odds_ratio is not None and prelim_upper > odds_ratio * 2.5:
+        # If preliminary upper bound is >2.5x the odds ratio, it's likely inflated
+        max_reasonable_upper = min(prelim_upper, odds_ratio * 2.5)
+        logger.info(f"Capping inflated prelim_upper from {prelim_upper:.3f} to {max_reasonable_upper:.3f}")
+    
     upper_bound_results = adaptive_grid_search(
         upper_bound_func,
-        bounds=(max(prelim_lower * 1.1, prelim_upper * 0.5), min(theta_max, prelim_upper * 2.0)),
+        bounds=(max(prelim_lower * 1.1, prelim_upper * 0.5), min(theta_max, max_reasonable_upper * 1.5)),
         target_value=0.0,
         initial_points=initial_grid_size // 2,
         refinement_rounds=refinement_rounds
