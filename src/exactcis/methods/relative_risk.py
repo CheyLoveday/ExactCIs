@@ -14,6 +14,8 @@ from scipy import optimize
 from exactcis.core import find_root_log, find_plateau_edge
 from exactcis.utils.validation import validate_counts
 from exactcis.utils.corrections import add_continuity_correction
+from exactcis.utils.solvers import bracket_log_space, bisection_safe
+from exactcis.utils.inversion import invert_bound
 
 
 # ------------ Wald-based Methods ------------
@@ -362,109 +364,93 @@ def corrected_score_statistic(x11: int, x12: int, x21: int, x22: int, theta0: fl
     return corrected_numerator / math.sqrt(variance)
 
 
-def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
-                      score_func: Callable, max_iter: int = 100, tol: float = 1e-10) -> float:
+def find_score_ci_bound_enhanced(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
+                               score_func: Callable) -> float:
     """
-    Find the confidence interval bound using enhanced root finding
-    with better boundary detection and search range handling.
+    Find the confidence interval bound using centralized solver infrastructure.
+    
+    This is the new implementation using exactcis.utils.solvers for bracketing and root finding.
+    Keeps the overall structure similar to the original for better parity preservation.
     """
     z_crit = stats.norm.ppf(1 - alpha/2)
     
     def objective(theta: float) -> float:
+        """Objective function for root finding."""
         score = score_func(x11, x12, x21, x22, theta)
         if is_lower:
             return score - z_crit  # Lower bound: S(θ) = +z
         else:
             return score + z_crit  # Upper bound: S(θ) = -z
     
-    # Calculate point estimate more robustly
-    n1 = x11 + x12
-    n2 = x21 + x22
+    # Calculate point estimate for seeding
+    n1, n2 = x11 + x12, x21 + x22
+    if n1 == 0 or n2 == 0:
+        return 0.0 if is_lower else float('inf')
+    
     p1_hat = (x11 + 0.5) / (n1 + 1)
-    p2_hat = (x21 + 0.5) / (n2 + 1)
+    p2_hat = (x21 + 0.5) / (n2 + 1) 
     rr_hat = p1_hat / p2_hat
     
-    if is_lower:
-        # For lower bound, start search much lower than point estimate
-        lo = max(1e-8, rr_hat / 1000)  # Much more aggressive lower search
-        hi = rr_hat * 0.99  # Just below point estimate
-    else:
-        # For upper bound - start with conservative range and expand smartly
-        lo = rr_hat * 1.01  # Just above point estimate  
-        hi = rr_hat * 2  # Start with smaller initial range
+    # Handle edge cases first
+    if is_lower and x11 == 0:
+        return 0.0
+    if not is_lower and x21 == 0:
+        return float('inf')
     
-    # Enhanced bracket expansion with systematic search
-    max_expansion = 50  # More reasonable limit
-    expansion_count = 0
-    
-    while expansion_count < max_expansion:
-        try:
-            val_lo, val_hi = objective(lo), objective(hi)
-            if val_lo * val_hi <= 0:
-                break
-            
-            if is_lower:
-                lo /= 2.0  # Systematic expansion for lower bound
+    # Use centralized bracketing
+    domain = (1e-12, 1e12)
+    try:
+        bounds, bracket_diag = bracket_log_space(
+            objective, theta0=rr_hat, domain=domain, 
+            factor=2.0, max_expand=50, target=0.0
+        )
+        
+        if not bracket_diag.converged:
+            # No sign change found - check for infinite bounds like original
+            if is_lower and bounds[0] <= domain[0] * 2:
+                return 0.0
+            elif not is_lower and bounds[1] >= domain[1] / 2:
+                return float('inf')
             else:
-                # For upper bound, expand more carefully
-                if hi < rr_hat * 100:  # Don't expand too far initially
-                    hi *= 1.5  # Gentler expansion
-                else:
-                    hi *= 2.0  # More aggressive when we're already far out
-                
-            expansion_count += 1
-                
-        except (OverflowError, ValueError, ZeroDivisionError):
-            if not is_lower and hi > 1e6:
-                return float('inf')  # Legitimate infinite bound
-            break
-    else:
-        # If standard expansion failed, try systematic search for upper bounds
-        if not is_lower:
-            # Try a systematic grid search for the sign change
-            search_multipliers = [2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 500, 1000]
-            for mult in search_multipliers:
-                try:
-                    test_hi = rr_hat * mult
-                    val_test = objective(test_hi)
-                    val_lo = objective(lo)
-                    if val_test * val_lo <= 0:
-                        hi = test_hi
-                        break
-                except:
-                    continue
-            else:
-                return float('inf')  # Legitimate infinite upper bound
+                return bounds[0] if is_lower else bounds[1]
+        
+        # Use centralized root finding
+        root, solve_diag = bisection_safe(objective, bounds[0], bounds[1], tol=1e-10)
+        
+        if solve_diag.converged:
+            return max(0.0, root)  # Ensure non-negative for RR
         else:
-            return 0.0
-    
-    # Enhanced binary search with plateau detection
-    for iteration in range(max_iter):
-        mid = (lo + hi) / 2
-        try:
-            val_mid = objective(mid)
+            return bounds[0] if is_lower else bounds[1]
             
-            if abs(val_mid) < tol:
-                return mid
-                
-            # Check for plateau (score function is flat)
-            if iteration > 10 and abs(hi - lo) < abs(mid) * 1e-8:
-                # Function may be flat in this region
-                return mid
-                
-            if val_mid * objective(lo) < 0:
-                hi = mid
-            else:
-                lo = mid
-                
-        except (OverflowError, ValueError, ZeroDivisionError):
-            # Numerical issues, try to recover
-            if is_lower:
-                return max(0, lo)
-            else:
-                return hi if hi < 1e6 else float('inf')
+    except Exception:
+        # Fallback to original bounds logic on any error
+        if is_lower:
+            return 0.0
+        else:
+            return float('inf')
+
+
+def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
+                      score_func: Callable, max_iter: int = 100, tol: float = 1e-10) -> float:
+    """
+    Find the confidence interval bound using centralized solver infrastructure.
     
-    return max(0, (lo + hi) / 2)
+    This is the refactored implementation using exactcis.utils.solvers and inversion.
+    Replaces the custom bracket expansion and root finding logic with centralized algorithms.
+    
+    Args:
+        x11, x12, x21, x22: Contingency table counts
+        alpha: Significance level  
+        is_lower: True for lower bound, False for upper bound
+        score_func: Score test function
+        max_iter: Unused (kept for compatibility)
+        tol: Unused (kept for compatibility)
+        
+    Returns:
+        Confidence interval bound
+    """
+    # Use the enhanced version with centralized infrastructure
+    return find_score_ci_bound_enhanced(x11, x12, x21, x22, alpha, is_lower, score_func)
 
 
 def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[float, float]:
