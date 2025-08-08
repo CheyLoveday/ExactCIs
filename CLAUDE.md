@@ -15,15 +15,16 @@ ExactCIs is a focused Python package for computing confidence intervals for **od
 - Barnard's unconditional exact - Profile likelihood with inflation control
 - Wald-Haldane (asymptotic) - Fast approximation for large samples
 
-**Relative Risk Methods (6 implemented - FULLY TESTED Aug 2025):**
+**Relative Risk Methods (7 implemented - FULLY TESTED Aug 2025):**
 - Wald standard and Katz variants - Cross-validated with SciPy ≥1.11
 - Wald correlated (for matched data) - Enhanced zero-cell handling
 - Score/Tang (Miettinen-Nurminen) - Fixed bracket expansion algorithm
 - Score with continuity correction - Fixed parameter ordering and root finding
+- Score with strong continuity correction - Alternative correction variant
 - U-statistic (nonparametric) - Duan et al. method with proper variance
 
 **Current Focus (Aug 2025):**
-- ✅ **All RR methods fixed and production-ready** (50/50 tests passing)
+- ✅ **All RR methods fixed and production-ready** (57 tests: 50 passed, 7 skipped)
 - 🔄 **Performance profiling extension** to RR methods (see `profiling/RR_PROFILING_PLAN.md`)
 - 📋 **Next Priority**: Cross-validation with R packages and SciPy benchmarking
 
@@ -36,6 +37,7 @@ ExactCIs is a focused Python package for computing confidence intervals for **od
 - `uv run pytest --cov=src/exactcis tests/` - Run tests with coverage
 - `pytest tests/test_methods/test_blaker.py -v` - Run specific test file
 - `pytest tests/test_methods/test_blaker.py::test_specific_function -v` - Run specific test
+- `pytest tests/test_methods/test_relative_risk.py -v` - Test relative risk methods
 
 ### Code Quality
 - `pre-commit run --all-files` - Run linting with pre-commit
@@ -49,12 +51,17 @@ ExactCIs is a focused Python package for computing confidence intervals for **od
 - `make dev-install` - Alternative development install
 - `make clean` - Clean build artifacts
 
+### Performance Profiling
+- `python profiling/performance_profiler.py` - Benchmark all methods
+- `python profiling/rr_performance_extension.py` - Benchmark RR methods specifically
+- `python profiling/line_profiler.py` - Detailed line-by-line profiling
+
 ### Documentation
 - `make docs` - Generate Sphinx documentation
 - Documentation lives in `docs/source/` with RST files
 
 ### Building & Distribution
-- `make dist` - Build source and wheel packages
+- `make dist` - Build source and wheel packages (uses `python -m build`)
 - `twine check dist/*` - Check package before upload
 - `make release` - Full release process (check + upload)
 
@@ -236,11 +243,31 @@ result = or_ci(a, b, c, d, method="blaker")    # Blaker exact method
 
 ## File Navigation Helpers
 
-- CI method implementations: `src/exactcis/methods/<method>.py`
-- Core algorithms: `src/exactcis/core.py:` (line numbers for key functions):
+### Core Implementation Files
+- **Method implementations**: `src/exactcis/methods/<method>.py`
+  - `relative_risk.py:1-200` - All RR confidence interval methods
+  - `conditional.py`, `midp.py`, `blaker.py`, `unconditional.py`, `wald.py` - OR methods
+- **Core algorithms**: `src/exactcis/core.py` (line numbers for key functions):
   - PMF calculations: ~100-400
   - Root finding: ~400-700 (recently enhanced)
   - Support calculations: ~280-320
-- CI search utilities: `src/exactcis/utils/ci_search.py` (adaptive grid search with inflation control)
-- Main orchestrator: `src/exactcis/__init__.py:40` (`compute_all_cis`)
-- Test patterns: `tests/test_methods/test_<method>.py`
+- **Utilities**: `src/exactcis/utils/`
+  - `ci_search.py` - Adaptive grid search with inflation control
+  - `root_finding.py` - Enhanced root-finding algorithms (bracket expansion fixes)
+  - `stats.py` - Statistical utility functions and corrections
+
+### API and Orchestration  
+- **Main API**: `src/exactcis/__init__.py`
+  - `compute_all_cis()` at line ~56 - OR methods orchestrator
+  - `compute_all_rr_cis()` at line ~83 - RR methods orchestrator
+- **CLI interface**: `src/exactcis/cli.py`
+
+### Testing
+- **Method-specific tests**: `tests/test_methods/test_<method>.py`
+- **Integration tests**: `tests/test_integration.py`, `tests/test_comprehensive_integration.py`
+- **RR-specific validation**: `tests/test_methods/test_relative_risk.py`
+
+### Performance & Profiling
+- **Main profiler**: `profiling/performance_profiler.py`
+- **RR profiling**: `profiling/rr_performance_extension.py`
+- **Profiling plan**: `profiling/RR_PROFILING_PLAN.md`

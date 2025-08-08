@@ -9,45 +9,11 @@ from typing import Tuple, Dict, List, Optional, Callable, Union
 import numpy as np
 from scipy import stats
 from scipy import optimize
+
+# Use centralized imports
 from exactcis.core import find_root_log, find_plateau_edge
-
-
-def validate_counts(a: int, b: int, c: int, d: int) -> None:
-    """
-    Validate the counts in a 2x2 contingency table for relative risk calculation.
-
-    Args:
-        a: Count in cell (1,1) - exposed with outcome
-        b: Count in cell (1,2) - exposed without outcome
-        c: Count in cell (2,1) - unexposed with outcome
-        d: Count in cell (2,2) - unexposed without outcome
-
-    Raises:
-        ValueError: If any count is negative
-    """
-    if not all(isinstance(x, (int, float)) and x >= 0 for x in (a, b, c, d)):
-        raise ValueError("All counts must be non‑negative numbers")
-
-
-def add_continuity_correction(a: int, b: int, c: int, d: int, correction: float = 0.5) -> Tuple[float, float, float, float]:
-    """
-    Add a continuity correction to the cell counts if any are zero.
-
-    Args:
-        a: Count in cell (1,1)
-        b: Count in cell (1,2)
-        c: Count in cell (2,1)
-        d: Count in cell (2,2)
-        correction: Correction value to add (default: 0.5)
-
-    Returns:
-        Tuple of corrected counts (a, b, c, d)
-    """
-    # Only apply correction if any cell contains a zero
-    if a == 0 or b == 0 or c == 0 or d == 0:
-        return a + correction, b + correction, c + correction, d + correction
-    else:
-        return float(a), float(b), float(c), float(d)
+from exactcis.utils.validation import validate_counts
+from exactcis.utils.corrections import add_continuity_correction
 
 
 # ------------ Wald-based Methods ------------
@@ -69,7 +35,7 @@ def ci_wald_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[flo
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
@@ -131,7 +97,7 @@ def ci_wald_katz_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
@@ -186,7 +152,7 @@ def ci_wald_correlated_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Enhanced zero-cell handling (check before continuity correction)
     if c == 0:
@@ -517,7 +483,7 @@ def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[fl
     Returns:
         The score-based confidence interval for the relative risk
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Handle boundary cases
     if a == 0:
@@ -548,7 +514,7 @@ def ci_score_cc_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05, delta: f
     Returns:
         The continuity-corrected score-based confidence interval for the relative risk
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Create a partial function with fixed delta for the corrected score
     corrected_score = lambda x11, x12, x21, x22, theta0: corrected_score_statistic(x11, x12, x21, x22, theta0, delta)
@@ -584,7 +550,7 @@ def ci_ustat_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[fl
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
