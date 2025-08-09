@@ -24,7 +24,7 @@ import traceback
 # Add src to path to import exactcis
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
-from exactcis import compute_all_cis, compute_all_rr_cis
+from exactcis import compute_all_cis, compute_all_rr_cis, __version__
 
 
 def generate_test_grid() -> List[Tuple[int, int, int, int]]:
@@ -172,7 +172,7 @@ def generate_golden_fixtures():
     fixtures = {}
     metadata = {
         'generation_time': datetime.now().isoformat(),
-        'exactcis_version': '0.2.0',  # Current version
+        'exactcis_version': __version__,  # capture the package version dynamically
         'python_version': sys.version,
         'total_tables': len(test_tables),
         'alpha_levels': alpha_levels,

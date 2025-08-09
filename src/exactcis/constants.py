@@ -6,6 +6,12 @@ used throughout the package for consistent behavior.
 """
 
 import math
+from typing import Literal
+
+# Type Aliases for controlled vocabularies
+CorrectionMethod = Literal["haldane", "continuity", None]
+WaldMethod = Literal["wald", "agresti_caffo"]
+Distribution = Literal["normal", "t"]
 
 # Default significance level
 DEFAULT_ALPHA = 0.05

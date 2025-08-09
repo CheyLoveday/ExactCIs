@@ -41,9 +41,9 @@ except ImportError:
     logger.warning("Numba not available, performance may be reduced")
 
 from exactcis.core import (
-    validate_counts,
     calculate_odds_ratio
 )
+from exactcis.utils.validation import validate_table_and_alpha
 
 # Import CI search utilities
 from exactcis.utils.ci_search import (
@@ -409,7 +409,7 @@ def exact_ci_unconditional(a: int, b: int, c: int, d: int,
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     """
     # Validate inputs
-    validate_counts(a, b, c, d)
+    a, b, c, d = validate_table_and_alpha(a, b, c, d, alpha, preserve_int_types=True)
     
     if not 0 < alpha < 1:
         raise ValueError(f"Alpha must be between 0 and 1, got {alpha}")

@@ -13,20 +13,22 @@ ExactCIs is a focused Python package for computing confidence intervals for **od
 - Mid-P adjusted (exact) - Adaptive grid search with CI inversion
 - Blaker's exact - Recently fixed (Aug 2025), optimal coverage
 - Barnard's unconditional exact - Profile likelihood with inflation control
-- Wald-Haldane (asymptotic) - Fast approximation for large samples
+- Wald-Haldane (asymptotic) - Refactored with centralized infrastructure (Aug 2025)
 
-**Relative Risk Methods (7 implemented - FULLY TESTED Aug 2025):**
-- Wald standard and Katz variants - Cross-validated with SciPy ≥1.11
+**Relative Risk Methods (7 implemented):**
+- Wald standard and Katz variants - Refactored with centralized infrastructure (Aug 2025)
 - Wald correlated (for matched data) - Enhanced zero-cell handling
 - Score/Tang (Miettinen-Nurminen) - Fixed bracket expansion algorithm
 - Score with continuity correction - Fixed parameter ordering and root finding
 - Score with strong continuity correction - Alternative correction variant
 - U-statistic (nonparametric) - Duan et al. method with proper variance
 
-**Current Focus (Aug 2025):**
-- ✅ **All RR methods fixed and production-ready** (57 tests: 50 passed, 7 skipped)
-- 🔄 **Performance profiling extension** to RR methods (see `profiling/RR_PROFILING_PLAN.md`)
-- 📋 **Next Priority**: Cross-validation with R packages and SciPy benchmarking
+**Phase 0 Refactoring Complete (Aug 2025):**
+- ✅ **Centralized validation and corrections** - Single source of truth in `validation.py` and `continuity.py`
+- ✅ **Golden parity testing** - Comprehensive fixtures prevent regressions
+- ✅ **Core solver infrastructure** - Robust bracketing and root-finding in `solvers.py` and `inversion.py`
+- ✅ **Mathematical operations centralized** - `mathops.py` and `estimates.py` consolidate computations
+- ✅ **Wald methods refactored** - Both OR and RR use new infrastructure with dataclass safety
 
 ## Development Commands
 
@@ -70,26 +72,27 @@ ExactCIs is a focused Python package for computing confidence intervals for **od
 The package follows a modular architecture with clear separation of concerns:
 
 ### Core Components
-- `src/exactcis/core.py` - Core statistical functions, PMF calculations, root-finding algorithms
-- `src/exactcis/__init__.py` - Main public API with `compute_all_cis()` orchestrator function
+- `src/exactcis/core.py` - Core statistical functions, PMF calculations, legacy algorithms
+- `src/exactcis/__init__.py` - Main public API with `compute_all_cis()` and `compute_all_rr_cis()` orchestrators
+
+### Refactored Infrastructure (`src/exactcis/utils/`)
+- `validation.py` - Centralized input validation (Phase 0 ✅)
+- `continuity.py` - Unified continuity correction policies (Phase 0 ✅) 
+- `solvers.py` - Robust root-finding and bracketing algorithms (Phase 1 ✅)
+- `inversion.py` - Standardized CI inversion framework (Phase 1 ✅)
+- `mathops.py` - Safe mathematical operations (Phase 2 ✅)
+- `estimates.py` - Centralized point estimates and standard errors (Phase 2 ✅)
+- `optimization.py` - Optimization algorithms for unconditional methods
+- `parallel.py` - Parallel processing utilities
+- `shared_cache.py` - Caching utilities
 
 ### Method Implementations (`src/exactcis/methods/`)
 - `conditional.py` - Fisher's exact conditional method (noncentral hypergeometric CDF inversion)
 - `midp.py` - Mid-P adjusted method (half-weight for observed table)
 - `blaker.py` - Blaker's exact method (acceptability function inversion)
-- `unconditional.py` - Barnard's unconditional exact method (grid/NumPy optimization over nuisance parameter)
-- `wald.py` - Wald-Haldane approximation (normal approximation with Haldane correction)
-- `clopper_pearson.py` - Clopper-Pearson method for binomial proportions
-- `relative_risk.py` - **NEW (Aug 2025)** - Relative risk confidence intervals (Wald, Katz, Score/Tang, U-statistic methods)
-
-### Utilities (`src/exactcis/utils/`)
-- `stats.py` - Statistical utility functions, corrections
-- `validators.py` - Input validation functions
-- `optimization.py` - Optimization algorithms
-- `parallel.py` - Parallel processing utilities
-- `root_finding.py` - Root-finding algorithms
-- `pmf_functions.py` - Probability mass function calculations
-- `shared_cache.py` - Caching utilities
+- `unconditional.py` - Barnard's unconditional exact method (grid/NumPy optimization)
+- `wald.py` - **Refactored** Wald-Haldane approximation using centralized infrastructure
+- `relative_risk.py` - **Refactored** RR methods using centralized solvers and estimates
 
 ## Key Implementation Details
 
@@ -110,21 +113,23 @@ The package follows a modular architecture with clear separation of concerns:
 - Caching at multiple levels (binomial coefficients, PMF weights, etc.)
 - Progress reporting callbacks for long-running calculations
 
-### Recent Algorithm Improvements (Aug 2025)
+### Refactoring Achievements (Aug 2025)
 
-**Relative Risk Methods - Critical Fixes:**
-1. **Score Method Root Finding**: Enhanced bracket expansion in `find_score_ci_bound()` 
-   - Fixed infinite upper bounds issue: now returns finite CIs like `(1.18, 2.21)` instead of `(1.18, inf)`
-   - Systematic grid search with plateau detection for robust convergence
-2. **Parameter Order Standardization**: Fixed `ci_score_cc_rr` signature to match other methods
-3. **Zero-Cell Detection**: Enhanced `ci_wald_correlated_rr` with pre-continuity-correction logic
-4. **Test Expectation Alignment**: Updated tests to handle legitimate continuity correction effects
+**Phase 0 - Validation & Corrections:**
+- **Centralized validation**: All methods use single `validate_2x2_table()` from `validation.py`
+- **Unified corrections**: Smart continuity correction policies in `continuity.py`
+- **Golden parity**: Comprehensive fixtures prevent numerical regressions
 
-**Performance Optimizations:**
-- **Enhanced Root Finding**: Relaxed statistical tolerances (2% vs 1%) prevent degenerate solutions
-- **Adaptive Grid Search**: Intelligent theta grid generation centered around sample estimates  
-- **Batch Processing**: Parallel processing support for computationally intensive methods
-- **Shared Caching**: Multi-level caching for repeated calculations
+**Phase 1 - Core Solvers:**
+- **Robust bracketing**: Enhanced bracket expansion with plateau detection in `solvers.py`
+- **Standardized inversion**: CI bounds finding unified in `inversion.py` 
+- **Score method fixes**: Eliminated infinite upper bounds, improved convergence
+
+**Phase 2 - Mathematical Infrastructure:**
+- **Safe operations**: Math utilities centralized in `mathops.py` (zero-safe ratios, log operations)
+- **Point estimates**: All OR/RR estimates and standard errors unified in `estimates.py`
+- **Dataclass safety**: Structured `EstimationResult` and `CorrectionResult` types
+- **Wald refactoring**: Both OR and RR Wald methods use centralized infrastructure
 
 ## Testing Strategy
 
@@ -139,6 +144,45 @@ The package follows a modular architecture with clear separation of concerns:
 - Comparative tests against R's exact2x2 package
 - Performance benchmarks in `profiling/` directory
 - **Comprehensive validation**: `comprehensive_outlier_test.py` validates all methods across 10 diverse scenarios
+
+### Golden Parity Testing System
+
+**Purpose**: Ensure refactors maintain numerical correctness while accommodating precision changes from algorithmic improvements.
+
+#### **Tiered Warning System** 🚦
+- **🟢 LOW (< 0.1%)**: Minor precision difference (likely acceptable refactoring artifact)
+- **🟡 MEDIUM (< 1%)**: Moderate precision difference (may indicate algorithm change)  
+- **🟠 HIGH (< 10%)**: Significant precision difference (requires investigation)
+- **🔴 CRITICAL (≥ 10%)**: Major numerical difference (likely bug or substantial algorithm change)
+
+#### **Configuration Modes**
+- **Standard mode**: Fail on differences beyond tight tolerances (1e-9 relative, 1e-12 absolute)
+- **Refactoring mode**: Warn for differences < 10%, fail only on CRITICAL (≥ 10%)
+- **Strict mode**: Exact bitwise equality (no tolerances)
+
+#### **Usage Examples**
+```bash
+# Standard mode - tight tolerances for production
+uv run pytest tests/test_golden_parity.py
+
+# Refactoring mode - allows acceptable precision changes
+EXACTCIS_REFACTORING_MODE=1 uv run pytest tests/test_golden_parity.py
+
+# Investigate specific differences with detailed output
+EXACTCIS_REFACTORING_MODE=1 uv run pytest tests/test_golden_parity.py -s -v
+
+# Strict mode - exact match required  
+EXACTCIS_STRICT_PARITY=1 uv run pytest tests/test_golden_parity.py
+
+# Custom tolerance
+EXACTCIS_REL_TOL=1e-8 uv run pytest tests/test_golden_parity.py
+```
+
+#### **When to Use Each Mode**
+- **Standard**: Validating final implementations and releases
+- **Refactoring**: Active development with infrastructure changes
+- **Strict**: Critical validation of core algorithms
+- **Custom tolerance**: Fine-tuning precision requirements for specific scenarios
 
 ## Common Development Patterns
 
@@ -161,28 +205,15 @@ The package follows a modular architecture with clear separation of concerns:
 - Consider caching for expensive repeated calculations
 - Implement timeout checks for long-running operations
 
-## Current Performance & Profiling Focus
-
-### Performance Profiling Strategy
-- **Primary Framework**: `profiling/performance_profiler.py` with comprehensive method benchmarking
-- **RR Extension**: `profiling/RR_PROFILING_PLAN.md` outlines integration of RR methods into profiling infrastructure
-- **Recent Validation**: All 57 RR tests passing (50 passed, 7 skipped) - methods are production-ready
-
-### Key Profiling Priorities
-1. **RR Method Performance**: Benchmark the 6 newly fixed RR methods against R equivalents
-2. **Score Algorithm Efficiency**: Measure impact of bracket expansion fixes on convergence speed
-3. **Zero-Cell Handling**: Profile delegation logic overhead in enhanced methods
-4. **Cross-Method Comparison**: OR vs RR performance characteristics and scaling behavior
-
 ## Next Development Priorities
 
-### 1. Performance Profiling Integration (Current Focus)
-- **Extend profiling to RR methods**: Add all 6 RR methods to `profiling/performance_profiler.py`
-- **Benchmark recent fixes**: Validate that score method fixes maintain performance
-- **Cross-validation**: Compare RR results with R `ratesci` and SciPy ≥1.11 implementations
-- **Scaling analysis**: Profile performance across table sizes and sparsity patterns
+### 1. Cross-Validation & Benchmarking (Current Focus)
+- **R Package Validation**: Compare results with `exact2x2`, `ratesci`, `epitools` 
+- **SciPy Integration**: Cross-validate with `scipy.stats.contingency.relative_risk()`
+- **Literature Benchmarking**: Reproduce examples from Agresti, Tang, Duan papers
+- **Performance Profiling**: Extend benchmarking to all refactored methods
 
-### 2. Enhanced Public API (Planned)
+### 2. Enhanced Public API (Next Release)
 ```python
 # Unified interface for both OR and RR
 from exactcis import or_ci, rr_ci
@@ -192,82 +223,49 @@ result = rr_ci(a, b, c, d)  # Uses best method for data characteristics
 result = or_ci(a, b, c, d)  # Auto-selects appropriate OR method
 
 # Explicit method selection
-result = rr_ci(a, b, c, d, method="score_cc")  # Score with continuity correction
-result = or_ci(a, b, c, d, method="blaker")    # Blaker exact method
+result = rr_ci(a, b, c, d, method="score_cc")
+result = or_ci(a, b, c, d, method="blaker")
 ```
 
-### 3. Cross-Package Validation
-- **SciPy Integration**: Cross-validate with `scipy.stats.contingency.relative_risk()`
-- **R Package Comparison**: Automated comparison with R `exact2x2`, `ratesci`, `epitools`
-- **Literature Benchmarking**: Reproduce key examples from Agresti, Tang, Duan papers
+### 3. Remaining Method Refactoring (Phase 3)
+- **Exact methods**: Refactor conditional, mid-P, Blaker, unconditional to use centralized infrastructure
+- **Registry system**: Method metadata and auto-selection logic
+- **Enhanced diagnostics**: Standardized convergence and performance metrics
 
-## Strategic Development Roadmap
+## Strategic Development Status
 
-### Phase 1: Performance & Validation (Current - Aug 2025)
-**Status: 🔄 In Progress**
-- **RR Profiling Integration**: Extend performance benchmarking to all 6 RR methods
-- **Cross-Validation**: Compare results with R `ratesci`, `exact2x2`, and SciPy ≥1.11
-- **Literature Benchmarking**: Validate against published examples (Agresti, Tang, Duan papers)
+### ✅ Completed Phases (Aug 2025)
+- **Phase 0**: Validation and corrections centralization
+- **Phase 1**: Core solver infrastructure with RR score refactoring  
+- **Phase 2**: Mathematical operations and Wald method refactoring
 
-### Phase 2: Enhanced Public API (Next Release) 
-**Priority: High**
-- **Unified Interface**: Implement `or_ci()` and `rr_ci()` functions with smart defaults
-- **Method Auto-Selection**: Logic to choose optimal method based on sample size and data characteristics  
-- **Comprehensive Documentation**: Method selection guidance and cross-reference examples
+### 🔄 Current Work
+- **Cross-validation**: R package and literature benchmarking
+- **Performance analysis**: Impact assessment of refactoring
+- **Documentation updates**: Reflect new architecture
 
-### Phase 3: Method Expansion (Future)
-**Priority: Medium - based on user demand**
-
-**Missing OR Methods:**
-- Logit/Score method (Miettinen-Nurminen 1985) 
-- Cornfield asymptotic approximation
-- Mantel-Haenszel pooled OR
-
-**Additional RR Methods:**  
-- Exact unconditional RR (for very small samples)
-- Bonett-Price hybrid Fieller interval
-- Bootstrap BCa intervals
-- Mantel-Haenszel stratified RR
-
-**Selection Criteria**: Methods must appear in major software (R/SAS/Stata) and fill genuine coverage gaps
-
-### Target Coverage Matrix
-| Sample Size | Current Coverage | Planned Enhancement |
-|-------------|------------------|---------------------|
-| **Large (n≥100)** | ✅ Wald variants | + Cross-validation benchmarks |
-| **Moderate (30≤n<100)** | ✅ Score/Tang methods | + Bonett-Price alternatives |
-| **Small (n<30)** | ✅ Exact conditional/Mid-P | + Exact unconditional options |
-| **Zero cells** | ✅ Continuity corrections | + Bootstrap fallbacks |
-| **Matched pairs** | ✅ U-statistic, correlated Wald | + McNemar exact OR |
-| **Stratified** | ⏳ Planned | + Mantel-Haenszel pooling |
+### 📋 Planned Phases
+- **Phase 3**: Exact methods refactoring with method registry
+- **Phase 4**: Enhanced public API with smart method selection
+- **Phase 5**: Method expansion based on validated user demand
 
 ## File Navigation Helpers
 
 ### Core Implementation Files
-- **Method implementations**: `src/exactcis/methods/<method>.py`
-  - `relative_risk.py:1-200` - All RR confidence interval methods
-  - `conditional.py`, `midp.py`, `blaker.py`, `unconditional.py`, `wald.py` - OR methods
-- **Core algorithms**: `src/exactcis/core.py` (line numbers for key functions):
-  - PMF calculations: ~100-400
-  - Root finding: ~400-700 (recently enhanced)
-  - Support calculations: ~280-320
-- **Utilities**: `src/exactcis/utils/`
-  - `ci_search.py` - Adaptive grid search with inflation control
-  - `root_finding.py` - Enhanced root-finding algorithms (bracket expansion fixes)
-  - `stats.py` - Statistical utility functions and corrections
+- **Method implementations**: `src/exactcis/methods/`
+  - `relative_risk.py` - All RR methods (refactored to use centralized infrastructure)
+  - `wald.py` - OR Wald method (refactored to use centralized infrastructure)
+  - `conditional.py`, `midp.py`, `blaker.py`, `unconditional.py` - OR exact methods
+- **Refactored infrastructure**: `src/exactcis/utils/`
+  - `validation.py` - Centralized input validation
+  - `continuity.py` - Unified continuity correction policies
+  - `solvers.py` - Robust root-finding and bracketing
+  - `inversion.py` - Standardized CI inversion framework
+  - `mathops.py` - Safe mathematical operations
+  - `estimates.py` - Centralized point estimates and standard errors
+- **Legacy core**: `src/exactcis/core.py` - PMF calculations and legacy algorithms
 
-### API and Orchestration  
-- **Main API**: `src/exactcis/__init__.py`
-  - `compute_all_cis()` at line ~56 - OR methods orchestrator
-  - `compute_all_rr_cis()` at line ~83 - RR methods orchestrator
-- **CLI interface**: `src/exactcis/cli.py`
-
-### Testing
-- **Method-specific tests**: `tests/test_methods/test_<method>.py`
-- **Integration tests**: `tests/test_integration.py`, `tests/test_comprehensive_integration.py`
-- **RR-specific validation**: `tests/test_methods/test_relative_risk.py`
-
-### Performance & Profiling
-- **Main profiler**: `profiling/performance_profiler.py`
-- **RR profiling**: `profiling/rr_performance_extension.py`
-- **Profiling plan**: `profiling/RR_PROFILING_PLAN.md`
+### API and Testing
+- **Main API**: `src/exactcis/__init__.py` - `compute_all_cis()` and `compute_all_rr_cis()`
+- **Golden parity**: `tests/test_golden_parity.py` - Prevents regressions during refactoring
+- **Utils tests**: `tests/test_utils/` - Unit tests for refactored infrastructure

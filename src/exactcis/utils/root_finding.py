@@ -1,5 +1,10 @@
 """
 Pure functions for numerical root finding operations.
+
+TODO: REVIEW FOR REMOVAL - Potential duplication with solvers.py
+This module contains root finding functionality that may overlap with
+the more comprehensive solver algorithms in utils/solvers.py.
+Consider consolidating into a single root finding module.
 """
 
 import math

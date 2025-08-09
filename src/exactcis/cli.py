@@ -22,7 +22,8 @@ from exactcis.methods import (
     exact_ci_unconditional,
     ci_wald_haldane
 )
-from exactcis.core import validate_counts, apply_haldane_correction
+from exactcis.core import apply_haldane_correction
+from exactcis.utils.validation import validate_counts, validate_alpha
 from exactcis.utils.parallel import parallel_compute_ci, get_optimal_workers
 
 # Configure logging

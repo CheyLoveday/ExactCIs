@@ -10,8 +10,10 @@ import numpy as np
 from scipy import stats
 from scipy import optimize
 
-# Use centralized imports
-from exactcis.core import find_root_log, find_plateau_edge
+# TODO: REVIEW FOR REMOVAL - Mixed legacy and centralized imports
+# Some imports still reference legacy core functions (find_root_log, find_plateau_edge)
+# while others use new centralized infrastructure. Consider refactoring to use only centralized.
+from exactcis.core import find_root_log, find_plateau_edge  # LEGACY: Replace with solvers
 from exactcis.utils.validation import validate_counts
 from exactcis.utils.corrections import add_continuity_correction
 from exactcis.utils.solvers import bracket_log_space, bisection_safe
@@ -397,37 +399,66 @@ def find_score_ci_bound_enhanced(x11: int, x12: int, x21: int, x22: int, alpha: 
     if not is_lower and x21 == 0:
         return float('inf')
     
-    # Use centralized bracketing
+    # Directional bracketing first (to avoid capturing the wrong root)
     domain = (1e-12, 1e12)
     try:
-        bounds, bracket_diag = bracket_log_space(
-            objective, theta0=rr_hat, domain=domain, 
-            factor=2.0, max_expand=50, target=0.0
-        )
+        factor = 2.0
+        max_expand = 60
+        bracket = None
         
-        if not bracket_diag.converged:
-            # No sign change found - check for infinite bounds like original
-            if is_lower and bounds[0] <= domain[0] * 2:
+        if is_lower:
+            # Prefer bracketing the left root
+            hi = min(rr_hat, 1.0)
+            hi = max(domain[0], min(domain[1], hi))
+            f_hi = objective(hi)
+            for k in range(max_expand):
+                lo = max(domain[0], hi / (factor ** (k + 1)))
+                f_lo = objective(lo)
+                if f_lo * f_hi <= 0:
+                    bracket = (lo, hi)
+                    break
+                hi = lo
+            if bracket is None and hi <= domain[0] * 2:
                 return 0.0
-            elif not is_lower and bounds[1] >= domain[1] / 2:
-                return float('inf')
-            else:
-                return bounds[0] if is_lower else bounds[1]
-        
-        # Use centralized root finding
-        root, solve_diag = bisection_safe(objective, bounds[0], bounds[1], tol=1e-10)
-        
-        if solve_diag.converged:
-            return max(0.0, root)  # Ensure non-negative for RR
         else:
-            return bounds[0] if is_lower else bounds[1]
-            
+            # Prefer bracketing the right root
+            lo = max(rr_hat, 1.0)
+            lo = max(domain[0], min(domain[1], lo))
+            f_lo = objective(lo)
+            for k in range(max_expand):
+                hi = min(domain[1], lo * (factor ** (k + 1)))
+                f_hi = objective(hi)
+                if f_lo * f_hi <= 0:
+                    bracket = (lo, hi)
+                    break
+                lo = hi
+            if bracket is None and hi >= domain[1] / 2:
+                return float('inf')
+        
+        # Fallback to symmetric log-space bracketing if directional failed
+        if bracket is None:
+            bounds, bracket_diag = bracket_log_space(
+                objective, theta0=rr_hat, domain=domain, 
+                factor=factor, max_expand=max_expand, target=0.0
+            )
+            if not bracket_diag.converged:
+                if is_lower and bounds[0] <= domain[0] * 2:
+                    return 0.0
+                elif not is_lower and bounds[1] >= domain[1] / 2:
+                    return float('inf')
+                else:
+                    return bounds[0] if is_lower else bounds[1]
+            bracket = bounds
+        
+        # Use centralized root finding within the established bracket
+        root, solve_diag = bisection_safe(objective, bracket[0], bracket[1], tol=1e-10)
+        if solve_diag.converged:
+            return max(0.0, root)
+        else:
+            return bracket[0] if is_lower else bracket[1]
     except Exception:
         # Fallback to original bounds logic on any error
-        if is_lower:
-            return 0.0
-        else:
-            return float('inf')
+        return 0.0 if is_lower else float('inf')
 
 
 def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,

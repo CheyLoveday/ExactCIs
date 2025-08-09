@@ -32,7 +32,6 @@ class SolverDiagnostics:
     converged: bool = False
     method: str = "unknown"
 
-
 def bracket_log_space(func: Callable[[float], float], 
                      theta0: float,
                      domain: Tuple[float, float] = (SMALL_POS, LARGE_POS),
@@ -130,7 +129,6 @@ def bracket_log_space(func: Callable[[float], float],
     diag.converged = False
     return (theta_lo, theta_hi), diag
 
-
 def is_monotone_on_log_grid(func: Callable[[float], float],
                            grid: Tuple[float, float],
                            num_points: int = 20) -> Dict[str, Union[bool, int]]:
@@ -171,7 +169,6 @@ def is_monotone_on_log_grid(func: Callable[[float], float],
         return {'monotone': True, 'direction': -1}
     else:
         return {'monotone': False, 'direction': 0}
-
 
 def bisection_safe(func: Callable[[float], float],
                   lo: float, 
@@ -255,7 +252,6 @@ def bisection_safe(func: Callable[[float], float],
     
     return mid, diag
 
-
 def find_root_robust(func: Callable[[float], float],
                     bounds: Tuple[float, float],
                     method: str = "bisection",
@@ -283,7 +279,6 @@ def find_root_robust(func: Callable[[float], float],
         # Later can add scipy.optimize.brentq, ridder, etc. with fallbacks
         logger.debug(f"Method {method} requested, falling back to bisection for robustness")
         return bisection_safe(func, bounds[0], bounds[1], tol, max_iter, target)
-
 
 def detect_plateau_region(func: Callable[[float], float],
                          bounds: Tuple[float, float],
@@ -327,3 +322,48 @@ def detect_plateau_region(func: Callable[[float], float],
         }
     else:
         return {'has_plateau': False, 'plateau_value': None, 'plateau_width': 0.0}
+
+# ##################################################################
+# Confidence Interval Construction Methods
+# ##################################################################
+
+def wald_ci_from_log_estimate(log_estimate: float, se: float, alpha: float = 0.05,
+                              distribution: str = "normal") -> Tuple[float, float]:
+    """
+    Compute a Wald-type CI from a log-scale estimate and its standard error.
+
+    This is a fundamental solver for constructing confidence intervals for many
+    asymptotic methods (e.g., for log-odds-ratio, log-relative-risk).
+
+    Args:
+        log_estimate: The point estimate on the log scale.
+        se: The standard error of the log-estimate.
+        alpha: The significance level (e.g., 0.05 for a 95% CI).
+        distribution: The reference distribution ("normal" or "t").
+
+    Returns:
+        A tuple containing the (lower_bound, upper_bound) of the CI on the
+        original scale.
+    """
+    # Local import to keep solvers module self-contained
+    from exactcis.utils.mathops import exp_safe
+
+    if math.isinf(se) or se <= 0:
+        return 0.0, float('inf')
+
+    if distribution == "normal":
+        from scipy import stats
+        critical_value = stats.norm.ppf(1 - alpha / 2)
+    elif distribution == "t":
+        from scipy import stats
+        # Note: A proper t-distribution CI requires degrees of freedom,
+        # which is a statistical policy decision. This solver just provides
+        # the mechanism. A placeholder is used if not provided.
+        df = 10  # Placeholder
+        critical_value = stats.t.ppf(1 - alpha / 2, df=df)
+    else:
+        raise ValueError(f"Unknown distribution: {distribution}")
+
+    margin = critical_value * se
+    lower_log, upper_log = log_estimate - margin, log_estimate + margin
+    return exp_safe(lower_log), exp_safe(upper_log)

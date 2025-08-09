@@ -77,8 +77,9 @@ def validate_alpha(alpha: float) -> None:
 
 def validate_table_and_alpha(a: Union[int, float], b: Union[int, float],
                             c: Union[int, float], d: Union[int, float],
-                            alpha: float = 0.05, allow_zero_margins: bool = False
-) -> tuple[float, float, float, float]:
+                            alpha: float = 0.05, allow_zero_margins: bool = False,
+                            preserve_int_types: bool = False
+) -> tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float]]:
     """
     Validate both table counts and alpha, returning normalized inputs.
     
@@ -89,13 +90,19 @@ def validate_table_and_alpha(a: Union[int, float], b: Union[int, float],
         a, b, c, d: Cell counts
         alpha: Significance level
         allow_zero_margins: Whether to allow zero margins
+        preserve_int_types: If True, return integers if inputs were integers
         
     Returns:
-        Tuple of normalized float counts (a, b, c, d)
+        Tuple of normalized counts (a, b, c, d) - floats by default, 
+        integers if preserve_int_types=True and all inputs were integers
         
     Raises:
         ValueError: If validation fails
     """
     validate_counts(a, b, c, d, allow_zero_margins=allow_zero_margins)
     validate_alpha(alpha)
-    return normalize_inputs(a, b, c, d)
+    
+    if preserve_int_types and all(isinstance(x, int) for x in (a, b, c, d)):
+        return int(a), int(b), int(c), int(d)
+    else:
+        return normalize_inputs(a, b, c, d)

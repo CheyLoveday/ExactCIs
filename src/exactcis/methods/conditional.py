@@ -11,7 +11,8 @@ from scipy.stats import nchypergeom_fisher, norm
 from scipy.optimize import brentq, bisect
 from typing import Tuple, Callable, Optional, List, Union
 from functools import lru_cache
-from exactcis.core import validate_counts, find_sign_change
+from exactcis.core import find_sign_change
+from exactcis.utils.validation import validate_table_and_alpha
 from exactcis.utils.shared_cache import cached_cdf_function, cached_sf_function
 
 # Configure logging
@@ -182,7 +183,7 @@ def exact_ci_conditional(a: int, b: int, c: int, d: int,
     if r1 == 0 or r2 == 0 or c1 == 0 or c2 == 0:
         return 0.0, float('inf')
         
-    validate_counts(a, b, c, d)
+    a, b, c, d = validate_table_and_alpha(a, b, c, d, alpha, preserve_int_types=True)
 
     # Debug information - log the table
     logger.info(f"Calculating CI for table: a={a}, b={b}, c={c}, d={d}, alpha={alpha}")

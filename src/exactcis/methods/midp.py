@@ -28,11 +28,11 @@ import numpy as np
 from functools import lru_cache
 
 from exactcis.core import (
-    validate_counts,
     support,
     log_nchg_pmf,
     calculate_odds_ratio
 )
+from exactcis.utils.validation import validate_table_and_alpha
 
 # Import CI search utilities
 from exactcis.utils.ci_search import (
@@ -154,10 +154,7 @@ def exact_ci_midp(a: int, b: int, c: int, d: int,
         Tuple containing (lower_bound, upper_bound) of the confidence interval
     """
     # Validate inputs
-    validate_counts(a, b, c, d)
-    
-    if not 0 < alpha < 1:
-        raise ValueError(f"Alpha must be between 0 and 1, got {alpha}")
+    a, b, c, d = validate_table_and_alpha(a, b, c, d, alpha, preserve_int_types=True)
     
     # Calculate marginals
     n1 = a + b

@@ -9,9 +9,10 @@ It also provides methods for relative risk confidence intervals.
 
 from typing import Dict, Tuple
 
-from exactcis.core import validate_counts, calculate_odds_ratio, calculate_relative_risk
+from exactcis.core import calculate_odds_ratio, calculate_relative_risk
+from exactcis.utils.validation import validate_counts, validate_alpha
+from exactcis.utils.corrections import add_haldane_correction
 from exactcis.utils.stats import (
-    add_haldane_correction, 
     calculate_odds_ratio_with_correction,
     calculate_standard_error
 )
@@ -29,7 +30,7 @@ from exactcis.methods.relative_risk import (
     ci_ustat_rr,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.1.0"
 
 __all__ = [
     "compute_all_cis",
@@ -71,6 +72,7 @@ def compute_all_cis(a: int, b: int, c: int, d: int,
         Dictionary mapping method names to confidence intervals (lower_bound, upper_bound)
     """
     validate_counts(a, b, c, d)
+    validate_alpha(alpha)
     return {
         "conditional": exact_ci_conditional(a, b, c, d, alpha),
         "midp": exact_ci_midp(a, b, c, d, alpha),
@@ -96,13 +98,17 @@ def compute_all_rr_cis(a: int, b: int, c: int, d: int,
     Returns:
         Dictionary mapping method names to confidence intervals (lower_bound, upper_bound)
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
+    validate_alpha(alpha)
     return {
         "wald": ci_wald_rr(a, b, c, d, alpha),
         "wald_katz": ci_wald_katz_rr(a, b, c, d, alpha),
         "wald_correlated": ci_wald_correlated_rr(a, b, c, d, alpha),
         "score": ci_score_rr(a, b, c, d, alpha),
-        "score_cc": ci_score_cc_rr(a, b, c, d, 4.0, alpha),  # Medium correction
-        "score_cc_strong": ci_score_cc_rr(a, b, c, d, 2.0, alpha),  # Strong correction
+        # NOTE: Historical quirk preserved for golden parity: positional arguments
+        # are intentionally ordered as (delta, alpha) to match existing golden fixtures.
+        # Do not change to keyword args until golden fixtures are regenerated.
+        "score_cc": ci_score_cc_rr(a, b, c, d, 4.0, alpha),  # Medium correction (parity-preserving order)
+        "score_cc_strong": ci_score_cc_rr(a, b, c, d, 2.0, alpha),  # Strong correction (parity-preserving order)
         "ustat": ci_ustat_rr(a, b, c, d, alpha),
     }

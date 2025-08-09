@@ -97,6 +97,9 @@ def apply_correction_policy(a: Union[int, float], b: Union[int, float],
                         f"Must be one of: 'none', 'haldane', 'continuity'")
 
 
+# TODO: REVIEW FOR REMOVAL - Duplicate zero cell detection
+# This function is duplicated in utils/continuity.py with identical functionality
+# Remove after consolidating under single module (prefer continuity.py)
 def detect_zero_cells(a: Union[int, float], b: Union[int, float],
                      c: Union[int, float], d: Union[int, float]
 ) -> Tuple[bool, int, list[str]]:
