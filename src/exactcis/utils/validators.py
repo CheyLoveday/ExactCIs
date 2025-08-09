@@ -4,7 +4,7 @@ Pure validation functions for ExactCIs.
 
 from typing import Union
 from .data_models import TableData, UnconditionalConfig
-from ..core import validate_counts
+from .validation import validate_counts
 
 
 def validate_table_data(table: TableData) -> bool:
@@ -24,21 +24,17 @@ def validate_table_data(table: TableData) -> bool:
     return True
 
 
+# TODO: REVIEW FOR REMOVAL - Deprecated alpha validation function
+# This function is deprecated and replaced by exactcis.utils.validation.validate_alpha
+# Remove after confirming no remaining dependencies
 def validate_alpha(alpha: float) -> bool:
     """
     Validate alpha parameter.
     
-    Args:
-        alpha: Significance level
-        
-    Returns:
-        True if valid
-        
-    Raises:
-        ValueError: If alpha is not in (0, 1)
+    DEPRECATED: Use exactcis.utils.validation.validate_alpha instead.
     """
-    if not (0 < alpha < 1):
-        raise ValueError("alpha must be between 0 and 1")
+    from .validation import validate_alpha as _validate_alpha
+    _validate_alpha(alpha)
     return True
 
 

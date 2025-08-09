@@ -32,7 +32,7 @@ from typing import Tuple, List, Optional, Callable
 import numpy as np
 from scipy import stats
 
-from exactcis.core import validate_counts
+from exactcis.utils.validation import validate_table_and_alpha
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -113,9 +113,7 @@ def exact_ci_clopper_pearson(a: int, b: int, c: int, d: int, alpha: float = 0.05
         ValueError: If inputs are invalid (negative counts, empty margins, invalid alpha, or invalid group)
     """
     # Validate inputs
-    validate_counts(a, b, c, d)
-    if not (0 < alpha < 1):
-        raise ValueError("alpha must be between 0 and 1")
+    a, b, c, d = validate_table_and_alpha(a, b, c, d, alpha)
     if group not in [1, 2]:
         raise ValueError("group must be 1 or 2")
     

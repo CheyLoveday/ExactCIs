@@ -9,6 +9,9 @@ import numpy as np
 from typing import Union, Tuple, Dict
 from functools import lru_cache
 from .data_models import PMFWeightsConfig, PMFWeightsResult
+# TODO: REVIEW FOR REMOVAL - Import from legacy core module
+# PMF functions import support and log_binom_coeff from core.py
+# Consider moving these core mathematical functions to a dedicated math utilities module
 from ..core import support, log_binom_coeff, SupportData
 
 logger = logging.getLogger(__name__)

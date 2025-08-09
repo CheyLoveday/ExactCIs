@@ -13,7 +13,6 @@ from scipy.optimize import brentq
 from functools import lru_cache
 
 from exactcis.core import (
-    validate_counts,
     support, # This now returns SupportData
     log_nchg_pmf, # Keep existing imports as needed
     find_smallest_theta,
@@ -21,6 +20,7 @@ from exactcis.core import (
     estimate_point_or,
     SupportData # Changed from Support to SupportData
 )
+from exactcis.utils.validation import validate_table_and_alpha
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -244,7 +244,7 @@ def exact_ci_blaker(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     """
     # No need to clear cache - using lru_cache which handles this automatically
     
-    validate_counts(a, b, c, d)
+    a, b, c, d = validate_table_and_alpha(a, b, c, d, alpha, preserve_int_types=True)
     if not (0 < alpha < 1):
         raise ValueError("alpha must be between 0 and 1")
     

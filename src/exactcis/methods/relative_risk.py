@@ -9,45 +9,15 @@ from typing import Tuple, Dict, List, Optional, Callable, Union
 import numpy as np
 from scipy import stats
 from scipy import optimize
-from exactcis.core import find_root_log, find_plateau_edge
 
-
-def validate_counts(a: int, b: int, c: int, d: int) -> None:
-    """
-    Validate the counts in a 2x2 contingency table for relative risk calculation.
-
-    Args:
-        a: Count in cell (1,1) - exposed with outcome
-        b: Count in cell (1,2) - exposed without outcome
-        c: Count in cell (2,1) - unexposed with outcome
-        d: Count in cell (2,2) - unexposed without outcome
-
-    Raises:
-        ValueError: If any count is negative
-    """
-    if not all(isinstance(x, (int, float)) and x >= 0 for x in (a, b, c, d)):
-        raise ValueError("All counts must be non‑negative numbers")
-
-
-def add_continuity_correction(a: int, b: int, c: int, d: int, correction: float = 0.5) -> Tuple[float, float, float, float]:
-    """
-    Add a continuity correction to the cell counts if any are zero.
-
-    Args:
-        a: Count in cell (1,1)
-        b: Count in cell (1,2)
-        c: Count in cell (2,1)
-        d: Count in cell (2,2)
-        correction: Correction value to add (default: 0.5)
-
-    Returns:
-        Tuple of corrected counts (a, b, c, d)
-    """
-    # Only apply correction if any cell contains a zero
-    if a == 0 or b == 0 or c == 0 or d == 0:
-        return a + correction, b + correction, c + correction, d + correction
-    else:
-        return float(a), float(b), float(c), float(d)
+# TODO: REVIEW FOR REMOVAL - Mixed legacy and centralized imports
+# Some imports still reference legacy core functions (find_root_log, find_plateau_edge)
+# while others use new centralized infrastructure. Consider refactoring to use only centralized.
+from exactcis.core import find_root_log, find_plateau_edge  # LEGACY: Replace with solvers
+from exactcis.utils.validation import validate_counts
+from exactcis.utils.corrections import add_continuity_correction
+from exactcis.utils.solvers import bracket_log_space, bisection_safe
+from exactcis.utils.inversion import invert_bound
 
 
 # ------------ Wald-based Methods ------------
@@ -69,7 +39,7 @@ def ci_wald_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[flo
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
@@ -131,7 +101,7 @@ def ci_wald_katz_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tupl
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)
@@ -186,7 +156,7 @@ def ci_wald_correlated_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Enhanced zero-cell handling (check before continuity correction)
     if c == 0:
@@ -396,109 +366,122 @@ def corrected_score_statistic(x11: int, x12: int, x21: int, x22: int, theta0: fl
     return corrected_numerator / math.sqrt(variance)
 
 
-def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
-                      score_func: Callable, max_iter: int = 100, tol: float = 1e-10) -> float:
+def find_score_ci_bound_enhanced(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
+                               score_func: Callable) -> float:
     """
-    Find the confidence interval bound using enhanced root finding
-    with better boundary detection and search range handling.
+    Find the confidence interval bound using centralized solver infrastructure.
+    
+    This is the new implementation using exactcis.utils.solvers for bracketing and root finding.
+    Keeps the overall structure similar to the original for better parity preservation.
     """
     z_crit = stats.norm.ppf(1 - alpha/2)
     
     def objective(theta: float) -> float:
+        """Objective function for root finding."""
         score = score_func(x11, x12, x21, x22, theta)
         if is_lower:
             return score - z_crit  # Lower bound: S(θ) = +z
         else:
             return score + z_crit  # Upper bound: S(θ) = -z
     
-    # Calculate point estimate more robustly
-    n1 = x11 + x12
-    n2 = x21 + x22
+    # Calculate point estimate for seeding
+    n1, n2 = x11 + x12, x21 + x22
+    if n1 == 0 or n2 == 0:
+        return 0.0 if is_lower else float('inf')
+    
     p1_hat = (x11 + 0.5) / (n1 + 1)
-    p2_hat = (x21 + 0.5) / (n2 + 1)
+    p2_hat = (x21 + 0.5) / (n2 + 1) 
     rr_hat = p1_hat / p2_hat
     
-    if is_lower:
-        # For lower bound, start search much lower than point estimate
-        lo = max(1e-8, rr_hat / 1000)  # Much more aggressive lower search
-        hi = rr_hat * 0.99  # Just below point estimate
-    else:
-        # For upper bound - start with conservative range and expand smartly
-        lo = rr_hat * 1.01  # Just above point estimate  
-        hi = rr_hat * 2  # Start with smaller initial range
+    # Handle edge cases first
+    if is_lower and x11 == 0:
+        return 0.0
+    if not is_lower and x21 == 0:
+        return float('inf')
     
-    # Enhanced bracket expansion with systematic search
-    max_expansion = 50  # More reasonable limit
-    expansion_count = 0
-    
-    while expansion_count < max_expansion:
-        try:
-            val_lo, val_hi = objective(lo), objective(hi)
-            if val_lo * val_hi <= 0:
-                break
-            
-            if is_lower:
-                lo /= 2.0  # Systematic expansion for lower bound
-            else:
-                # For upper bound, expand more carefully
-                if hi < rr_hat * 100:  # Don't expand too far initially
-                    hi *= 1.5  # Gentler expansion
-                else:
-                    hi *= 2.0  # More aggressive when we're already far out
-                
-            expansion_count += 1
-                
-        except (OverflowError, ValueError, ZeroDivisionError):
-            if not is_lower and hi > 1e6:
-                return float('inf')  # Legitimate infinite bound
-            break
-    else:
-        # If standard expansion failed, try systematic search for upper bounds
-        if not is_lower:
-            # Try a systematic grid search for the sign change
-            search_multipliers = [2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 500, 1000]
-            for mult in search_multipliers:
-                try:
-                    test_hi = rr_hat * mult
-                    val_test = objective(test_hi)
-                    val_lo = objective(lo)
-                    if val_test * val_lo <= 0:
-                        hi = test_hi
-                        break
-                except:
-                    continue
-            else:
-                return float('inf')  # Legitimate infinite upper bound
+    # Directional bracketing first (to avoid capturing the wrong root)
+    domain = (1e-12, 1e12)
+    try:
+        factor = 2.0
+        max_expand = 60
+        bracket = None
+        
+        if is_lower:
+            # Prefer bracketing the left root
+            hi = min(rr_hat, 1.0)
+            hi = max(domain[0], min(domain[1], hi))
+            f_hi = objective(hi)
+            for k in range(max_expand):
+                lo = max(domain[0], hi / (factor ** (k + 1)))
+                f_lo = objective(lo)
+                if f_lo * f_hi <= 0:
+                    bracket = (lo, hi)
+                    break
+                hi = lo
+            if bracket is None and hi <= domain[0] * 2:
+                return 0.0
         else:
-            return 0.0
+            # Prefer bracketing the right root
+            lo = max(rr_hat, 1.0)
+            lo = max(domain[0], min(domain[1], lo))
+            f_lo = objective(lo)
+            for k in range(max_expand):
+                hi = min(domain[1], lo * (factor ** (k + 1)))
+                f_hi = objective(hi)
+                if f_lo * f_hi <= 0:
+                    bracket = (lo, hi)
+                    break
+                lo = hi
+            if bracket is None and hi >= domain[1] / 2:
+                return float('inf')
+        
+        # Fallback to symmetric log-space bracketing if directional failed
+        if bracket is None:
+            bounds, bracket_diag = bracket_log_space(
+                objective, theta0=rr_hat, domain=domain, 
+                factor=factor, max_expand=max_expand, target=0.0
+            )
+            if not bracket_diag.converged:
+                if is_lower and bounds[0] <= domain[0] * 2:
+                    return 0.0
+                elif not is_lower and bounds[1] >= domain[1] / 2:
+                    return float('inf')
+                else:
+                    return bounds[0] if is_lower else bounds[1]
+            bracket = bounds
+        
+        # Use centralized root finding within the established bracket
+        root, solve_diag = bisection_safe(objective, bracket[0], bracket[1], tol=1e-10)
+        if solve_diag.converged:
+            return max(0.0, root)
+        else:
+            return bracket[0] if is_lower else bracket[1]
+    except Exception:
+        # Fallback to original bounds logic on any error
+        return 0.0 if is_lower else float('inf')
+
+
+def find_score_ci_bound(x11: int, x12: int, x21: int, x22: int, alpha: float, is_lower: bool,
+                      score_func: Callable, max_iter: int = 100, tol: float = 1e-10) -> float:
+    """
+    Find the confidence interval bound using centralized solver infrastructure.
     
-    # Enhanced binary search with plateau detection
-    for iteration in range(max_iter):
-        mid = (lo + hi) / 2
-        try:
-            val_mid = objective(mid)
-            
-            if abs(val_mid) < tol:
-                return mid
-                
-            # Check for plateau (score function is flat)
-            if iteration > 10 and abs(hi - lo) < abs(mid) * 1e-8:
-                # Function may be flat in this region
-                return mid
-                
-            if val_mid * objective(lo) < 0:
-                hi = mid
-            else:
-                lo = mid
-                
-        except (OverflowError, ValueError, ZeroDivisionError):
-            # Numerical issues, try to recover
-            if is_lower:
-                return max(0, lo)
-            else:
-                return hi if hi < 1e6 else float('inf')
+    This is the refactored implementation using exactcis.utils.solvers and inversion.
+    Replaces the custom bracket expansion and root finding logic with centralized algorithms.
     
-    return max(0, (lo + hi) / 2)
+    Args:
+        x11, x12, x21, x22: Contingency table counts
+        alpha: Significance level  
+        is_lower: True for lower bound, False for upper bound
+        score_func: Score test function
+        max_iter: Unused (kept for compatibility)
+        tol: Unused (kept for compatibility)
+        
+    Returns:
+        Confidence interval bound
+    """
+    # Use the enhanced version with centralized infrastructure
+    return find_score_ci_bound_enhanced(x11, x12, x21, x22, alpha, is_lower, score_func)
 
 
 def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[float, float]:
@@ -517,7 +500,7 @@ def ci_score_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[fl
     Returns:
         The score-based confidence interval for the relative risk
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Handle boundary cases
     if a == 0:
@@ -548,7 +531,7 @@ def ci_score_cc_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05, delta: f
     Returns:
         The continuity-corrected score-based confidence interval for the relative risk
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Create a partial function with fixed delta for the corrected score
     corrected_score = lambda x11, x12, x21, x22, theta0: corrected_score_statistic(x11, x12, x21, x22, theta0, delta)
@@ -584,7 +567,7 @@ def ci_ustat_rr(a: int, b: int, c: int, d: int, alpha: float = 0.05) -> Tuple[fl
     Returns:
         Tuple of (lower_bound, upper_bound) for the confidence interval
     """
-    validate_counts(a, b, c, d)
+    validate_counts(a, b, c, d, allow_zero_margins=True)
     
     # Apply continuity correction if needed
     a_c, b_c, c_c, d_c = add_continuity_correction(a, b, c, d)

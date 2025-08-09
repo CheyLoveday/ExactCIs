@@ -28,6 +28,7 @@ dependencies = [
     "scipy>=1.12.0",
     "typing-extensions; python_version < '3.10'", # For older Python versions that need newer typing features
     "statsmodels>=0.14.0",
+    "mpmath>=1.3.0",
 ]
 
 [project.optional-dependencies]

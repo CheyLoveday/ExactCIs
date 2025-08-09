@@ -17,49 +17,39 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
+# TODO: REVIEW FOR REMOVAL - Legacy validation wrapper
+# This validation function is now centralized in utils/validation.py
+# This wrapper exists only for backwards compatibility and could be removed
+# after confirming no direct dependencies remain
 def validate_counts(a: Union[int, float], b: Union[int, float], 
                    c: Union[int, float], d: Union[int, float]) -> None:
     """
-    Validate the counts in a 2x2 contingency table.
+    Validate the counts in a 2x2 contingency table using the centralized implementation.
 
-    Args:
-        a: Count in cell (1,1)
-        b: Count in cell (1,2)
-        c: Count in cell (2,1)
-        d: Count in cell (2,2)
-
-    Raises:
-        ValueError: If any count is negative, or if any margin is zero
+    This wrapper preserves the historical behavior of disallowing zero margins
+    for odds-ratio computations by default.
     """
-    if not all(isinstance(x, (int, float)) and x >= 0 for x in (a, b, c, d)):
-        raise ValueError("All counts must be non‑negative numbers")
-    if (a + b) == 0 or (c + d) == 0 or (a + c) == 0 or (b + d) == 0:
-        raise ValueError("Cannot compute odds ratio with empty margins")
+    from exactcis.utils.validation import validate_counts as _validate_counts_central
+    _validate_counts_central(a, b, c, d, allow_zero_margins=False)
 
 
+# TODO: REVIEW FOR REMOVAL - Legacy correction wrapper
+# Correction functionality is now centralized in utils/continuity.py and utils/corrections.py
+# This wrapper exists only for backwards compatibility and could be removed
+# after methods are refactored to use centralized infrastructure
 def apply_haldane_correction(a: Union[int, float], b: Union[int, float], 
                             c: Union[int, float], d: Union[int, float]) -> Tuple[float, float, float, float]:
     """
-    Apply Haldane's correction to a 2x2 contingency table.
-    
-    This adds 0.5 to each cell if any cell contains a zero, to prevent issues with
-    division by zero in odds ratio calculations.
-    
-    Args:
-        a: Count in cell (1,1)
-        b: Count in cell (1,2)
-        c: Count in cell (2,1)
-        d: Count in cell (2,2)
-        
-    Returns:
-        Tuple (a, b, c, d) with Haldane's correction applied
+    Apply continuity (Haldane-Anscombe) correction to a 2x2 contingency table when zeros are present.
+
+    Delegates to the centralized correction policy to ensure consistent behavior across methods.
     """
-    # Only apply correction if any cell contains a zero
-    if a == 0 or b == 0 or c == 0 or d == 0:
+    from exactcis.utils.corrections import add_continuity_correction as _add_continuity
+    a_f, b_f, c_f, d_f = _add_continuity(a, b, c, d, correction=0.5)
+    # Log only when a correction was applied
+    if (a_f != float(a)) or (b_f != float(b)) or (c_f != float(c)) or (d_f != float(d)):
         logger.info("Applying Haldane's correction (adding 0.5 to each cell)")
-        return a + 0.5, b + 0.5, c + 0.5, d + 0.5
-    else:
-        return float(a), float(b), float(c), float(d)
+    return a_f, b_f, c_f, d_f
 
 
 def logsumexp(log_terms: List[float]) -> float:
@@ -374,6 +364,10 @@ def pmf(k: int, n1: int, n2: int, m: int, theta: float) -> float:
     return pmf_dict[k]
 
 
+# TODO: REVIEW FOR REMOVAL - Legacy root finding algorithm
+# Root finding is now centralized in utils/solvers.py with more robust algorithms
+# This function is superseded by bisection_safe and find_root_robust in solvers.py
+# Keep only for backwards compatibility until all methods are refactored
 def find_root(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0,
               tol: float = 1e-8, maxiter: int = 60) -> float:
     """
@@ -887,9 +881,11 @@ def batch_validate_counts(tables: List[Tuple[int, int, int, int]]) -> List[bool]
     """
     valid_tables = []
     
+    from exactcis.utils.validation import validate_counts as _validate_counts_central
+    
     for a, b, c, d in tables:
         try:
-            validate_counts(a, b, c, d)
+            _validate_counts_central(a, b, c, d, allow_zero_margins=False)
             valid_tables.append(True)
         except ValueError:
             valid_tables.append(False)
@@ -1039,6 +1035,10 @@ def optimize_core_cache_for_batch(enable_large_cache: bool = True) -> None:
         logger.info("Reset cache sizes to default")
 
 
+# TODO: REVIEW FOR REMOVAL - Original PMF weights implementation
+# This is a fallback implementation that exists only for compatibility
+# The functional implementation in utils/pmf_functions.py should be preferred
+# Remove after confirming functional implementation covers all use cases
 def _pmf_weights_original_impl(n1: Union[int, float], n2: Union[int, float], m: Union[int, float], theta: float) -> Tuple[Tuple[int, ...], Tuple[float, ...]]:
     """Original implementation of pmf_weights calculation."""
     # Calculate support for the distribution
@@ -1062,6 +1062,10 @@ def _pmf_weights_original_impl(n1: Union[int, float], n2: Union[int, float], m: 
     return (tuple(supp.x), tuple(weights))
 
 
+# TODO: REVIEW FOR REMOVAL - Original root finding implementation
+# This is a fallback implementation that exists only for compatibility  
+# The robust solvers in utils/solvers.py should be preferred
+# Remove after all methods are refactored to use centralized solvers
 def _find_root_log_original_impl(f: Callable[[float], float], lo: float = 1e-8, hi: float = 1.0,
                                 tol: float = 1e-8, maxiter: int = 60,
                                 progress_callback: Optional[Callable[[float], None]] = None,
